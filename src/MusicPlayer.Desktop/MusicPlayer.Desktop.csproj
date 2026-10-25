@@ -27,5 +27,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MusicPlayer.Core\MusicPlayer.Core.csproj" />
     <ProjectReference Include="..\MusicPlayer.Audio\MusicPlayer.Audio.csproj" />
+    <ProjectReference Include="..\MusicPlayer.Infrastructure\MusicPlayer.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
