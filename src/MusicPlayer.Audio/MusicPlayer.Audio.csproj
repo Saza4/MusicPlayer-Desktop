@@ -16,11 +16,11 @@
 
   <!-- La licencia de BASS es gratuita para uso no comercial -->
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-    <None Include="native\win-x64\bass.dll" Link="bass.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="native\win-x64\*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-
+  
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
-    <None Include="native\linux-x64\libbass.so" Link="libbass.so" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="native\linux-x64\*.so" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

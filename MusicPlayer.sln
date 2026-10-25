@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicPlayer.Core.Tests", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicPlayer.Infrastructure", "src\MusicPlayer.Infrastructure\MusicPlayer.Infrastructure.csproj", "{CF7EC9F8-F1FB-4831-A62E-B916D25F93AF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicPlayer.Infrastructure.Tests", "tests\MusicPlayer.Infrastructure.Tests\MusicPlayer.Infrastructure.Tests.csproj", "{7E9A2890-28AA-4B8A-A1CF-DB48BF2C8974}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{CF7EC9F8-F1FB-4831-A62E-B916D25F93AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CF7EC9F8-F1FB-4831-A62E-B916D25F93AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CF7EC9F8-F1FB-4831-A62E-B916D25F93AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E9A2890-28AA-4B8A-A1CF-DB48BF2C8974}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E9A2890-28AA-4B8A-A1CF-DB48BF2C8974}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E9A2890-28AA-4B8A-A1CF-DB48BF2C8974}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E9A2890-28AA-4B8A-A1CF-DB48BF2C8974}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{130ECDF9-A138-4848-9F8F-81C63E739272} = {C1313C6F-6F9B-4295-B62D-9A01F1021505}
@@ -53,5 +59,6 @@ Global
 		{9943EA11-5405-42F6-B4B6-973AF5DFEAEF} = {C1313C6F-6F9B-4295-B62D-9A01F1021505}
 		{7733DAA7-DB8B-4B50-9652-3AEC5B1CD252} = {3A8B0EF9-D815-445B-90F9-C8F688FE24BC}
 		{CF7EC9F8-F1FB-4831-A62E-B916D25F93AF} = {C1313C6F-6F9B-4295-B62D-9A01F1021505}
+		{7E9A2890-28AA-4B8A-A1CF-DB48BF2C8974} = {3A8B0EF9-D815-445B-90F9-C8F688FE24BC}
 	EndGlobalSection
 EndGlobal

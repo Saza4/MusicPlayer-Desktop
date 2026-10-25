@@ -1,3 +1,4 @@
+using System.IO;
 using ManagedBass;
 using MusicPlayer.Core.Interfaces;
 using CorePlaybackState = MusicPlayer.Core.Interfaces.PlaybackState;
@@ -6,6 +7,26 @@ namespace MusicPlayer.Audio;
 
 public sealed class BassAudioPlayer : IAudioPlayer
 {
+    private static readonly string[] PluginFiles = OperatingSystem.IsWindows()
+        ? new[] { "bassflac.dll", "bass_aac.dll" }
+        : new[] { "libbassflac.so", "libbass_aac.so" };
+
+    /// <summary>Plugins cargados con éxito (útil para diagnóstico).</summary>
+    public IReadOnlyList<string> LoadedPlugins { get; }
+
+    private static List<string> LoadPlugins()
+    {
+        var loaded = new List<string>();
+        foreach (var file in PluginFiles)
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, file);
+            // Un plugin ausente no es fatal: solo se pierde ese formato.
+            if (File.Exists(path) && Bass.PluginLoad(path) != 0)
+                loaded.Add(file);
+        }
+        return loaded;
+    }
+
     private int _stream;
     private double _volume = 1.0;
     private TimeSpan _duration;
@@ -17,6 +38,8 @@ public sealed class BassAudioPlayer : IAudioPlayer
     {
         if (!Bass.Init() && Bass.LastError != Errors.Already)
             throw new InvalidOperationException($"No se pudo inicializar BASS: {Bass.LastError}");
+
+        LoadedPlugins = LoadPlugins();
     }
 
     public CorePlaybackState State => _state;

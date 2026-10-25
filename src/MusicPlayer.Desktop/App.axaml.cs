@@ -1,8 +1,12 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using MusicPlayer.Audio;
+using MusicPlayer.Core.Services;
+using MusicPlayer.Desktop.Services;
 using MusicPlayer.Desktop.ViewModels;
 using MusicPlayer.Desktop.Views;
+using MusicPlayer.Infrastructure;
 
 namespace MusicPlayer.Desktop;
 
@@ -21,17 +25,15 @@ public partial class App : Application
             // DisableAvaloniaDataAnnotationValidation();
 
             var window = new MainWindow();
-            var player = new MusicPlayer.Audio.BassAudioPlayer();
-            var scanner = new MusicPlayer.Core.Services.LibraryScanner(
-                new MusicPlayer.Infrastructure.TagLibTrackMetadataReader());
+            var player = new BassAudioPlayer();
+            var scanner = new LibraryScanner(new TagLibTrackMetadataReader());
+            var library = new LibraryService(scanner, new JsonLibraryRepository(JsonLibraryRepository.DefaultPath));
+            var viewModel = new MainViewModel(player, library, new AvaloniaFolderPickerService(window));
 
-            window.DataContext = new MainViewModel(
-                player,
-                scanner,
-                new MusicPlayer.Desktop.Services.AvaloniaFolderPickerService(window));
-
+            window.DataContext = viewModel;
             desktop.MainWindow = window;
             desktop.Exit += (_, _) => player.Dispose();
+            _ = viewModel.InitializeAsync(); // carga la biblioteca guardada sin bloquear el arranque
         }
 
         base.OnFrameworkInitializationCompleted();

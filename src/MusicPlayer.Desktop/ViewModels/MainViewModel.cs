@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicPlayer.Core.Interfaces;
+using MusicPlayer.Core.Models;
 using MusicPlayer.Core.Services;
 using MusicPlayer.Desktop.Services;
 
@@ -14,7 +15,7 @@ namespace MusicPlayer.Desktop.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     private readonly IAudioPlayer _player;
-    private readonly LibraryScanner _scanner;
+    private readonly LibraryService _library;
     private readonly IFolderPickerService _folderPicker;
     private readonly DispatcherTimer _timer;
 
@@ -39,10 +40,10 @@ public partial class MainViewModel : ViewModelBase
 
     public string PlayPauseText => IsPlaying ? "Pausa" : "Reproducir";
 
-    public MainViewModel(IAudioPlayer player, LibraryScanner scanner, IFolderPickerService folderPicker)
+    public MainViewModel(IAudioPlayer player, LibraryService library, IFolderPickerService folderPicker)
     {
         _player = player;
-        _scanner = scanner;
+        _library = library;
         _folderPicker = folderPicker;
 
         // BASS dispara estos eventos desde su propio hilo: hay que volver al hilo de la UI.
@@ -57,6 +58,19 @@ public partial class MainViewModel : ViewModelBase
 
     // ---- Biblioteca ----
 
+    public async Task InitializeAsync()
+    {
+        try
+        {
+            Status = "Cargando biblioteca…";
+            ApplySnapshot(await _library.LoadAsync());
+        }
+        catch (Exception ex)
+        {
+            Status = $"No se pudo cargar la biblioteca: {ex.Message}";
+        }
+    }
+
     [RelayCommand]
     private async Task AddFolderAsync()
     {
@@ -67,25 +81,21 @@ public partial class MainViewModel : ViewModelBase
         {
             Status = "Escaneando…";
             var progress = new Progress<int>(count => Status = $"Escaneando… {count} canciones");
-            var found = await _scanner.ScanAsync(folder, progress);
-
-            // Mezcla con lo que ya había (varias carpetas) sin duplicar archivos.
-            var ordered = Tracks.Select(i => i.Track)
-                .Concat(found)
-                .DistinctBy(t => t.FilePath, StringComparer.OrdinalIgnoreCase)
-                .OrderBy(t => t.Artist, StringComparer.CurrentCultureIgnoreCase)
-                .ThenBy(t => t.Album, StringComparer.CurrentCultureIgnoreCase)
-                .ThenBy(t => t.TrackNumber)
-                .ThenBy(t => t.Title, StringComparer.CurrentCultureIgnoreCase)
-                .Select(t => new TrackItemViewModel(t));
-
-            Tracks = new ObservableCollection<TrackItemViewModel>(ordered);
-            Status = $"{Tracks.Count} canciones en la biblioteca";
+            ApplySnapshot(await _library.AddFolderAsync(folder, progress));
         }
         catch (Exception ex)
         {
             Status = $"Error al escanear: {ex.Message}";
         }
+    }
+
+    private void ApplySnapshot(LibrarySnapshot snapshot)
+    {
+        Tracks = new ObservableCollection<TrackItemViewModel>(
+            snapshot.Tracks.Select(t => new TrackItemViewModel(t)));
+        Status = Tracks.Count == 0
+            ? "Agrega una carpeta para empezar"
+            : $"{Tracks.Count} canciones en la biblioteca";
     }
 
     // ---- Reproducción ----
