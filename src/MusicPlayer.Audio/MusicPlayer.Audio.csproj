@@ -14,4 +14,13 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- La licencia de BASS es gratuita para uso no comercial -->
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <None Include="native\win-x64\bass.dll" Link="bass.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <None Include="native\linux-x64\libbass.so" Link="libbass.so" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

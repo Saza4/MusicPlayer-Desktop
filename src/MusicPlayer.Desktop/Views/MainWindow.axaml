@@ -1,22 +1,16 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="MusicPlayer.Desktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="MusicPlayer.Desktop" Width="960" Height="600">
-
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainViewModel />
-    </Design.DataContext>
-
-    <TextBox Text="{Binding Greeting}"
-             HorizontalAlignment="Center"
-             VerticalAlignment="Center" 
-             FontSize="24"/>
+        Title="MusicPlayer" Width="960" Height="600">
+    <StackPanel Margin="24" Spacing="12" MaxWidth="600" VerticalAlignment="Center">
+        <TextBox Text="{Binding FilePath}" Watermark="Ruta a un .mp3 o .wav"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Reproducir" Command="{Binding LoadAndPlayCommand}"/>
+            <Button Content="Pausa" Command="{Binding PauseCommand}"/>
+            <Button Content="Detener" Command="{Binding StopCommand}"/>
+        </StackPanel>
+        <TextBlock Text="{Binding Status}"/>
+    </StackPanel>
 </Window>
