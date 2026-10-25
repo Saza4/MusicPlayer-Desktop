@@ -17,10 +17,21 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainViewModel(new MusicPlayer.Audio.BassAudioPlayer()),
-            };
+            // Si tu plantilla incluye esta llamada, consérvala aquí arriba:
+            // DisableAvaloniaDataAnnotationValidation();
+
+            var window = new MainWindow();
+            var player = new MusicPlayer.Audio.BassAudioPlayer();
+            var scanner = new MusicPlayer.Core.Services.LibraryScanner(
+                new MusicPlayer.Infrastructure.TagLibTrackMetadataReader());
+
+            window.DataContext = new MainViewModel(
+                player,
+                scanner,
+                new MusicPlayer.Desktop.Services.AvaloniaFolderPickerService(window));
+
+            desktop.MainWindow = window;
+            desktop.Exit += (_, _) => player.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();
