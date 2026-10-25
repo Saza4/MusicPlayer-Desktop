@@ -7,7 +7,7 @@
         x:Class="MusicPlayer.Desktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="MusicPlayer.Desktop">
+        Title="MusicPlayer.Desktop" Width="960" Height="600">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -17,6 +17,6 @@
 
     <TextBox Text="{Binding Greeting}"
              HorizontalAlignment="Center"
-             VerticalAlignment="Center" />
-
+             VerticalAlignment="Center" 
+             FontSize="24"/>
 </Window>
