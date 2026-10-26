@@ -20,6 +20,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly IFolderPickerService _folderPicker;
     private readonly DispatcherTimer _timer;
 
+    public LyricsViewModel Lyrics { get; }
+
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
     private IReadOnlyList<TrackItemViewModel> _queue = Array.Empty<TrackItemViewModel>();
     private readonly DispatcherTimer _searchDebounce;
@@ -46,11 +48,13 @@ public partial class MainViewModel : ViewModelBase
 
     public string PlayPauseText => IsPlaying ? "Pausa" : "Reproducir";
 
-    public MainViewModel(IAudioPlayer player, LibraryService library, IFolderPickerService folderPicker)
+    public MainViewModel(IAudioPlayer player, LibraryService library,
+                         IFolderPickerService folderPicker, LyricsViewModel lyrics)
     {
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
+        Lyrics = lyrics;
 
         // BASS dispara estos eventos desde su propio hilo: hay que volver al hilo de la UI.
         _player.StateChanged += (_, state) =>
@@ -153,6 +157,7 @@ public partial class MainViewModel : ViewModelBase
 
             DurationText = TimeFormatter.Format(_player.Duration);
             CurrentTrack = item;
+            _ = Lyrics.LoadAsync(item.Track); // sin await: la letra aparece cuando esté lista
             NowPlaying = $"{item.Title} — {item.Artist}";
 
             _player.Play();
@@ -232,6 +237,8 @@ public partial class MainViewModel : ViewModelBase
     // Método parcial generado por CommunityToolkit: se ejecuta al cambiar PositionSeconds.
     partial void OnPositionSecondsChanged(double value)
     {
+        Lyrics.UpdatePosition(TimeSpan.FromSeconds(value));
+
         PositionText = TimeFormatter.Format(TimeSpan.FromSeconds(value));
 
         // Si el cambio vino del usuario (arrastrando el Slider), saltar a ese punto.

@@ -5,6 +5,26 @@
         x:DataType="vm:MainViewModel"
         Title="MusicPlayer" Width="960" Height="600" MinWidth="640" MinHeight="400">
 
+    <Window.Styles>
+        <Style Selector="ListBox.lyrics ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <!-- La línea activa se resalta con el TextBlock, no con la selección del ListBox -->
+        <Style Selector="ListBox.lyrics ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.lyrics ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.lyrics TextBlock.synced">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+        <Style Selector="ListBox.lyrics TextBlock.synced.active">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </Window.Styles>
+
     <DockPanel>
 
         <!-- Barra superior -->
@@ -34,6 +54,9 @@
                             Command="{Binding TogglePlayPauseCommand}"
                             MinWidth="100" HorizontalContentAlignment="Center"/>
                     <Button Content="Siguiente" Command="{Binding NextCommand}"/>
+                    <Button Content="Letra"
+                            Command="{Binding Lyrics.ToggleOpenCommand}"
+                            IsEnabled="{Binding Lyrics.IsAvailable}"/>
                 </StackPanel>
 
                 <Grid ColumnDefinitions="56,*,56">
@@ -48,24 +71,44 @@
             </StackPanel>
         </Border>
 
-        <!-- Lista de canciones -->
-        <ListBox Margin="8"
-                 ItemsSource="{Binding Tracks}"
-                 SelectedItem="{Binding SelectedTrack}"
-                 DoubleTapped="OnTrackDoubleTapped">
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:TrackItemViewModel">
-                    <Grid ColumnDefinitions="3*,2*,Auto" Margin="8,6">
-                        <TextBlock Grid.Column="0" Text="{Binding Title}"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Artist}"
-                                   TextTrimming="CharacterEllipsis" Opacity="0.7"/>
-                        <TextBlock Grid.Column="2" Text="{Binding DurationText}"
-                                   Margin="12,0,0,0" Opacity="0.7"/>
-                    </Grid>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <!-- Lista de canciones y panel de letras -->
+        <Grid ColumnDefinitions="*,Auto">
+            <ListBox Grid.Column="0" Margin="8"
+                     ItemsSource="{Binding Tracks}"
+                     SelectedItem="{Binding SelectedTrack}"
+                     DoubleTapped="OnTrackDoubleTapped">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TrackItemViewModel">
+                        <Grid ColumnDefinitions="3*,2*,Auto" Margin="8,6">
+                            <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Artist}"
+                                       TextTrimming="CharacterEllipsis" Opacity="0.7"/>
+                            <TextBlock Grid.Column="2" Text="{Binding DurationText}"
+                                       Margin="12,0,0,0" Opacity="0.7"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Border Grid.Column="1" Width="380" Margin="0,8,8,8" Padding="8"
+                    IsVisible="{Binding Lyrics.ShowPanel}"
+                    BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="8">
+                <ListBox Classes="lyrics" Background="Transparent"
+                         ItemsSource="{Binding Lyrics.Lines}"
+                         SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
+                         Tapped="OnLyricTapped">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LyricLineViewModel">
+                            <TextBlock Text="{Binding Text}" FontSize="18" Padding="8,6"
+                                       TextWrapping="Wrap"
+                                       Classes.synced="{Binding IsSynced}"
+                                       Classes.active="{Binding IsActive}"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+        </Grid>
 
     </DockPanel>
 </Window>

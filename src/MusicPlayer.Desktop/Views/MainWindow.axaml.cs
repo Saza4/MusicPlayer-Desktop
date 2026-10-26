@@ -17,4 +17,10 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel vm && vm.SelectedTrack is { } track)
             vm.PlayTrackCommand.Execute(track);
     }
+
+    private void OnLyricTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm && (e.Source as Control)?.DataContext is LyricLineViewModel line)
+            vm.Lyrics.SeekToLineCommand.Execute(line);
+    }
 }
