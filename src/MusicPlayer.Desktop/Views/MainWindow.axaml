@@ -16,11 +16,13 @@
         <Style Selector="ListBox.lyrics ListBoxItem:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent"/>
         </Style>
-        <Style Selector="ListBox.lyrics TextBlock.synced">
+        <Style Selector="ListBox.lyrics StackPanel.synced">
             <Setter Property="Opacity" Value="0.45"/>
         </Style>
-        <Style Selector="ListBox.lyrics TextBlock.synced.active">
+        <Style Selector="ListBox.lyrics StackPanel.synced.active">
             <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="ListBox.lyrics StackPanel.active TextBlock.lead">
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
     </Window.Styles>
@@ -94,19 +96,59 @@
             <Border Grid.Column="1" Width="380" Margin="0,8,8,8" Padding="8"
                     IsVisible="{Binding Lyrics.ShowPanel}"
                     BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="8">
-                <ListBox Classes="lyrics" Background="Transparent"
-                         ItemsSource="{Binding Lyrics.Lines}"
-                         SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
-                         Tapped="OnLyricTapped">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:LyricLineViewModel">
-                            <TextBlock Text="{Binding Text}" FontSize="18" Padding="8,6"
-                                       TextWrapping="Wrap"
-                                       Classes.synced="{Binding IsSynced}"
-                                       Classes.active="{Binding IsActive}"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <DockPanel>
+                    <Button DockPanel.Dock="Top" Margin="0,0,0,8"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Content="Traducción y pronunciación">
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <StackPanel Spacing="4" MinWidth="260">
+                                    <CheckBox Content="Mostrar traducción"
+                                              IsChecked="{Binding Lyrics.ShowTranslation}"
+                                              IsEnabled="{Binding Lyrics.HasTranslation}"/>
+                                    <CheckBox Content="Mostrar pronunciación"
+                                              IsChecked="{Binding Lyrics.ShowPronunciation}"
+                                              IsEnabled="{Binding Lyrics.HasPronunciation}"/>
+                                    <CheckBox Content="Ocultar original"
+                                              IsChecked="{Binding Lyrics.HideOriginal}"
+                                              IsEnabled="{Binding Lyrics.HasExtras}"/>
+                                    <Separator Margin="0,4"/>
+                                    <CheckBox Content="Pronunciación en texto grande"
+                                              IsChecked="{Binding Lyrics.EmphasizePronunciation}"
+                                              IsEnabled="{Binding Lyrics.HasPronunciation}"/>
+                                    <TextBlock Text="Esta canción no tiene archivos .lrc de traducción ni de pronunciación."
+                                               TextWrapping="Wrap" FontSize="12" Opacity="0.6"
+                                               IsVisible="{Binding !Lyrics.HasExtras}"/>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <ListBox Classes="lyrics" Background="Transparent"
+                             ItemsSource="{Binding Lyrics.Lines}"
+                             SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
+                             Tapped="OnLyricTapped">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LyricLineViewModel">
+                                <StackPanel Spacing="2" Margin="8,6" Background="Transparent"
+                                            Classes.synced="{Binding IsSynced}"
+                                            Classes.active="{Binding IsActive}">
+                                    <TextBlock Classes="lead" TextWrapping="Wrap"
+                                               Text="{Binding Pronunciation}"
+                                               IsVisible="{Binding ShowPronunciation}"
+                                               FontSize="{Binding PronunciationFontSize}"/>
+                                    <TextBlock Classes="lead" TextWrapping="Wrap"
+                                               Text="{Binding Text}"
+                                               IsVisible="{Binding ShowOriginal}"
+                                               FontSize="{Binding OriginalFontSize}"/>
+                                    <TextBlock TextWrapping="Wrap" FontStyle="Italic"
+                                               Text="{Binding Translation}"
+                                               IsVisible="{Binding ShowTranslation}"
+                                               FontSize="{Binding TranslationFontSize}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
             </Border>
         </Grid>
 

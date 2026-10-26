@@ -27,8 +27,30 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     [NotifyPropertyChangedFor(nameof(ShowPanel))]
     private bool _isOpen;
 
+    // Lo que la canción actual tiene disponible.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasExtras))]
+    private bool _hasTranslation;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasExtras))]
+    private bool _hasPronunciation;
+
+    // Preferencias del usuario (por ahora solo viven mientras la app está abierta).
+    [ObservableProperty] private bool _showTranslation;
+    [ObservableProperty] private bool _showPronunciation;
+    [ObservableProperty] private bool _hideOriginal;
+    [ObservableProperty] private bool _emphasizePronunciation;
+
     /// <summary>El panel solo se muestra si el usuario lo abrió y hay letra.</summary>
     public bool ShowPanel => IsOpen && IsAvailable;
+
+    public bool HasExtras => HasTranslation || HasPronunciation;
+
+    partial void OnShowTranslationChanged(bool value) => ApplyDisplay();
+    partial void OnShowPronunciationChanged(bool value) => ApplyDisplay();
+    partial void OnHideOriginalChanged(bool value) => ApplyDisplay();
+    partial void OnEmphasizePronunciationChanged(bool value) => ApplyDisplay();
 
     public async Task LoadAsync(Track track)
     {
@@ -90,6 +112,19 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
             block.Lines.Select(l => new LyricLineViewModel(l, block.Kind == LyricsKind.Synced)));
         IsSynced = block.Kind == LyricsKind.Synced;
         IsAvailable = block.IsAvailable;
+        HasTranslation = block.Lines.Any(l => !string.IsNullOrWhiteSpace(l.Translation));
+        HasPronunciation = block.Lines.Any(l => !string.IsNullOrWhiteSpace(l.Romanization));
         ActiveIndex = -1;
+        ApplyDisplay();
+    }
+
+    private void ApplyDisplay()
+    {
+        var options = new LyricsDisplayOptions(
+            ShowTranslation, ShowPronunciation, HideOriginal, EmphasizePronunciation);
+        var layout = options.Resolve(HasTranslation, HasPronunciation);
+
+        foreach (var line in Lines)
+            line.ApplyLayout(layout);
     }
 }
