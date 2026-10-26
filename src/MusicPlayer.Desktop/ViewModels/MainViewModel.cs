@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,6 +19,11 @@ public partial class MainViewModel : ViewModelBase
     private readonly LibraryService _library;
     private readonly IFolderPickerService _folderPicker;
     private readonly DispatcherTimer _timer;
+
+    private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
+    private IReadOnlyList<TrackItemViewModel> _queue = Array.Empty<TrackItemViewModel>();
+    private readonly DispatcherTimer _searchDebounce;
+    [ObservableProperty] private string _searchText = "";
 
     // Evita el bucle timer -> Slider -> Seek -> timer.
     private bool _isUpdatingFromTimer;
@@ -54,6 +60,10 @@ public partial class MainViewModel : ViewModelBase
 
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, OnTick);
         _timer.Start();
+
+        // Espera 200 ms tras la última tecla para no refiltrar en cada pulsación.
+        _searchDebounce = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Normal,
+            (_, _) => { _searchDebounce.Stop(); ApplyFilter(); });
     }
 
     // ---- Biblioteca ----
@@ -91,11 +101,28 @@ public partial class MainViewModel : ViewModelBase
 
     private void ApplySnapshot(LibrarySnapshot snapshot)
     {
+        _allTracks = snapshot.Tracks.Select(t => new TrackItemViewModel(t)).ToList();
+        ApplyFilter();
+    }
+
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchDebounce.Stop();
+        _searchDebounce.Start();
+    }
+
+    private void ApplyFilter()
+    {
+        var ids = TrackFilter.Filter(_allTracks.Select(i => i.Track), SearchText)
+            .Select(t => t.Id)
+            .ToHashSet();
+
         Tracks = new ObservableCollection<TrackItemViewModel>(
-            snapshot.Tracks.Select(t => new TrackItemViewModel(t)));
-        Status = Tracks.Count == 0
-            ? "Agrega una carpeta para empezar"
-            : $"{Tracks.Count} canciones en la biblioteca";
+            _allTracks.Where(i => ids.Contains(i.Track.Id))); // conserva el orden de la biblioteca
+
+        Status = _allTracks.Count == 0 ? "Agrega una carpeta para empezar"
+            : string.IsNullOrWhiteSpace(SearchText) ? $"{_allTracks.Count} canciones en la biblioteca"
+            : $"{Tracks.Count} de {_allTracks.Count} canciones";
     }
 
     // ---- Reproducción ----
@@ -104,7 +131,12 @@ public partial class MainViewModel : ViewModelBase
     private void PlayTrack(TrackItemViewModel? item)
     {
         if (item is null) return;
+        _queue = Tracks.ToList(); // la cola es lo que el usuario veía al elegir
+        StartPlayback(item);
+    }
 
+    private void StartPlayback(TrackItemViewModel item)
+    {
         try
         {
             _player.Load(item.Track.FilePath);
@@ -158,14 +190,13 @@ public partial class MainViewModel : ViewModelBase
     private void Next()
     {
         var index = IndexOfCurrent();
-        if (index >= 0 && index + 1 < Tracks.Count)
-            PlayTrack(Tracks[index + 1]);
+        if (index >= 0 && index + 1 < _queue.Count)
+            StartPlayback(_queue[index + 1]);
     }
 
     [RelayCommand]
     private void Previous()
     {
-        // Convención habitual: pasados 3 s, "anterior" reinicia la canción actual.
         if (_player.CurrentTime > TimeSpan.FromSeconds(3))
         {
             _player.Seek(TimeSpan.Zero);
@@ -174,14 +205,14 @@ public partial class MainViewModel : ViewModelBase
 
         var index = IndexOfCurrent();
         if (index > 0)
-            PlayTrack(Tracks[index - 1]);
+            StartPlayback(_queue[index - 1]);
     }
 
     private int IndexOfCurrent()
     {
         if (CurrentTrack is null) return -1;
-        for (int i = 0; i < Tracks.Count; i++)
-            if (string.Equals(Tracks[i].Track.FilePath, CurrentTrack.Track.FilePath,
+        for (int i = 0; i < _queue.Count; i++)
+            if (string.Equals(_queue[i].Track.FilePath, CurrentTrack.Track.FilePath,
                     StringComparison.OrdinalIgnoreCase))
                 return i;
         return -1;

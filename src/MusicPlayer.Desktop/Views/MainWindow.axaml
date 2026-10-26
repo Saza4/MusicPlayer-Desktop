@@ -13,7 +13,10 @@
             <DockPanel>
                 <Button DockPanel.Dock="Left" Content="Agregar carpeta"
                         Command="{Binding AddFolderCommand}"/>
-                <TextBlock Text="{Binding Status}" Margin="16,0,0,0"
+                <TextBox DockPanel.Dock="Right" Width="280"
+                         Text="{Binding SearchText}"
+                         Watermark="Buscar por título, artista o álbum"/>
+                <TextBlock Text="{Binding Status}" Margin="16,0"
                            VerticalAlignment="Center" Opacity="0.7"/>
             </DockPanel>
         </Border>
