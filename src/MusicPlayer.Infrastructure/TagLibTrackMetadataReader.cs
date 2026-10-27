@@ -24,8 +24,7 @@ public sealed class TagLibTrackMetadataReader : ITrackMetadataReader
                 Year = tag.Year,
                 Genre = tag.FirstGenre,
                 TrackNumber = tag.Track,
-                Duration = file.Properties.Duration,
-                CoverArt = tag.Pictures.FirstOrDefault()?.Data.Data
+                Duration = file.Properties.Duration
             };
         }
         catch (Exception ex) when (ex is TagLib.CorruptFileException

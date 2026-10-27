@@ -20,8 +20,7 @@ public class JsonLibraryRepositoryTests : IDisposable
             Year = 2020,
             Genre = "Rock",
             TrackNumber = 3,
-            Duration = TimeSpan.FromSeconds(125.5),
-            CoverArt = new byte[] { 1, 2, 3 }
+            Duration = TimeSpan.FromSeconds(125.5)
         };
 
         await new JsonLibraryRepository(FilePath)
@@ -36,7 +35,6 @@ public class JsonLibraryRepositoryTests : IDisposable
         Assert.Equal("Álbum", t.Album);
         Assert.Equal(track.Duration, t.Duration);
         Assert.Equal(track.AddedAt, t.AddedAt);
-        Assert.Null(t.CoverArt); // la carátula no se persiste
         Assert.Equal(new[] { @"C:\Music" }, loaded.Folders);
     }
 

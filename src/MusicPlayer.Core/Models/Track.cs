@@ -11,6 +11,5 @@ public sealed record Track
     public string? Genre { get; init; }
     public uint TrackNumber { get; init; }
     public TimeSpan Duration { get; init; }
-    public byte[]? CoverArt { get; init; }
     public DateTimeOffset AddedAt { get; init; } = DateTimeOffset.UtcNow;
 }

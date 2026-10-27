@@ -40,7 +40,15 @@ public partial class App : Application
             var lyricsProvider = new CompanionLyricsProvider(
                 baseLyrics, parser, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
             var lyrics = new LyricsViewModel(lyricsProvider, player);
-            var viewModel = new MainViewModel(player, library, new AvaloniaFolderPickerService(window), lyrics);
+
+            var coverProvider = new CachedCoverArtProvider(new CompositeCoverArtProvider(new ICoverArtProvider[]
+            {
+                new EmbeddedCoverArtProvider(),  // prioridad: carátula incrustada
+                new FolderCoverArtProvider()     // respaldo: cover.jpg, folder.png...
+            }));
+            var covers = new CoverArtLoader(coverProvider);
+
+            var viewModel = new MainViewModel(player, library, new AvaloniaFolderPickerService(window), lyrics, covers);
 
             window.DataContext = viewModel;
             desktop.MainWindow = window;

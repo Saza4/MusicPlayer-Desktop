@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -19,6 +21,11 @@ public partial class MainViewModel : ViewModelBase
     private readonly LibraryService _library;
     private readonly IFolderPickerService _folderPicker;
     private readonly DispatcherTimer _timer;
+
+    private readonly CoverArtLoader _covers;
+    private CancellationTokenSource? _coverCts;
+    [ObservableProperty] private Bitmap? _nowPlayingCover;
+    [ObservableProperty] private bool _isImmersive;
 
     public LyricsViewModel Lyrics { get; }
 
@@ -49,8 +56,10 @@ public partial class MainViewModel : ViewModelBase
     public string PlayPauseText => IsPlaying ? "Pausa" : "Reproducir";
 
     public MainViewModel(IAudioPlayer player, LibraryService library,
-                         IFolderPickerService folderPicker, LyricsViewModel lyrics)
+                         IFolderPickerService folderPicker, LyricsViewModel lyrics,
+                         CoverArtLoader covers)
     {
+        _covers = covers;
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
@@ -105,7 +114,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void ApplySnapshot(LibrarySnapshot snapshot)
     {
-        _allTracks = snapshot.Tracks.Select(t => new TrackItemViewModel(t)).ToList();
+        _allTracks = snapshot.Tracks.Select(t => new TrackItemViewModel(t, _covers)).ToList();
         ApplyFilter();
     }
 
@@ -158,6 +167,7 @@ public partial class MainViewModel : ViewModelBase
             DurationText = TimeFormatter.Format(_player.Duration);
             CurrentTrack = item;
             _ = Lyrics.LoadAsync(item.Track); // sin await: la letra aparece cuando esté lista
+            _ = LoadNowPlayingCoverAsync(item.Track);
             NowPlaying = $"{item.Title} — {item.Artist}";
 
             _player.Play();
@@ -167,6 +177,32 @@ public partial class MainViewModel : ViewModelBase
             Status = ex.Message;
         }
     }
+
+    private async Task LoadNowPlayingCoverAsync(Track track)
+    {
+        _coverCts?.Cancel();
+        var cts = _coverCts = new CancellationTokenSource();
+        try
+        {
+            var cover = await _covers.LoadLargeAsync(track, cts.Token);
+            if (!cts.IsCancellationRequested)
+                NowPlayingCover = cover; // null si la pista no tiene carátula
+        }
+        catch (OperationCanceledException)
+        {
+            // Se cambió de canción antes de terminar.
+        }
+    }
+
+    [RelayCommand]
+    private void OpenImmersive()
+    {
+        if (CurrentTrack is not null)
+            IsImmersive = true;
+    }
+
+    [RelayCommand]
+    private void CloseImmersive() => IsImmersive = false;
 
     [RelayCommand]
     private void TogglePlayPause()
