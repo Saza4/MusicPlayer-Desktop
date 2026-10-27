@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -39,7 +40,6 @@ public partial class App : Application
             });
             var lyricsProvider = new CompanionLyricsProvider(
                 baseLyrics, parser, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
-            var lyrics = new LyricsViewModel(lyricsProvider, player);
 
             var coverProvider = new CachedCoverArtProvider(new CompositeCoverArtProvider(new ICoverArtProvider[]
             {
@@ -48,11 +48,20 @@ public partial class App : Application
             }));
             var covers = new CoverArtLoader(coverProvider);
 
-            var viewModel = new MainViewModel(player, library, new AvaloniaFolderPickerService(window), lyrics, covers);
+            var settings = new SettingsService(new JsonSettingsRepository(AppPaths.Settings));
+            var playlistManager = new PlaylistManager(new JsonPlaylistRepository(AppPaths.Playlists));
+            var playlists = new PlaylistViewModel(playlistManager);
+            var lyrics = new LyricsViewModel(lyricsProvider, player, settings);
+            var viewModel = new MainViewModel(
+                player, library, new AvaloniaFolderPickerService(window), lyrics, covers, playlists, settings);
 
             window.DataContext = viewModel;
             desktop.MainWindow = window;
-            desktop.Exit += (_, _) => player.Dispose();
+            desktop.Exit += (_, _) =>
+            {
+                Task.Run(() => settings.FlushAsync()).GetAwaiter().GetResult();
+                player.Dispose();
+            };
             _ = viewModel.InitializeAsync(); // carga la biblioteca guardada sin bloquear el arranque
         }
 

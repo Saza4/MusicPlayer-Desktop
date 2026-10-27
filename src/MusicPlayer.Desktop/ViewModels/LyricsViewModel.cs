@@ -7,13 +7,16 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicPlayer.Core.Interfaces;
 using MusicPlayer.Core.Models;
+using MusicPlayer.Core.Services;
 
 namespace MusicPlayer.Desktop.ViewModels;
 
-public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer player) : ObservableObject
+public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer player, SettingsService settings)
+    : ObservableObject
 {
     private LyricBlock _block = LyricBlock.Empty;
     private CancellationTokenSource? _cts;
+    private bool _restoring;
 
     [ObservableProperty] private ObservableCollection<LyricLineViewModel> _lines = new();
     [ObservableProperty] private bool _isSynced;
@@ -36,7 +39,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     [NotifyPropertyChangedFor(nameof(HasExtras))]
     private bool _hasPronunciation;
 
-    // Preferencias del usuario (por ahora solo viven mientras la app está abierta).
+    // Preferencias del usuario persistidas mediante SettingsService.
     [ObservableProperty] private bool _showTranslation;
     [ObservableProperty] private bool _showPronunciation;
     [ObservableProperty] private bool _hideOriginal;
@@ -47,10 +50,39 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
 
     public bool HasExtras => HasTranslation || HasPronunciation;
 
-    partial void OnShowTranslationChanged(bool value) => ApplyDisplay();
-    partial void OnShowPronunciationChanged(bool value) => ApplyDisplay();
-    partial void OnHideOriginalChanged(bool value) => ApplyDisplay();
-    partial void OnEmphasizePronunciationChanged(bool value) => ApplyDisplay();
+    partial void OnShowTranslationChanged(bool value) => OnPreferenceChanged();
+    partial void OnShowPronunciationChanged(bool value) => OnPreferenceChanged();
+    partial void OnHideOriginalChanged(bool value) => OnPreferenceChanged();
+    partial void OnEmphasizePronunciationChanged(bool value) => OnPreferenceChanged();
+
+    private void OnPreferenceChanged()
+    {
+        ApplyDisplay();
+        if (_restoring) return; // Al restaurar no hay nada nuevo que guardar
+        settings.Update(s => s with
+        {
+            ShowTranslation = ShowTranslation,
+            ShowPronunciation = ShowPronunciation,
+            HideOriginal = HideOriginal,
+            EmphasizePronunciation = EmphasizePronunciation
+        });
+    }
+
+    public void Restore(AppSettings saved)
+    {
+        _restoring = true;
+        try
+        {
+            ShowTranslation = saved.ShowTranslation;
+            ShowPronunciation = saved.ShowPronunciation;
+            HideOriginal = saved.HideOriginal;
+            EmphasizePronunciation = saved.EmphasizePronunciation;
+        }
+        finally
+        {
+            _restoring = false;
+        }
+    }
 
     public async Task LoadAsync(Track track)
     {
@@ -102,7 +134,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         if (line is not { IsSynced: true }) return;
 
         player.Seek(line.Line.Timestamp);
-        UpdatePosition(line.Line.Timestamp); // también funciona con la reproducción en pausa
+        UpdatePosition(line.Line.Timestamp); // También funciona con la reproducción en pausa
     }
 
     private void SetBlock(LyricBlock block)

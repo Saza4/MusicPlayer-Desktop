@@ -93,6 +93,9 @@
                                 Command="{Binding Lyrics.ToggleOpenCommand}"
                                 IsEnabled="{Binding Lyrics.IsAvailable}"/>
                         <Button Content="Pantalla completa" Command="{Binding OpenImmersiveCommand}"/>
+                        <TextBlock Text="Vol." VerticalAlignment="Center" Margin="16,0,0,0" Opacity="0.7"/>
+                        <Slider Minimum="0" Maximum="1" Width="120" VerticalAlignment="Center"
+                                Value="{Binding Volume}"/>
                     </StackPanel>
 
                     <Grid ColumnDefinitions="56,*,56">
@@ -107,12 +110,62 @@
                 </StackPanel>
             </Border>
 
-            <!-- Lista de canciones y panel de letras -->
-            <Grid ColumnDefinitions="*,Auto">
-                <ListBox Grid.Column="0" Margin="8"
+            <!-- Barra lateral, Lista de canciones y Panel de letras -->
+            <Grid ColumnDefinitions="220,*,Auto">
+                <DockPanel Grid.Column="0" Margin="8,8,0,8">
+                    <!-- Panel de edición (crear / renombrar / confirmar eliminación) -->
+                    <Border DockPanel.Dock="Bottom" Margin="0,8,0,0" Padding="8" CornerRadius="8"
+                            Background="#18FFFFFF" IsVisible="{Binding Playlists.IsEditing}">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{Binding Playlists.Prompt}" TextWrapping="Wrap"
+                                       FontWeight="SemiBold"/>
+                            <TextBox x:Name="PlaylistNameBox" Watermark="Nombre" MaxLength="80"
+                                     Text="{Binding Playlists.NameDraft}"
+                                     IsVisible="{Binding Playlists.IsNameInput}"
+                                     KeyDown="OnPlaylistNameKeyDown"/>
+                            <TextBlock Text="{Binding Playlists.EditError}" TextWrapping="Wrap"
+                                       Foreground="#FFE57373"
+                                       IsVisible="{Binding Playlists.HasEditError}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="{Binding Playlists.ConfirmText}"
+                                        Command="{Binding Playlists.ConfirmEditCommand}"/>
+                                <Button Content="Cancelar"
+                                        Command="{Binding Playlists.CancelEditCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <!-- Renombrar / eliminar: solo con una playlist seleccionada -->
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0"
+                                IsVisible="{Binding Playlists.HasPlaylistSelected}">
+                        <Button Content="Renombrar" Command="{Binding Playlists.BeginRenameCommand}"/>
+                        <Button Content="Eliminar" Command="{Binding Playlists.BeginDeleteCommand}"/>
+                    </StackPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button DockPanel.Dock="Right" Content="+" Padding="10,2"
+                                Command="{Binding Playlists.BeginCreateCommand}"
+                                ToolTip.Tip="Nueva playlist"/>
+                        <TextBlock Text="COLECCIONES" FontSize="12" Opacity="0.6"
+                                   VerticalAlignment="Center" Margin="8,0"/>
+                    </DockPanel>
+                    <ListBox ItemsSource="{Binding Playlists.Items}"
+                             SelectedItem="{Binding Playlists.Selected}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PlaylistItemViewModel">
+                                <DockPanel Margin="4">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}"
+                                               Opacity="0.6" Margin="8,0,0,0"/>
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+
+                <ListBox Grid.Column="1" Margin="8"
                          ItemsSource="{Binding Tracks}"
                          SelectedItem="{Binding SelectedTrack}"
-                         DoubleTapped="OnTrackDoubleTapped">
+                         DoubleTapped="OnTrackDoubleTapped"
+                         ContextRequested="OnTrackListContextRequested">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:TrackItemViewModel">
                             <Grid ColumnDefinitions="Auto,3*,2*,Auto" Margin="8,4">
@@ -131,7 +184,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Border Grid.Column="1" Width="380" Margin="0,8,8,8" Padding="8"
+                <Border Grid.Column="2" Width="380" Margin="0,8,8,8" Padding="8"
                         IsVisible="{Binding Lyrics.ShowPanel}"
                         BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="8">
                     <DockPanel>

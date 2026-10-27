@@ -23,11 +23,16 @@ public partial class MainViewModel : ViewModelBase
     private readonly DispatcherTimer _timer;
 
     private readonly CoverArtLoader _covers;
+    private readonly SettingsService _settings;
+    private bool _restoring;
     private CancellationTokenSource? _coverCts;
+
     [ObservableProperty] private Bitmap? _nowPlayingCover;
     [ObservableProperty] private bool _isImmersive;
+    [ObservableProperty] private double _volume = 1.0;
 
     public LyricsViewModel Lyrics { get; }
+    public PlaylistViewModel Playlists { get; }
 
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
     private IReadOnlyList<TrackItemViewModel> _queue = Array.Empty<TrackItemViewModel>();
@@ -57,13 +62,16 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel(IAudioPlayer player, LibraryService library,
                          IFolderPickerService folderPicker, LyricsViewModel lyrics,
-                         CoverArtLoader covers)
+                         CoverArtLoader covers, PlaylistViewModel playlists,
+                         SettingsService settings)
     {
         _covers = covers;
+        _settings = settings;
+        Lyrics = lyrics;
+        Playlists = playlists;
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
-        Lyrics = lyrics;
 
         // BASS dispara estos eventos desde su propio hilo: hay que volver al hilo de la UI.
         _player.StateChanged += (_, state) =>
@@ -77,6 +85,9 @@ public partial class MainViewModel : ViewModelBase
         // Espera 200 ms tras la última tecla para no refiltrar en cada pulsación.
         _searchDebounce = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Normal,
             (_, _) => { _searchDebounce.Stop(); ApplyFilter(); });
+
+        Playlists.Changed += (_, _) => ApplyFilter();
+        Playlists.Notified += message => Status = message;
     }
 
     // ---- Biblioteca ----
@@ -85,8 +96,25 @@ public partial class MainViewModel : ViewModelBase
     {
         try
         {
-            Status = "Cargando biblioteca…";
+            Status = "Cargando…";
+            var saved = await _settings.LoadAsync();
+            _restoring = true;
+            try
+            {
+                Volume = Math.Clamp(saved.Volume, 0.0, 1.0);
+                Lyrics.Restore(saved);
+            }
+            finally
+            {
+                _restoring = false;
+            }
+
+            await Playlists.InitializeAsync();
             ApplySnapshot(await _library.LoadAsync());
+
+            // La última canción queda seleccionada: Reproducir arranca desde ahí.
+            if (saved.LastTrackId is { } lastId)
+                SelectedTrack = _allTracks.FirstOrDefault(i => i.Track.Id == lastId);
         }
         catch (Exception ex)
         {
@@ -124,18 +152,31 @@ public partial class MainViewModel : ViewModelBase
         _searchDebounce.Start();
     }
 
+    private IReadOnlyList<TrackItemViewModel> CurrentSource() =>
+        Playlists.CurrentPlaylist is { } playlist
+            ? PlaylistManager.Resolve(playlist, _allTracks, i => i.Track.Id)
+            : _allTracks;
+
     private void ApplyFilter()
     {
-        var ids = TrackFilter.Filter(_allTracks.Select(i => i.Track), SearchText)
+        var source = CurrentSource();
+        var ids = TrackFilter.Filter(source.Select(i => i.Track), SearchText)
             .Select(t => t.Id)
             .ToHashSet();
 
         Tracks = new ObservableCollection<TrackItemViewModel>(
-            _allTracks.Where(i => ids.Contains(i.Track.Id))); // conserva el orden de la biblioteca
+            source.Where(i => ids.Contains(i.Track.Id))); // conserva el orden de la fuente
 
-        Status = _allTracks.Count == 0 ? "Agrega una carpeta para empezar"
-            : string.IsNullOrWhiteSpace(SearchText) ? $"{_allTracks.Count} canciones en la biblioteca"
-            : $"{Tracks.Count} de {_allTracks.Count} canciones";
+        var searching = !string.IsNullOrWhiteSpace(SearchText);
+        var playlist = Playlists.CurrentPlaylist;
+
+        Status = playlist is null
+            ? _allTracks.Count == 0 ? "Agrega una carpeta para empezar"
+              : searching ? $"{Tracks.Count} de {source.Count} canciones"
+              : $"{_allTracks.Count} canciones en la biblioteca"
+            : source.Count == 0 ? $"\"{playlist.Name}\" está vacía. Clic derecho en una canción para agregarla"
+              : searching ? $"{Tracks.Count} de {source.Count} canciones"
+              : $"{playlist.Name}: {source.Count} canciones";
     }
 
     // ---- Reproducción ----
@@ -168,6 +209,7 @@ public partial class MainViewModel : ViewModelBase
             CurrentTrack = item;
             _ = Lyrics.LoadAsync(item.Track); // sin await: la letra aparece cuando esté lista
             _ = LoadNowPlayingCoverAsync(item.Track);
+            _settings.Update(s => s with { LastTrackId = item.Track.Id });
             NowPlaying = $"{item.Title} — {item.Artist}";
 
             _player.Play();
@@ -259,7 +301,7 @@ public partial class MainViewModel : ViewModelBase
         return -1;
     }
 
-    // ---- Barra de progreso ----
+    // ---- Barra de progreso y volumen ----
 
     private void OnTick(object? sender, EventArgs e)
     {
@@ -280,5 +322,12 @@ public partial class MainViewModel : ViewModelBase
         // Si el cambio vino del usuario (arrastrando el Slider), saltar a ese punto.
         if (!_isUpdatingFromTimer)
             _player.Seek(TimeSpan.FromSeconds(value));
+    }
+
+    partial void OnVolumeChanged(double value)
+    {
+        _player.Volume = value;
+        if (!_restoring)
+            _settings.Update(s => s with { Volume = value });
     }
 }
