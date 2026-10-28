@@ -65,6 +65,19 @@
                 </DockPanel>
             </Border>
 
+            <!-- Barra de confirmación de eliminación -->
+            <Border DockPanel.Dock="Top" Padding="16,10" Background="#33E57373"
+                    IsVisible="{Binding IsConfirmingDelete}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Eliminar del disco" Command="{Binding ConfirmDeleteTrackCommand}"/>
+                        <Button Content="Cancelar" Command="{Binding CancelDeleteTrackCommand}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding DeletePrompt}" TextWrapping="Wrap"
+                               VerticalAlignment="Center" Margin="0,0,16,0"/>
+                </DockPanel>
+            </Border>
+
             <!-- Controles de reproducción -->
             <Border DockPanel.Dock="Bottom" Padding="16,12"
                     BorderThickness="0,1,0,0" BorderBrush="#33FFFFFF">

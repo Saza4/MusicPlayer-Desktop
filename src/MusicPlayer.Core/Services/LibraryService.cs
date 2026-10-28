@@ -40,6 +40,43 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         return _current;
     }
 
+    public async Task<RemoveResult> RemoveTracksAsync(IEnumerable<Guid> ids, bool deleteFiles)
+    {
+        var wanted = ids.ToHashSet();
+        var targets = _current.Tracks.Where(t => wanted.Contains(t.Id)).ToList();
+        var removed = new List<Track>();
+        var errors = new List<string>();
+
+        if (targets.Count == 0)
+            return new RemoveResult(_current, removed, errors);
+
+        await Task.Run(() =>
+        {
+            foreach (var track in targets)
+            {
+                if (deleteFiles)
+                {
+                    try { File.Delete(track.FilePath); } // no lanza si el archivo ya no existe
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        errors.Add($"{track.Title}: {ex.Message}");
+                        continue; // sigue en la biblioteca: el archivo no se pudo borrar
+                    }
+                }
+                removed.Add(track);
+            }
+        });
+
+        if (removed.Count == 0)
+            return new RemoveResult(_current, removed, errors);
+
+        var gone = removed.Select(t => t.Id).ToHashSet();
+        _current = _current with { Tracks = _current.Tracks.Where(t => !gone.Contains(t.Id)).ToList() };
+        await repository.SaveAsync(_current);
+
+        return new RemoveResult(_current, removed, errors);
+    }
+
     /// <summary>Quita de la biblioteca las pistas cuyo archivo ya no existe.</summary>
     public async Task<LibrarySnapshot> PruneMissingAsync(CancellationToken ct = default)
     {

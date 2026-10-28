@@ -31,6 +31,20 @@ public sealed class PlaylistManager(IPlaylistRepository repository)
         return renamed;
     }
 
+    /// <summary>Un solo guardado, y ninguno si no hay nada que limpiar.</summary>
+    public async Task RemoveTracksEverywhereAsync(IEnumerable<Guid> trackIds, CancellationToken ct = default)
+    {
+        var gone = trackIds.ToHashSet();
+        if (!_playlists.Any(p => p.TrackIds.Any(gone.Contains)))
+            return;
+
+        var updated = _playlists
+            .Select(p => p with { TrackIds = p.TrackIds.Where(t => !gone.Contains(t)).ToList() })
+            .ToList();
+
+        await CommitAsync(updated, ct);
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         Get(id);

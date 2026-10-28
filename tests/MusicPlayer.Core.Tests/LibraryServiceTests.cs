@@ -110,5 +110,52 @@ public class LibraryServiceTests : IDisposable
         Assert.Equal(1, repo.SaveCount);
     }
 
+    [Fact]
+    public async Task RemoveTracksAsync_Unlink_RemovesFromLibraryButKeepsFile()
+    {
+        var file = Touch("a/one.mp3");
+        Touch("a/two.mp3");
+        var repo = new InMemoryRepository();
+        var service = NewService(repo);
+        var snapshot = await service.AddFolderAsync(Path.Combine(_root, "a"));
+        var target = snapshot.Tracks.Single(t => t.Title == "one");
+
+        var result = await service.RemoveTracksAsync(new[] { target.Id }, deleteFiles: false);
+
+        Assert.Equal("two", Assert.Single(result.Snapshot.Tracks).Title);
+        Assert.Single(result.Removed);
+        Assert.Empty(result.Errors);
+        Assert.True(File.Exists(file));
+        Assert.Same(result.Snapshot, repo.Stored);
+    }
+
+    [Fact]
+    public async Task RemoveTracksAsync_DeleteFiles_RemovesFileAndTrack()
+    {
+        var file = Touch("a/one.mp3");
+        var service = NewService(new InMemoryRepository());
+        var snapshot = await service.AddFolderAsync(Path.Combine(_root, "a"));
+
+        var result = await service.RemoveTracksAsync(new[] { snapshot.Tracks[0].Id }, deleteFiles: true);
+
+        Assert.Empty(result.Snapshot.Tracks);
+        Assert.False(File.Exists(file));
+    }
+
+    [Fact]
+    public async Task RemoveTracksAsync_UnknownIds_DoesNothingAndDoesNotSave()
+    {
+        Touch("a/one.mp3");
+        var repo = new InMemoryRepository();
+        var service = NewService(repo);
+        await service.AddFolderAsync(Path.Combine(_root, "a"));
+
+        var result = await service.RemoveTracksAsync(new[] { Guid.NewGuid() }, deleteFiles: true);
+
+        Assert.Single(result.Snapshot.Tracks);
+        Assert.Empty(result.Removed);
+        Assert.Equal(1, repo.SaveCount); // solo el guardado de AddFolderAsync
+    }
+
     public void Dispose() => Directory.Delete(_root, recursive: true);
 }

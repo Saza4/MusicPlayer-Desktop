@@ -159,4 +159,11 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         foreach (var line in Lines)
             line.ApplyLayout(layout);
     }
+
+    /// <summary>Descarta la letra actual (por ejemplo, al detener la reproducción).</summary>
+    public void Clear()
+    {
+        _cts?.Cancel(); // evita que una carga en curso reponga la letra
+        SetBlock(LyricBlock.Empty);
+    }
 }

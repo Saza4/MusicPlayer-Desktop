@@ -172,4 +172,33 @@ public class PlaylistManagerTests
 
         Assert.Equal(new[] { "c", "a" }, result.Select(i => i.Name));
     }
+
+    [Fact]
+    public async Task RemoveTracksEverywhere_CleansEveryPlaylist()
+    {
+        var manager = new PlaylistManager(new InMemoryRepository());
+        var p1 = await manager.CreateAsync("P1");
+        var p2 = await manager.CreateAsync("P2");
+        await manager.AddTracksAsync(p1.Id, new[] { A, B });
+        await manager.AddTracksAsync(p2.Id, new[] { B, C });
+
+        await manager.RemoveTracksEverywhereAsync(new[] { B });
+
+        Assert.Equal(new[] { A }, manager.Find(p1.Id)!.TrackIds);
+        Assert.Equal(new[] { C }, manager.Find(p2.Id)!.TrackIds);
+    }
+
+    [Fact]
+    public async Task RemoveTracksEverywhere_NothingToRemove_DoesNotSave()
+    {
+        var repo = new InMemoryRepository();
+        var manager = new PlaylistManager(repo);
+        var playlist = await manager.CreateAsync("P");
+        await manager.AddTracksAsync(playlist.Id, new[] { A });
+        var savesBefore = repo.SaveCount;
+
+        await manager.RemoveTracksEverywhereAsync(new[] { C });
+
+        Assert.Equal(savesBefore, repo.SaveCount);
+    }
 }

@@ -107,6 +107,13 @@ public sealed class BassAudioPlayer : IAudioPlayer
         SetState(CorePlaybackState.Stopped);
     }
 
+    public void Unload()
+    {
+        ReleaseStream();
+        _duration = TimeSpan.Zero;
+        SetState(CorePlaybackState.Stopped);
+    }
+
     public void Seek(TimeSpan position)
     {
         if (_stream == 0) return;

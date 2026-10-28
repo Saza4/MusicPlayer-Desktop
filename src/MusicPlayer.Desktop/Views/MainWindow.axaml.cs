@@ -115,7 +115,8 @@ public partial class MainWindow : Window
         {
             vm.SelectedTrack = item;
             vm.PlayTrackCommand.Execute(item);
-        };
+        }
+        ;
         entries.Add(play);
         entries.Add(new Separator());
 
@@ -128,7 +129,8 @@ public partial class MainWindow : Window
             {
                 Header = MenuText(target.Name) + (alreadyIn ? "  ✓" : ""),
                 IsEnabled = !alreadyIn
-            };
+            }
+            ;
             entry.Click += (_, _) => _ = vm.Playlists.AddTrackAsync(item.Track, target);
             targets.Add(entry);
         }
@@ -148,6 +150,15 @@ public partial class MainWindow : Window
             remove.Click += (_, _) => _ = vm.Playlists.RemoveTrackAsync(item.Track);
             entries.Add(remove);
         }
+
+        entries.Add(new Separator());
+        var unlink = new MenuItem { Header = "Quitar de la biblioteca" };
+        unlink.Click += (_, _) => vm.UnlinkTrackCommand.Execute(item);
+        entries.Add(unlink);
+
+        var delete = new MenuItem { Header = "Eliminar del disco…" };
+        delete.Click += (_, _) => vm.AskDeleteTrackCommand.Execute(item);
+        entries.Add(delete);
 
         new ContextMenu { ItemsSource = entries }.Open(owner);
         e.Handled = true;

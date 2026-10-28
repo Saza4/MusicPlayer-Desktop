@@ -31,6 +31,16 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool _isImmersive;
     [ObservableProperty] private double _volume = 1.0;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt))]
+    private TrackItemViewModel? _trackPendingDelete;
+
+    public bool IsConfirmingDelete => TrackPendingDelete is not null;
+
+    public string DeletePrompt => TrackPendingDelete is { } track
+        ? $"¿Eliminar \"{track.Title}\" del disco? El archivo se borrará de forma permanente, sin pasar por la papelera."
+        : "";
+
     public LyricsViewModel Lyrics { get; }
     public PlaylistViewModel Playlists { get; }
 
@@ -177,6 +187,73 @@ public partial class MainViewModel : ViewModelBase
             : source.Count == 0 ? $"\"{playlist.Name}\" está vacía. Clic derecho en una canción para agregarla"
               : searching ? $"{Tracks.Count} de {source.Count} canciones"
               : $"{playlist.Name}: {source.Count} canciones";
+    }
+
+    // ---- Eliminación y desvinculación ----
+
+    [RelayCommand]
+    private Task UnlinkTrackAsync(TrackItemViewModel? item) => RemoveTrackAsync(item, deleteFile: false);
+
+    [RelayCommand]
+    private void AskDeleteTrack(TrackItemViewModel? item) => TrackPendingDelete = item;
+
+    [RelayCommand]
+    private void CancelDeleteTrack() => TrackPendingDelete = null;
+
+    [RelayCommand]
+    private async Task ConfirmDeleteTrackAsync()
+    {
+        var item = TrackPendingDelete;
+        TrackPendingDelete = null;
+        await RemoveTrackAsync(item, deleteFile: true);
+    }
+
+    private async Task RemoveTrackAsync(TrackItemViewModel? item, bool deleteFile)
+    {
+        if (item is null) return;
+        try
+        {
+            // Una sola regla: si suena la canción quitada, se detiene. Además, en Windows
+            // el archivo debe soltarse antes de poder borrarlo.
+            if (CurrentTrack?.Track.Id == item.Track.Id)
+                ClearCurrentTrack();
+
+            var result = await _library.RemoveTracksAsync(new[] { item.Track.Id }, deleteFile);
+            var removedIds = result.Removed.Select(t => t.Id).ToList();
+            _queue = _queue.Where(q => !removedIds.Contains(q.Track.Id)).ToList();
+            await Playlists.ForgetTracksAsync(removedIds);
+            ApplySnapshot(result.Snapshot);
+
+            // ApplySnapshot escribe el estado general: el mensaje de esta acción va después.
+            Status = result.Errors.Count > 0 ? $"No se pudo eliminar: {result.Errors[0]}"
+                : deleteFile ? $"\"{item.Title}\" eliminada del disco"
+                : $"\"{item.Title}\" quitada de la biblioteca";
+        }
+        catch (Exception ex)
+        {
+            Status = $"No se pudo quitar la canción: {ex.Message}";
+        }
+    }
+
+    private void ClearCurrentTrack()
+    {
+        _coverCts?.Cancel(); // evita que una carátula en curso reaparezca
+        Lyrics.Clear();
+        _player.Unload();
+        _isUpdatingFromTimer = true;
+        try
+        {
+            PositionSeconds = 0;
+            DurationSeconds = 1;
+        }
+        finally { _isUpdatingFromTimer = false; }
+
+        PositionText = "0:00";
+        DurationText = "0:00";
+        CurrentTrack = null;
+        NowPlaying = "Nada en reproducción";
+        NowPlayingCover = null;
+        IsImmersive = false;
     }
 
     // ---- Reproducción ----

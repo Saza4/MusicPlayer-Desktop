@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -181,6 +182,21 @@ public partial class PlaylistViewModel : ObservableObject
         catch (Exception ex)
         {
             Notified?.Invoke($"No se pudo quitar: {ex.Message}");
+        }
+    }
+
+    /// <summary>Quita estas pistas de todas las playlists y refresca la barra lateral.</summary>
+    public async Task ForgetTracksAsync(IReadOnlyCollection<Guid> trackIds)
+    {
+        try
+        {
+            await _manager.RemoveTracksEverywhereAsync(trackIds);
+            foreach (var item in Items)
+                Refresh(item);
+        }
+        catch (Exception ex)
+        {
+            Notified?.Invoke($"No se pudieron limpiar las playlists: {ex.Message}");
         }
     }
 
