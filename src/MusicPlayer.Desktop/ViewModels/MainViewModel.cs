@@ -31,6 +31,19 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool _isImmersive;
     [ObservableProperty] private double _volume = 1.0;
 
+    [ObservableProperty] private bool _isShuffleOn;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RepeatText))]
+    private RepeatMode _repeat;
+
+    public string RepeatText => Repeat switch
+    {
+        RepeatMode.All => "Repetir: todas",
+        RepeatMode.One => "Repetir: una",
+        _ => "Repetir: no"
+    };
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt))]
     private TrackItemViewModel? _trackPendingDelete;
@@ -45,7 +58,7 @@ public partial class MainViewModel : ViewModelBase
     public PlaylistViewModel Playlists { get; }
 
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
-    private IReadOnlyList<TrackItemViewModel> _queue = Array.Empty<TrackItemViewModel>();
+    private readonly PlayQueue<TrackItemViewModel> _queue = new();
     private readonly DispatcherTimer _searchDebounce;
     [ObservableProperty] private string _searchText = "";
 
@@ -87,7 +100,7 @@ public partial class MainViewModel : ViewModelBase
         _player.StateChanged += (_, state) =>
             Dispatcher.UIThread.Post(() => IsPlaying = state == PlaybackState.Playing);
         _player.TrackEnded += (_, _) =>
-            Dispatcher.UIThread.Post(() => Next());
+            Dispatcher.UIThread.Post(() => OnTrackEnded());
 
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, OnTick);
         _timer.Start();
@@ -112,6 +125,8 @@ public partial class MainViewModel : ViewModelBase
             try
             {
                 Volume = Math.Clamp(saved.Volume, 0.0, 1.0);
+                IsShuffleOn = saved.Shuffle;
+                Repeat = saved.Repeat;
                 Lyrics.Restore(saved);
             }
             finally
@@ -220,7 +235,7 @@ public partial class MainViewModel : ViewModelBase
 
             var result = await _library.RemoveTracksAsync(new[] { item.Track.Id }, deleteFile);
             var removedIds = result.Removed.Select(t => t.Id).ToList();
-            _queue = _queue.Where(q => !removedIds.Contains(q.Track.Id)).ToList();
+            _queue.RemoveWhere(q => removedIds.Contains(q.Track.Id));
             await Playlists.ForgetTracksAsync(removedIds);
             ApplySnapshot(result.Snapshot);
 
@@ -262,8 +277,17 @@ public partial class MainViewModel : ViewModelBase
     private void PlayTrack(TrackItemViewModel? item)
     {
         if (item is null) return;
-        _queue = Tracks.ToList(); // la cola es lo que el usuario veía al elegir
-        StartPlayback(item);
+        // La cola es lo que el usuario veía al elegir. Si la pista ya no está en la lista visible
+        // (por ejemplo, tras cambiar de playlist), suena sola.
+        var list = Tracks.ToList();
+        var index = list.FindIndex(i => i.Track.Id == item.Track.Id);
+        if (index < 0)
+        {
+            list = new List<TrackItemViewModel> { item };
+            index = 0;
+        }
+        _queue.Start(list, index);
+        StartPlayback(list[index]);
     }
 
     private void StartPlayback(TrackItemViewModel item)
@@ -349,33 +373,58 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void Next()
     {
-        var index = IndexOfCurrent();
-        if (index >= 0 && index + 1 < _queue.Count)
-            StartPlayback(_queue[index + 1]);
+        if (_queue.MoveNext() is { } next)
+            StartPlayback(next);
     }
 
     [RelayCommand]
     private void Previous()
     {
-        if (_player.CurrentTime > TimeSpan.FromSeconds(3))
+        // Convención habitual: pasados 3 s, "anterior" reinicia la canción actual.
+        if (_player.CurrentTime > TimeSpan.FromSeconds(3)
+            || _queue.MovePrevious() is not { } previous)
         {
             _player.Seek(TimeSpan.Zero);
             return;
         }
-
-        var index = IndexOfCurrent();
-        if (index > 0)
-            StartPlayback(_queue[index - 1]);
+        StartPlayback(previous);
     }
 
-    private int IndexOfCurrent()
+    private void OnTrackEnded()
     {
-        if (CurrentTrack is null) return -1;
-        for (int i = 0; i < _queue.Count; i++)
-            if (string.Equals(_queue[i].Track.FilePath, CurrentTrack.Track.FilePath,
-                    StringComparison.OrdinalIgnoreCase))
-                return i;
-        return -1;
+        if (_queue.MoveNextAfterEnd() is not { } next) return;
+        if (ReferenceEquals(next, CurrentTrack))
+        {
+            // "Repetir una": reinicia sin recargar el archivo, la letra ni la carátula.
+            _player.Seek(TimeSpan.Zero);
+            _player.Play();
+        }
+        else
+        {
+            StartPlayback(next);
+        }
+    }
+
+    [RelayCommand]
+    private void CycleRepeat() => Repeat = Repeat switch
+    {
+        RepeatMode.Off => RepeatMode.All,
+        RepeatMode.All => RepeatMode.One,
+        _ => RepeatMode.Off
+    };
+
+    partial void OnIsShuffleOnChanged(bool value)
+    {
+        _queue.Shuffle = value;
+        if (!_restoring)
+            _settings.Update(s => s with { Shuffle = value });
+    }
+
+    partial void OnRepeatChanged(RepeatMode value)
+    {
+        _queue.Repeat = value;
+        if (!_restoring)
+            _settings.Update(s => s with { Repeat = value });
     }
 
     // ---- Barra de progreso y volumen ----

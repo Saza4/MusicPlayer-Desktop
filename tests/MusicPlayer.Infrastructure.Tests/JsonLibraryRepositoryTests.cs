@@ -20,7 +20,8 @@ public class JsonLibraryRepositoryTests : IDisposable
             Year = 2020,
             Genre = "Rock",
             TrackNumber = 3,
-            Duration = TimeSpan.FromSeconds(125.5)
+            Duration = TimeSpan.FromSeconds(125.5),
+            DiscNumber = 2
         };
 
         await new JsonLibraryRepository(FilePath)
@@ -35,6 +36,7 @@ public class JsonLibraryRepositoryTests : IDisposable
         Assert.Equal("Álbum", t.Album);
         Assert.Equal(track.Duration, t.Duration);
         Assert.Equal(track.AddedAt, t.AddedAt);
+        Assert.Equal(2u, t.DiscNumber);
         Assert.Equal(new[] { @"C:\Music" }, loaded.Folders);
     }
 
@@ -58,6 +60,21 @@ public class JsonLibraryRepositoryTests : IDisposable
         Assert.Empty(loaded.Tracks);
         Assert.True(File.Exists(FilePath + ".corrupt"));
         Assert.False(File.Exists(FilePath));
+    }
+
+    [Fact]
+    public async Task Load_FileWrittenBeforeDiscNumberExisted_DefaultsToZero()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        await File.WriteAllTextAsync(FilePath, $$"""
+            {"Version":1,"Folders":[],"Tracks":[{"Id":"{{Guid.NewGuid()}}","FilePath":"a.mp3","Title":"t",
+            "Artist":"a","Album":"b","Year":0,"Genre":null,"TrackNumber":1,"DurationTicks":0,
+            "AddedAt":"2026-01-01T00:00:00+00:00"}]}
+            """);
+
+        var loaded = await new JsonLibraryRepository(FilePath).LoadAsync();
+
+        Assert.Equal(0u, Assert.Single(loaded.Tracks).DiscNumber);
     }
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);

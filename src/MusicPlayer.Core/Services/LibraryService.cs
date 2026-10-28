@@ -35,7 +35,7 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             ? _current.Folders
             : _current.Folders.Append(folder).ToList();
 
-        _current = new LibrarySnapshot(Order(byPath.Values), folders);
+        _current = new LibrarySnapshot(TrackSorter.Sort(byPath.Values), folders);
         await repository.SaveAsync(_current, ct);
         return _current;
     }
@@ -90,11 +90,4 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         await repository.SaveAsync(_current, ct);
         return _current;
     }
-
-    private static IReadOnlyList<Track> Order(IEnumerable<Track> tracks) =>
-        tracks.OrderBy(t => t.Artist, StringComparer.CurrentCultureIgnoreCase)
-              .ThenBy(t => t.Album, StringComparer.CurrentCultureIgnoreCase)
-              .ThenBy(t => t.TrackNumber)
-              .ThenBy(t => t.Title, StringComparer.CurrentCultureIgnoreCase)
-              .ToList();
 }

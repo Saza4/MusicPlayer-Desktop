@@ -24,6 +24,7 @@ public sealed class TagLibTrackMetadataReader : ITrackMetadataReader
                 Year = tag.Year,
                 Genre = tag.FirstGenre,
                 TrackNumber = tag.Track,
+                DiscNumber = tag.Disc,
                 Duration = file.Properties.Duration
             };
         }

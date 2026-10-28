@@ -102,6 +102,9 @@
                                 Command="{Binding TogglePlayPauseCommand}"
                                 MinWidth="100" HorizontalContentAlignment="Center"/>
                         <Button Content="Siguiente" Command="{Binding NextCommand}"/>
+                        <ToggleButton Content="Aleatorio" IsChecked="{Binding IsShuffleOn}"/>
+                        <Button Content="{Binding RepeatText}" Command="{Binding CycleRepeatCommand}"
+                                MinWidth="130" HorizontalContentAlignment="Center"/>
                         <Button Content="Letra"
                                 Command="{Binding Lyrics.ToggleOpenCommand}"
                                 IsEnabled="{Binding Lyrics.IsAvailable}"/>
@@ -288,6 +291,9 @@
                                     Command="{Binding TogglePlayPauseCommand}"
                                     MinWidth="100" HorizontalContentAlignment="Center"/>
                             <Button Content="Siguiente" Command="{Binding NextCommand}"/>
+                            <ToggleButton Content="Aleatorio" IsChecked="{Binding IsShuffleOn}"/>
+                            <Button Content="{Binding RepeatText}" Command="{Binding CycleRepeatCommand}"
+                                    MinWidth="130" HorizontalContentAlignment="Center"/>
                         </StackPanel>
                     </StackPanel>
                     <!-- Derecha: letras con la misma plantilla que el panel lateral -->

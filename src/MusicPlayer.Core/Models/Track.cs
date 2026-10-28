@@ -10,6 +10,7 @@ public sealed record Track
     public uint Year { get; init; }
     public string? Genre { get; init; }
     public uint TrackNumber { get; init; }
+    public uint DiscNumber { get; init; }
     public TimeSpan Duration { get; init; }
     public DateTimeOffset AddedAt { get; init; } = DateTimeOffset.UtcNow;
 }

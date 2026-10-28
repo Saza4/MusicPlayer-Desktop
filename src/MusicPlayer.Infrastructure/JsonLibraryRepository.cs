@@ -18,7 +18,7 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
 
     internal sealed record TrackRecord(
         Guid Id, string FilePath, string Title, string Artist, string Album,
-        uint Year, string? Genre, uint TrackNumber, long DurationTicks, DateTimeOffset AddedAt);
+        uint Year, string? Genre, uint TrackNumber, long DurationTicks, DateTimeOffset AddedAt, uint DiscNumber = 0);
 
     public async Task<LibrarySnapshot> LoadAsync(CancellationToken ct = default)
     {
@@ -43,7 +43,8 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
                 Genre = r.Genre,
                 TrackNumber = r.TrackNumber,
                 Duration = TimeSpan.FromTicks(r.DurationTicks),
-                AddedAt = r.AddedAt
+                AddedAt = r.AddedAt,
+                DiscNumber = r.DiscNumber
             }).ToList();
 
             return new LibrarySnapshot(tracks, file.Folders ?? new());
@@ -66,7 +67,7 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
             snapshot.Folders.ToList(),
             snapshot.Tracks.Select(t => new TrackRecord(
                 t.Id, t.FilePath, t.Title, t.Artist, t.Album, t.Year,
-                t.Genre, t.TrackNumber, t.Duration.Ticks, t.AddedAt)).ToList());
+                t.Genre, t.TrackNumber, t.Duration.Ticks, t.AddedAt, t.DiscNumber)).ToList());
 
         var tempPath = filePath + ".tmp";
         await using (var stream = File.Create(tempPath))

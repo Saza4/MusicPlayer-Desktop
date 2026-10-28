@@ -11,7 +11,7 @@ public class JsonSettingsRepositoryTests : IDisposable
     [Fact]
     public async Task SaveThenLoad_RoundTripsEverything()
     {
-        var settings = new AppSettings(0.35, true, true, true, true, Guid.NewGuid());
+        var settings = new AppSettings(0.35, true, true, true, true, Guid.NewGuid(), Shuffle: true, Repeat: RepeatMode.One);
 
         await new JsonSettingsRepository(FilePath).SaveAsync(settings);
         var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
