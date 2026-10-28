@@ -9,11 +9,6 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
     private const int CurrentVersion = 1;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    /// <summary>%APPDATA%\MusicPlayer en Windows, ~/.config/MusicPlayer en Linux.</summary>
-    public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "MusicPlayer", "library.json");
-
     internal sealed record LibraryFile(int Version, List<string>? Folders, List<TrackRecord>? Tracks);
 
     internal sealed record TrackRecord(

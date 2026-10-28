@@ -8,4 +8,5 @@ public static class AppPaths
 
     public static string Settings => Path.Combine(DataDirectory, "settings.json");
     public static string Playlists => Path.Combine(DataDirectory, "playlists.json");
+    public static string Library => Path.Combine(DataDirectory, "library.json");
 }
