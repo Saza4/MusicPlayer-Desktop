@@ -286,4 +286,74 @@ public class PlayQueueTests
         queue.RemoveWhere(s => s == "x");
         Assert.Equal("b", queue.MoveNext());
     }
+
+    [Fact]
+    public void Peek_ReturnsTheFollowingTrackWithoutAdvancing()
+    {
+        var queue = Started(1);
+
+        Assert.Equal("c", queue.PeekNextAfterEnd());
+        Assert.Equal("b", queue.Current);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void Peek_MatchesWhatTheTrackEndingWouldPlay_EvenWithShuffle(int seed)
+    {
+        var queue = Started(0, shuffle: true, seed: seed);
+
+        var peeked = queue.PeekNextAfterEnd();
+
+        Assert.Equal(peeked, queue.MoveNextAfterEnd());
+    }
+
+    [Fact]
+    public void Peek_RepeatOne_ReturnsTheCurrentTrack()
+    {
+        var queue = Started(1, repeat: RepeatMode.One);
+
+        Assert.Equal("b", queue.PeekNextAfterEnd());
+    }
+
+    [Fact]
+    public void Peek_LastTrackWithRepeatOff_ReturnsNull()
+    {
+        Assert.Null(Started(4).PeekNextAfterEnd());
+    }
+
+    [Fact]
+    public void Peek_LastTrackWithRepeatAll_ReturnsTheFirstTrack()
+    {
+        var queue = Started(4, repeat: RepeatMode.All);
+
+        Assert.Equal("a", queue.PeekNextAfterEnd());
+        Assert.Equal("a", queue.MoveNextAfterEnd());
+    }
+
+    [Fact]
+    public void Peek_LastTrackWithRepeatAllAndShuffle_IsUnknownUntilTheRoundStarts()
+    {
+        var queue = Started(0, shuffle: true, seed: 1, repeat: RepeatMode.All);
+        for (int i = 1; i < Songs.Length; i++) queue.MoveNext();
+
+        Assert.Null(queue.PeekNextAfterEnd());
+    }
+
+    [Fact]
+    public void Peek_SeesTracksAddedWithPlayNext()
+    {
+        var queue = Started(1);
+
+        queue.PlayNext("x");
+
+        Assert.Equal("x", queue.PeekNextAfterEnd());
+    }
+
+    [Fact]
+    public void Peek_EmptyQueue_ReturnsNull()
+    {
+        Assert.Null(new PlayQueue<string>().PeekNextAfterEnd());
+    }
 }

@@ -101,6 +101,8 @@ public partial class MainViewModel : ViewModelBase
             Dispatcher.UIThread.Post(() => IsPlaying = state == PlaybackState.Playing);
         _player.TrackEnded += (_, _) =>
             Dispatcher.UIThread.Post(() => OnTrackEnded());
+        _player.AdvancedToNext += (_, path) =>
+            Dispatcher.UIThread.Post(() => OnAdvancedToNext(path));
 
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, OnTick);
         _timer.Start();
@@ -228,6 +230,8 @@ public partial class MainViewModel : ViewModelBase
         if (item is null) return;
         try
         {
+            _player.PrepareNext(null); // suelta el archivo preparado: en Windows no se puede borrar un archivo abierto
+
             // Una sola regla: si suena la canción quitada, se detiene. Además, en Windows
             // el archivo debe soltarse antes de poder borrarlo.
             if (CurrentTrack?.Track.Id == item.Track.Id)
@@ -236,6 +240,7 @@ public partial class MainViewModel : ViewModelBase
             var result = await _library.RemoveTracksAsync(new[] { item.Track.Id }, deleteFile);
             var removedIds = result.Removed.Select(t => t.Id).ToList();
             _queue.RemoveWhere(q => removedIds.Contains(q.Track.Id));
+            UpdateGapless();
             await Playlists.ForgetTracksAsync(removedIds);
             ApplySnapshot(result.Snapshot);
 
@@ -295,31 +300,68 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             _player.Load(item.Track.FilePath);
-
-            // Reiniciar posición ANTES de cambiar el máximo: si no, el Slider ajusta su
-            // valor al nuevo rango y dispara un Seek no deseado.
-            _isUpdatingFromTimer = true;
-            try
-            {
-                PositionSeconds = 0;
-                DurationSeconds = Math.Max(_player.Duration.TotalSeconds, 1);
-            }
-            finally { _isUpdatingFromTimer = false; }
-
-            DurationText = TimeFormatter.Format(_player.Duration);
-            CurrentTrack = item;
-            _ = Lyrics.LoadAsync(item.Track); // sin await: la letra aparece cuando esté lista
-            _ = LoadNowPlayingCoverAsync(item.Track);
-            _settings.Update(s => s with { LastTrackId = item.Track.Id });
-            NowPlaying = $"{item.Title} — {item.Artist}";
-
+            ShowTrack(item);
             _player.Play();
+            UpdateGapless();
         }
         catch (Exception ex)
         {
             Status = ex.Message;
         }
     }
+
+    /// <summary>Actualiza lo que se ve (título, duración, letra, carátula) para la pista que suena.</summary>
+    private void ShowTrack(TrackItemViewModel item)
+    {
+        // Reiniciar posición ANTES de cambiar el máximo: si no, el Slider ajusta su
+        // valor al nuevo rango y dispara un Seek no deseado.
+        _isUpdatingFromTimer = true;
+        try
+        {
+            PositionSeconds = 0;
+            DurationSeconds = Math.Max(_player.Duration.TotalSeconds, 1);
+        }
+        finally { _isUpdatingFromTimer = false; }
+
+        DurationText = TimeFormatter.Format(_player.Duration);
+        CurrentTrack = item;
+        _ = Lyrics.LoadAsync(item.Track);
+        _ = LoadNowPlayingCoverAsync(item.Track);
+        _settings.Update(s => s with { LastTrackId = item.Track.Id });
+        NowPlaying = $"{item.Title} — {item.Artist}";
+    }
+
+    // El reproductor pasó solo a la pista preparada: aquí solo se pone al día la cola y lo que se ve.
+    private void OnAdvancedToNext(string path)
+    {
+        var next = _queue.MoveNextAfterEnd();
+        if (next is null) return;
+
+        if (!string.Equals(next.Track.FilePath, path, StringComparison.OrdinalIgnoreCase))
+        {
+            // La cola cambió justo antes del salto y lo que suena ya no coincide: se reinicia con lo correcto.
+            StartPlayback(next);
+            return;
+        }
+
+        if (ReferenceEquals(next, CurrentTrack))
+        {
+            // "Repetir una": misma letra y carátula, solo vuelve el contador al principio.
+            _isUpdatingFromTimer = true;
+            try { PositionSeconds = 0; }
+            finally { _isUpdatingFromTimer = false; }
+        }
+        else
+        {
+            ShowTrack(next);
+        }
+
+        UpdateGapless();
+    }
+
+    /// <summary>Le dice al reproductor cuál es la pista que sigue para que empiece sin silencio.</summary>
+    private void UpdateGapless() =>
+        _player.PrepareNext(CurrentTrack is null ? null : _queue.PeekNextAfterEnd()?.Track.FilePath);
 
     private async Task LoadNowPlayingCoverAsync(Track track)
     {
@@ -401,6 +443,7 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
         _queue.PlayNext(item);
+        UpdateGapless();
         Status = $"\"{item.Title}\" sonará a continuación";
     }
 
@@ -414,6 +457,7 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
         _queue.Enqueue(item);
+        UpdateGapless();
         Status = $"\"{item.Title}\" agregada al final de la cola";
     }
 
@@ -443,6 +487,7 @@ public partial class MainViewModel : ViewModelBase
     partial void OnIsShuffleOnChanged(bool value)
     {
         _queue.Shuffle = value;
+        UpdateGapless();
         if (!_restoring)
             _settings.Update(s => s with { Shuffle = value });
     }
@@ -450,6 +495,7 @@ public partial class MainViewModel : ViewModelBase
     partial void OnRepeatChanged(RepeatMode value)
     {
         _queue.Repeat = value;
+        UpdateGapless();
         if (!_restoring)
             _settings.Update(s => s with { Repeat = value });
     }

@@ -82,6 +82,20 @@ public sealed class PlayQueue<T> where T : class
     public T? MoveNextAfterEnd() =>
         Repeat == RepeatMode.One && Current is { } same ? same : MoveNext();
 
+    /// <summary>
+    /// Qué sonaría si la pista terminara ahora, sin avanzar la cola. Null si no hay siguiente
+    /// o no se puede saber de antemano (la vuelta de "Repetir todas" con Aleatorio se baraja al empezar).
+    /// </summary>
+    public T? PeekNextAfterEnd()
+    {
+        if (_position < 0) return null;
+        if (Repeat == RepeatMode.One) return Current;
+        if (_position + 1 < _order.Length) return _items[_order[_position + 1]];
+
+        // Fin de la cola: con "Repetir todas" sin Aleatorio la vuelta empieza por la primera pista.
+        return Repeat == RepeatMode.All && !_shuffle ? _items[0] : null;
+    }
+
     /// <summary>Pista anterior, o null si ya estamos en la primera.</summary>
     public T? MovePrevious()
     {

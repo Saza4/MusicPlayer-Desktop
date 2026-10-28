@@ -10,7 +10,7 @@ inversión de dependencias y pruebas unitarias**. No usa servicios de streaming.
 
 ## Funciones
 
-- **Reproducción** de `.mp3`, `.flac`, `.wav` y `.m4a` con seek, volumen, anterior y siguiente.
+- **Reproducción** de `.mp3`, `.flac`, `.wav` y `.m4a` con seek, volumen, anterior y siguiente, **sin silencios entre pistas** (BASSmix).
 - **Aleatorio** (Fisher-Yates sobre una lista de índices) y **repetir** (no / todas / una).
 - **Cola dinámica:** "Reproducir siguiente" y "Agregar a la cola" desde el clic derecho.
 - **Biblioteca:** escaneo de carpetas en segundo plano, metadatos con TagLibSharp, orden por
@@ -70,11 +70,11 @@ dotnet run --project src/MusicPlayer.Desktop
 ### Binarios de BASS
 
 El motor de audio usa [BASS](https://www.un4seen.com) mediante ManagedBass. Los binarios **no se
-incluyen en este repositorio**. Descarga **BASS**, **BASSFLAC** y **BASS_AAC** (64 bits) y colócalos así:
+incluyen en este repositorio**. Descarga **BASS**, **BASSFLAC**, **BASS_AAC** y **BASSmix** (64 bits) y colócalos así:
 
 ```
-src/MusicPlayer.Audio/native/win-x64/    bass.dll  bassflac.dll  bass_aac.dll
-src/MusicPlayer.Audio/native/linux-x64/  libbass.so  libbassflac.so  libbass_aac.so
+src/MusicPlayer.Audio/native/win-x64/    bass.dll  bassflac.dll  bass_aac.dll  bassmix.dll
+src/MusicPlayer.Audio/native/linux-x64/  libbass.so  libbassflac.so  libbass_aac.so  libbassmix.so
 ```
 
 El proyecto los copia solo junto al ejecutable. Sin ellos la aplicación no inicia.
@@ -95,7 +95,6 @@ o `~/.config/MusicPlayer` (Linux).
 
 ## Hoja de ruta
 
-- Reproducción sin silencios (gapless)
 - Teclas multimedia del sistema
 - Vistas por artista y álbum
 - Editor de etiquetas
