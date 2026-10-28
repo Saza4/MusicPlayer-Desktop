@@ -390,6 +390,33 @@ public partial class MainViewModel : ViewModelBase
         StartPlayback(previous);
     }
 
+    [RelayCommand]
+    private void PlayNext(TrackItemViewModel? item)
+    {
+        if (item is null) return;
+        // Sin nada sonando, "siguiente" equivale a reproducirla.
+        if (CurrentTrack is null)
+        {
+            PlayTrack(item);
+            return;
+        }
+        _queue.PlayNext(item);
+        Status = $"\"{item.Title}\" sonará a continuación";
+    }
+
+    [RelayCommand]
+    private void AddToQueue(TrackItemViewModel? item)
+    {
+        if (item is null) return;
+        if (CurrentTrack is null)
+        {
+            PlayTrack(item);
+            return;
+        }
+        _queue.Enqueue(item);
+        Status = $"\"{item.Title}\" agregada al final de la cola";
+    }
+
     private void OnTrackEnded()
     {
         if (_queue.MoveNextAfterEnd() is not { } next) return;

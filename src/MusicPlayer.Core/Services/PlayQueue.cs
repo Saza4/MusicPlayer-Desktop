@@ -9,6 +9,7 @@ public sealed class PlayQueue<T> where T : class
     private T[] _items = Array.Empty<T>();
     private int[] _order = Array.Empty<int>(); // índices de _items en el orden en que suenan
     private int _position = -1;                // posición dentro de _order
+    private int _pendingNext;                  // pistas de "Reproducir siguiente" que aún no han sonado
     private bool _shuffle;
 
     public PlayQueue(Random? random = null) => _random = random ?? Random.Shared;
@@ -41,7 +42,19 @@ public sealed class PlayQueue<T> where T : class
         _items = list;
         _order = _shuffle ? Shuffled(startIndex) : Sequential();
         _position = Array.IndexOf(_order, startIndex);
+        _pendingNext = 0;
     }
+
+    /// <summary>Hace sonar esta pista justo después de la actual (detrás de las que ya se pidieron "siguiente").</summary>
+    public void PlayNext(T item)
+    {
+        var at = Math.Min(_position + 1 + _pendingNext, _order.Length);
+        Insert(item, at);
+        _pendingNext++;
+    }
+
+    /// <summary>Añade esta pista al final de lo que queda por sonar.</summary>
+    public void Enqueue(T item) => Insert(item, _order.Length);
 
     /// <summary>Siguiente por acción del usuario: ignora "Repetir una". Null al llegar al final.</summary>
     public T? MoveNext()
@@ -51,6 +64,7 @@ public sealed class PlayQueue<T> where T : class
         if (_position + 1 < _order.Length)
         {
             _position++;
+            _pendingNext = Math.Max(0, _pendingNext - 1);
             return Current;
         }
 
@@ -60,6 +74,7 @@ public sealed class PlayQueue<T> where T : class
         var last = _position >= 0 ? _order[_position] : -1;
         _order = _shuffle ? Shuffled(first: -1, avoidFirst: last) : Sequential();
         _position = 0;
+        _pendingNext = 0;
         return Current;
     }
 
@@ -73,6 +88,7 @@ public sealed class PlayQueue<T> where T : class
         if (_position <= 0) return null;
 
         _position--;
+        _pendingNext = 0;
         return Current;
     }
 
@@ -98,6 +114,16 @@ public sealed class PlayQueue<T> where T : class
         _items = kept.ToArray();
         _order = order.ToArray();
         _position = position;
+        _pendingNext = 0;
+    }
+
+    private void Insert(T item, int orderPosition)
+    {
+        _items = _items.Append(item).ToArray();
+
+        var order = new List<int>(_order);
+        order.Insert(orderPosition, _items.Length - 1);
+        _order = order.ToArray();
     }
 
     // Al activar o desactivar Aleatorio, la pista en curso no cambia.
@@ -108,6 +134,7 @@ public sealed class PlayQueue<T> where T : class
         var current = _position >= 0 ? _order[_position] : -1;
         _order = _shuffle ? Shuffled(current) : Sequential();
         _position = current >= 0 ? Array.IndexOf(_order, current) : -1;
+        _pendingNext = 0;
     }
 
     private int[] Sequential() => Enumerable.Range(0, _items.Length).ToArray();

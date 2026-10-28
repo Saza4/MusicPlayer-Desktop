@@ -118,6 +118,15 @@ public partial class MainWindow : Window
         }
         ;
         entries.Add(play);
+
+        var playNext = new MenuItem { Header = "Reproducir siguiente" };
+        playNext.Click += (_, _) => vm.PlayNextCommand.Execute(item);
+        entries.Add(playNext);
+
+        var enqueue = new MenuItem { Header = "Agregar a la cola" };
+        enqueue.Click += (_, _) => vm.AddToQueueCommand.Execute(item);
+        entries.Add(enqueue);
+
         entries.Add(new Separator());
 
         // Submenú: una entrada por playlist, más "Nueva playlist…".

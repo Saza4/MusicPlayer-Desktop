@@ -196,4 +196,94 @@ public class PlayQueueTests
         Assert.Null(queue.MoveNext());
         Assert.Null(queue.MovePrevious());
     }
+
+    [Fact]
+    public void PlayNext_PlaysRightAfterTheCurrentTrack()
+    {
+        var queue = Started(1);
+        queue.PlayNext("x");
+        Assert.Equal("x", queue.MoveNext());
+        Assert.Equal("c", queue.MoveNext());
+    }
+
+    [Fact]
+    public void PlayNext_Several_PlayInTheOrderTheyWereAdded()
+    {
+        var queue = Started(1);
+        queue.PlayNext("x");
+        queue.PlayNext("y");
+        Assert.Equal("x", queue.MoveNext());
+        Assert.Equal("y", queue.MoveNext());
+        Assert.Equal("c", queue.MoveNext());
+    }
+
+    [Fact]
+    public void PlayNext_AfterTheQueuedTrackStarted_NewOneGoesRightAfterIt()
+    {
+        var queue = Started(1);
+        queue.PlayNext("x");
+        Assert.Equal("x", queue.MoveNext());
+        queue.PlayNext("y");
+        Assert.Equal("y", queue.MoveNext());
+        Assert.Equal("c", queue.MoveNext());
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void PlayNext_WithShuffle_StillPlaysNext(int seed)
+    {
+        var queue = Started(0, shuffle: true, seed: seed);
+        queue.PlayNext("x");
+        Assert.Equal("x", queue.MoveNext());
+    }
+
+    [Fact]
+    public void PlayNext_OnEmptyQueue_PlaysIt()
+    {
+        var queue = new PlayQueue<string>();
+        queue.PlayNext("x");
+        Assert.Equal(1, queue.Count);
+        Assert.Equal("x", queue.MoveNext());
+    }
+
+    [Fact]
+    public void Enqueue_PlaysAfterEverythingElse()
+    {
+        var queue = Started(2);
+        queue.Enqueue("x");
+        Assert.Equal(new[] { "c", "d", "e", "x" }, PlayThrough(queue));
+    }
+
+    [Fact]
+    public void Enqueue_WithShuffle_StaysLast()
+    {
+        for (int seed = 0; seed < 20; seed++)
+        {
+            var queue = Started(0, shuffle: true, seed: seed);
+            queue.Enqueue("x");
+            var played = PlayThrough(queue);
+            Assert.Equal(Songs.Length + 1, played.Count);
+            Assert.Equal("x", played[^1]);
+        }
+    }
+
+    [Fact]
+    public void Enqueue_WithRepeatAll_JoinsTheNextRound()
+    {
+        var queue = Started(4, repeat: RepeatMode.All);
+        queue.Enqueue("x");
+        Assert.Equal("x", queue.MoveNext());
+        Assert.Equal("a", queue.MoveNext()); // nueva vuelta
+    }
+
+    [Fact]
+    public void RemoveWhere_QueuedTrack_IsSkipped()
+    {
+        var queue = Started(0);
+        queue.PlayNext("x");
+        queue.RemoveWhere(s => s == "x");
+        Assert.Equal("b", queue.MoveNext());
+    }
 }
