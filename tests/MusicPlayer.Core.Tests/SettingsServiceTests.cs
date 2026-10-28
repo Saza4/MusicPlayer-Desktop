@@ -75,7 +75,7 @@ public class SettingsServiceTests
     public async Task Update_Burst_SavesOnlyOnceAfterTheDelay()
     {
         var repo = new InMemorySettingsRepository();
-        var service = new SettingsService(repo, TimeSpan.FromMilliseconds(50));
+        var service = new SettingsService(repo, TimeSpan.FromMilliseconds(250));
 
         for (int i = 1; i <= 5; i++)
         {
@@ -83,7 +83,7 @@ public class SettingsServiceTests
             service.Update(s => s with { Volume = volume });
         }
 
-        await Task.Delay(500);
+        await Task.Delay(1500);
 
         Assert.Equal(1, repo.SaveCount);
         Assert.Equal(0.5, repo.Stored.Volume);

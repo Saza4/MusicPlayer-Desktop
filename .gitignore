@@ -429,3 +429,4 @@ FodyWeavers.xsd
 
 # BASS native libraries
 src/MusicPlayer.Audio/native/
+src/MusicPlayer.Audio/native/
