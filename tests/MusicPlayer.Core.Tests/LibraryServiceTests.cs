@@ -95,18 +95,57 @@ public class LibraryServiceTests : IDisposable
             Stored = new LibrarySnapshot(
                 new[]
                 {
-                    new Track { FilePath = keep, Title = "keep" },
-                    new Track { FilePath = gone, Title = "gone" }
+                new Track { FilePath = keep, Title = "keep" },
+                new Track { FilePath = gone, Title = "gone" }
                 },
                 Array.Empty<string>())
         };
         var service = NewService(repo);
         await service.LoadAsync();
 
-        var snapshot = await service.PruneMissingAsync();
+        var result = await service.PruneMissingAsync();
 
-        Assert.Single(snapshot.Tracks);
-        Assert.Equal("keep", snapshot.Tracks[0].Title);
+        Assert.Equal("keep", Assert.Single(result.Snapshot.Tracks).Title);
+        Assert.Equal("gone", Assert.Single(result.Removed).Title);
+        Assert.Equal(1, repo.SaveCount);
+    }
+
+    [Fact]
+    public async Task FindMissingAsync_ReturnsOnlyTracksWhoseFileIsGone()
+    {
+        Touch("a/keep.mp3");
+        var doomed = Touch("a/gone.mp3");
+        var service = NewService(new InMemoryRepository());
+        await service.AddFolderAsync(Path.Combine(_root, "a"));
+
+        File.Delete(doomed);
+        var missing = await service.FindMissingAsync();
+
+        Assert.Equal("gone", Assert.Single(missing).Title);
+    }
+
+    [Fact]
+    public async Task FindMissingAsync_NothingMissing_ReturnsEmpty()
+    {
+        Touch("a/one.mp3");
+        var service = NewService(new InMemoryRepository());
+        await service.AddFolderAsync(Path.Combine(_root, "a"));
+
+        Assert.Empty(await service.FindMissingAsync());
+    }
+
+    [Fact]
+    public async Task PruneMissingAsync_NothingMissing_DoesNotSave()
+    {
+        Touch("a/one.mp3");
+        var repo = new InMemoryRepository();
+        var service = NewService(repo);
+        await service.AddFolderAsync(Path.Combine(_root, "a")); // un guardado
+
+        var result = await service.PruneMissingAsync();
+
+        Assert.Empty(result.Removed);
+        Assert.Single(result.Snapshot.Tracks);
         Assert.Equal(1, repo.SaveCount);
     }
 

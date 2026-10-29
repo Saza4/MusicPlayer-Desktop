@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,6 +54,34 @@ public partial class MainViewModel : ViewModelBase
     public string DeletePrompt => TrackPendingDelete is { } track
         ? $"¿Eliminar \"{track.Title}\" del disco? El archivo se borrará de forma permanente, sin pasar por la papelera."
         : "";
+
+    private HashSet<Guid> _missingIds = new(); // fuente de verdad de qué pistas faltan
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMissing), nameof(MissingPrompt))]
+    private int _missingCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MissingPrompt))]
+    private bool _isConfirmingPrune;
+
+    public bool HasMissing => MissingCount > 0;
+
+    public string MissingPrompt
+    {
+        get
+        {
+            var songs = MissingCount == 1 ? "1 canción" : $"{MissingCount} canciones";
+            return IsConfirmingPrune
+                ? $"¿Quitar {songs} de la biblioteca y de sus playlists? Los archivos no se tocan. Si desconectaste un disco, conéctalo y cancela."
+                : $"{songs} no disponible{(MissingCount == 1 ? "" : "s")}: el archivo se movió, se borró o el disco está desconectado.";
+        }
+    }
+
+    partial void OnMissingCountChanged(int value)
+    {
+        if (value == 0) IsConfirmingPrune = false; // nada que confirmar
+    }
 
     public LyricsViewModel Lyrics { get; }
     public PlaylistViewModel Playlists { get; }
@@ -142,6 +171,8 @@ public partial class MainViewModel : ViewModelBase
             // La última canción queda seleccionada: Reproducir arranca desde ahí.
             if (saved.LastTrackId is { } lastId)
                 SelectedTrack = _allTracks.FirstOrDefault(i => i.Track.Id == lastId);
+
+            _ = CheckAvailabilityAsync(); // en segundo plano: no retrasa el arranque
         }
         catch (Exception ex)
         {
@@ -160,6 +191,7 @@ public partial class MainViewModel : ViewModelBase
             Status = "Escaneando…";
             var progress = new Progress<int>(count => Status = $"Escaneando… {count} canciones");
             ApplySnapshot(await _library.AddFolderAsync(folder, progress));
+            _ = CheckAvailabilityAsync();
         }
         catch (Exception ex)
         {
@@ -169,7 +201,11 @@ public partial class MainViewModel : ViewModelBase
 
     private void ApplySnapshot(LibrarySnapshot snapshot)
     {
-        _allTracks = snapshot.Tracks.Select(t => new TrackItemViewModel(t, _covers)).ToList();
+        _missingIds.IntersectWith(snapshot.Tracks.Select(t => t.Id));
+        _allTracks = snapshot.Tracks
+            .Select(t => new TrackItemViewModel(t, _covers) { IsAvailable = !_missingIds.Contains(t.Id) })
+            .ToList();
+        MissingCount = _missingIds.Count;
         ApplyFilter();
     }
 
@@ -204,6 +240,82 @@ public partial class MainViewModel : ViewModelBase
             : source.Count == 0 ? $"\"{playlist.Name}\" está vacía. Clic derecho en una canción para agregarla"
               : searching ? $"{Tracks.Count} de {source.Count} canciones"
               : $"{playlist.Name}: {source.Count} canciones";
+    }
+
+    [RelayCommand]
+    private async Task CheckAvailabilityAsync()
+    {
+        try
+        {
+            var missing = await _library.FindMissingAsync();
+            _missingIds = missing.Select(t => t.Id).ToHashSet();
+            foreach (var item in _allTracks)
+                item.IsAvailable = !_missingIds.Contains(item.Track.Id);
+            MissingCount = _missingIds.Count;
+        }
+        catch (Exception ex)
+        {
+            Status = $"No se pudo revisar la biblioteca: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void AskPrune() => IsConfirmingPrune = true;
+
+    [RelayCommand]
+    private void CancelPrune() => IsConfirmingPrune = false;
+
+    [RelayCommand]
+    private async Task ConfirmPruneAsync()
+    {
+        IsConfirmingPrune = false;
+        try
+        {
+            // Si suena una pista que va a desaparecer de la biblioteca, se detiene (igual que al quitarla a mano).
+            if (CurrentTrack is { } playing && _missingIds.Contains(playing.Track.Id))
+                ClearCurrentTrack();
+
+            var result = await _library.PruneMissingAsync(); // vuelve a comprobar el disco en este momento
+            var removed = result.Removed.Select(t => t.Id).ToHashSet();
+            _queue.RemoveWhere(q => removed.Contains(q.Track.Id));
+            UpdateGapless();
+            await Playlists.ForgetTracksAsync(removed);
+            ApplySnapshot(result.Snapshot);
+
+            // ApplySnapshot escribe el estado general: el mensaje de esta acción va después.
+            Status = removed.Count == 0 ? "No había canciones no disponibles"
+                : removed.Count == 1 ? "1 canción quitada de la biblioteca"
+                : $"{removed.Count} canciones quitadas de la biblioteca";
+        }
+        catch (Exception ex)
+        {
+            Status = $"No se pudo limpiar la biblioteca: {ex.Message}";
+        }
+    }
+
+    private void MarkAvailability(TrackItemViewModel item, bool available)
+    {
+        var changed = available ? _missingIds.Remove(item.Track.Id) : _missingIds.Add(item.Track.Id);
+        if (!changed) return;
+        item.IsAvailable = available;
+        // La cola puede tener una instancia vieja (tras reescanear): se actualiza también la visible.
+        if (_allTracks.FirstOrDefault(i => i.Track.Id == item.Track.Id) is { } shown)
+            shown.IsAvailable = available;
+        MissingCount = _missingIds.Count;
+    }
+
+    /// <summary>Avanza la cola con <paramref name="advance"/> saltando las pistas cuyo archivo ya no existe.</summary>
+    private TrackItemViewModel? MoveToAvailable(Func<TrackItemViewModel?> advance)
+    {
+        // Tope de una vuelta completa: sin él, "Repetir todas" con todo ausente no terminaría nunca.
+        for (var attempts = 0; attempts <= _queue.Count; attempts++)
+        {
+            if (advance() is not { } candidate) return null;
+            var exists = File.Exists(candidate.Track.FilePath);
+            MarkAvailability(candidate, exists);
+            if (exists) return candidate;
+        }
+        return null;
     }
 
     // ---- Eliminación y desvinculación ----
@@ -297,15 +409,24 @@ public partial class MainViewModel : ViewModelBase
 
     private void StartPlayback(TrackItemViewModel item)
     {
+        if (!File.Exists(item.Track.FilePath))
+        {
+            MarkAvailability(item, false);
+            Status = $"\"{item.Title}\" no está disponible: el archivo se movió o se borró";
+            return;
+        }
         try
         {
             _player.Load(item.Track.FilePath);
+            MarkAvailability(item, true);
             ShowTrack(item);
             _player.Play();
             UpdateGapless();
         }
         catch (Exception ex)
         {
+            // Load ya soltó lo anterior: la interfaz no debe seguir diciendo que suena algo.
+            ClearCurrentTrack();
             Status = ex.Message;
         }
     }
@@ -415,7 +536,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void Next()
     {
-        if (_queue.MoveNext() is { } next)
+        if (MoveToAvailable(_queue.MoveNext) is { } next)
             StartPlayback(next);
     }
 
@@ -424,7 +545,7 @@ public partial class MainViewModel : ViewModelBase
     {
         // Convención habitual: pasados 3 s, "anterior" reinicia la canción actual.
         if (_player.CurrentTime > TimeSpan.FromSeconds(3)
-            || _queue.MovePrevious() is not { } previous)
+            || MoveToAvailable(_queue.MovePrevious) is not { } previous)
         {
             _player.Seek(TimeSpan.Zero);
             return;
@@ -463,7 +584,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void OnTrackEnded()
     {
-        if (_queue.MoveNextAfterEnd() is not { } next) return;
+        if (MoveToAvailable(_queue.MoveNextAfterEnd) is not { } next) return;
         if (ReferenceEquals(next, CurrentTrack))
         {
             // "Repetir una": reinicia sin recargar el archivo, la letra ni la carátula.

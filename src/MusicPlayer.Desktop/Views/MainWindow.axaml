@@ -27,6 +27,10 @@
     </Window.Resources>
 
     <Window.Styles>
+        <Style Selector="Style Selector" /> <!-- Preservado de estructura base -->
+        <Style Selector="Grid.missing">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
         <Style Selector="ListBox.lyrics ListBoxItem">
             <Setter Property="Padding" Value="0"/>
         </Style>
@@ -74,6 +78,25 @@
                         <Button Content="Cancelar" Command="{Binding CancelDeleteTrackCommand}"/>
                     </StackPanel>
                     <TextBlock Text="{Binding DeletePrompt}" TextWrapping="Wrap"
+                               VerticalAlignment="Center" Margin="0,0,16,0"/>
+                </DockPanel>
+            </Border>
+
+            <!-- Barra de aviso -->
+            <Border DockPanel.Dock="Top" Padding="16,10" Background="#33FFB74D"
+                    IsVisible="{Binding HasMissing}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Volver a revisar" Command="{Binding CheckAvailabilityCommand}"
+                                IsVisible="{Binding !IsConfirmingPrune}"/>
+                        <Button Content="Quitar de la biblioteca…" Command="{Binding AskPruneCommand}"
+                                IsVisible="{Binding !IsConfirmingPrune}"/>
+                        <Button Content="Quitar" Command="{Binding ConfirmPruneCommand}"
+                                IsVisible="{Binding IsConfirmingPrune}"/>
+                        <Button Content="Cancelar" Command="{Binding CancelPruneCommand}"
+                                IsVisible="{Binding IsConfirmingPrune}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding MissingPrompt}" TextWrapping="Wrap"
                                VerticalAlignment="Center" Margin="0,0,16,0"/>
                 </DockPanel>
             </Border>
@@ -184,7 +207,8 @@
                          ContextRequested="OnTrackListContextRequested">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:TrackItemViewModel">
-                            <Grid ColumnDefinitions="Auto,3*,2*,Auto" Margin="8,4">
+                            <Grid ColumnDefinitions="Auto,3*,2*,Auto" Margin="8,4"
+                                  Classes.missing="{Binding !IsAvailable}">
                                 <Border Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0"
                                         CornerRadius="4" ClipToBounds="True" Background="#22FFFFFF">
                                     <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
@@ -193,7 +217,7 @@
                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Grid.Column="2" Text="{Binding Artist}"
                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Opacity="0.7"/>
-                                <TextBlock Grid.Column="3" Text="{Binding DurationText}"
+                                <TextBlock Grid.Column="3" Text="{Binding TrailingText}"
                                            VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.7"/>
                             </Grid>
                         </DataTemplate>

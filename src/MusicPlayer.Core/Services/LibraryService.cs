@@ -77,17 +77,18 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         return new RemoveResult(_current, removed, errors);
     }
 
-    /// <summary>Quita de la biblioteca las pistas cuyo archivo ya no existe.</summary>
-    public async Task<LibrarySnapshot> PruneMissingAsync(CancellationToken ct = default)
+    /// <summary>Pistas de la biblioteca cuyo archivo ya no existe. No modifica nada.</summary>
+    public Task<IReadOnlyList<Track>> FindMissingAsync(CancellationToken ct = default)
     {
-        var existing = await Task.Run(
-            () => _current.Tracks.Where(t => File.Exists(t.FilePath)).ToList(), ct);
+        var tracks = _current.Tracks; // el snapshot es inmutable: se captura antes de salir del hilo
+        return Task.Run<IReadOnlyList<Track>>(
+            () => tracks.Where(t => !File.Exists(t.FilePath)).ToList(), ct);
+    }
 
-        if (existing.Count == _current.Tracks.Count)
-            return _current;
-
-        _current = _current with { Tracks = existing };
-        await repository.SaveAsync(_current, ct);
-        return _current;
+    /// <summary>Quita de la biblioteca (no del disco) las pistas cuyo archivo ya no existe.</summary>
+    public async Task<RemoveResult> PruneMissingAsync(CancellationToken ct = default)
+    {
+        var missing = await FindMissingAsync(ct);
+        return await RemoveTracksAsync(missing.Select(t => t.Id), deleteFiles: false);
     }
 }
