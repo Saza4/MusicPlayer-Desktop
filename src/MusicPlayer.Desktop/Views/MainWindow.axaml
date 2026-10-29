@@ -200,29 +200,87 @@
                     </ListBox>
                 </DockPanel>
 
-                <ListBox Grid.Column="1" Margin="8"
-                         ItemsSource="{Binding Tracks}"
-                         SelectedItem="{Binding SelectedTrack}"
-                         DoubleTapped="OnTrackDoubleTapped"
-                         ContextRequested="OnTrackListContextRequested">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:TrackItemViewModel">
-                            <Grid ColumnDefinitions="Auto,3*,2*,Auto" Margin="8,4"
-                                  Classes.missing="{Binding !IsAvailable}">
-                                <Border Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0"
-                                        CornerRadius="4" ClipToBounds="True" Background="#22FFFFFF">
-                                    <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
-                                </Border>
-                                <TextBlock Grid.Column="1" Text="{Binding Title}"
-                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Artist}"
-                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Opacity="0.7"/>
-                                <TextBlock Grid.Column="3" Text="{Binding TrailingText}"
-                                           VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.7"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <DockPanel Grid.Column="1" Margin="8">
+                    <TabStrip DockPanel.Dock="Top" Margin="0,0,0,6"
+                              IsVisible="{Binding ShowModeTabs}"
+                              SelectedIndex="{Binding BrowseIndex}">
+                        <TabStripItem Content="Canciones"/>
+                        <TabStripItem Content="Álbumes"/>
+                        <TabStripItem Content="Artistas"/>
+                    </TabStrip>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6" IsVisible="{Binding ShowBackBar}">
+                        <Button DockPanel.Dock="Left" Content="{Binding BackText}" Command="{Binding GoBackCommand}"/>
+                        <Button DockPanel.Dock="Right" Content="▶ Reproducir" Command="{Binding PlayScopeCommand}"/>
+                        <TextBlock Text="{Binding BrowseTitle}" FontWeight="SemiBold" Margin="12,0"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                    <Panel>
+                        <!-- Canciones: el mismo ListBox de antes, con IsVisible nuevo -->
+                        <ListBox IsVisible="{Binding ShowSongs}"
+                                 ItemsSource="{Binding Tracks}"
+                                 SelectedItem="{Binding SelectedTrack}"
+                                 DoubleTapped="OnTrackDoubleTapped"
+                                 ContextRequested="OnTrackListContextRequested">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TrackItemViewModel">
+                                    <Grid ColumnDefinitions="Auto,3*,2*,Auto" Margin="8,4"
+                                          Classes.missing="{Binding !IsAvailable}">
+                                        <!-- Thumbnail de Canciones -->
+                                        <Border Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0"
+                                                CornerRadius="4" ClipToBounds="True" Background="#22FFFFFF">
+                                            <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Title}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Artist}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Opacity="0.7"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding TrailingText}"
+                                                   VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.7"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <ListBox IsVisible="{Binding ShowAlbums}" ItemsSource="{Binding Albums}"
+                                 Tapped="OnBrowseTapped">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AlbumItemViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" Margin="8,4">
+                                        <!-- Thumbnail de Álbumes -->
+                                        <Border Width="56" Height="56" Margin="0,0,12,0" CornerRadius="4"
+                                                ClipToBounds="True" Background="#22FFFFFF">
+                                            <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Subtitle}" Opacity="0.7"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <ListBox IsVisible="{Binding ShowArtists}" ItemsSource="{Binding Artists}"
+                                 Tapped="OnBrowseTapped">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ArtistItemViewModel">
+                                    <Grid ColumnDefinitions="Auto,*" Margin="8,4">
+                                        <!-- Thumbnail de Artistas -->
+                                        <Border Width="56" Height="56" Margin="0,0,12,0" CornerRadius="4"
+                                                ClipToBounds="True" Background="#22FFFFFF">
+                                            <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Summary}" Opacity="0.7"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Panel>
+                </DockPanel>
 
                 <Border Grid.Column="2" Width="380" Margin="0,8,8,8" Padding="8"
                         IsVisible="{Binding Lyrics.ShowPanel}"

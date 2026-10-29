@@ -173,6 +173,17 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnBrowseTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+
+        switch ((e.Source as Control)?.DataContext)
+        {
+            case ArtistItemViewModel artist: vm.OpenArtistCommand.Execute(artist); break;
+            case AlbumItemViewModel album: vm.OpenAlbumCommand.Execute(album); break;
+        }
+    }
+
     // En el encabezado de un MenuItem, "_" marca una tecla de acceso: "__" muestra un guion bajo literal.
     private static string MenuText(string text) => text.Replace("_", "__");
 }

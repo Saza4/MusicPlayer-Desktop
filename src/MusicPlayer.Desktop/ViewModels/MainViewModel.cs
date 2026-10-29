@@ -83,6 +83,75 @@ public partial class MainViewModel : ViewModelBase
         if (value == 0) IsConfirmingPrune = false; // nada que confirmar
     }
 
+    // ---- Navegación por álbum y artista ----
+    [ObservableProperty] private int _browseIndex; // 0 Canciones, 1 Álbumes, 2 Artistas
+    [ObservableProperty] private ObservableCollection<AlbumItemViewModel> _albums = new();
+    [ObservableProperty] private ObservableCollection<ArtistItemViewModel> _artists = new();
+    private string? _artistScope;     // artista abierto
+    private AlbumGroup? _albumScope;  // álbum abierto
+    private BrowseMode Mode => (BrowseMode)Math.Max(0, BrowseIndex);
+    private bool InLibrary => Playlists.CurrentPlaylist is null;
+    public bool ShowModeTabs => InLibrary;
+    public bool ShowArtists => InLibrary && Mode == BrowseMode.Artists && _artistScope is null;
+    public bool ShowAlbums => InLibrary && _albumScope is null
+        && (Mode == BrowseMode.Albums || (Mode == BrowseMode.Artists && _artistScope is not null));
+    public bool ShowSongs => !ShowArtists && !ShowAlbums;
+    public bool ShowBackBar => InLibrary && (_artistScope is not null || _albumScope is not null);
+    public string BackText => _albumScope is null ? "← Artistas"
+        : _artistScope is { } artist ? $"← {artist}"
+        : "← Álbumes";
+    public string BrowseTitle => _albumScope is { } album ? $"{album.Album} — {album.Artist}" : _artistScope ?? "";
+
+    partial void OnBrowseIndexChanged(int value)
+    {
+        _artistScope = null;
+        _albumScope = null;
+        ApplyFilter();
+    }
+
+    private void NotifyBrowse()
+    {
+        OnPropertyChanged(nameof(ShowModeTabs));
+        OnPropertyChanged(nameof(ShowArtists));
+        OnPropertyChanged(nameof(ShowAlbums));
+        OnPropertyChanged(nameof(ShowSongs));
+        OnPropertyChanged(nameof(ShowBackBar));
+        OnPropertyChanged(nameof(BackText));
+        OnPropertyChanged(nameof(BrowseTitle));
+    }
+
+    [RelayCommand]
+    private void OpenArtist(ArtistItemViewModel? artist)
+    {
+        if (artist is null) return;
+        _artistScope = artist.Name;
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void OpenAlbum(AlbumItemViewModel? album)
+    {
+        if (album is null) return;
+        _albumScope = album.Group;
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void GoBack()
+    {
+        if (_albumScope is not null) _albumScope = null;
+        else _artistScope = null;
+        ApplyFilter();
+    }
+
+    /// <summary>Reproduce lo que se ve (álbum o discografía del artista) desde el principio.</summary>
+    [RelayCommand]
+    private void PlayScope()
+    {
+        if (Tracks.Count > 0)
+            PlayTrack(Tracks[0]);
+    }
+
     public LyricsViewModel Lyrics { get; }
     public PlaylistViewModel Playlists { get; }
 
@@ -226,20 +295,33 @@ public partial class MainViewModel : ViewModelBase
         var ids = TrackFilter.Filter(source.Select(i => i.Track), SearchText)
             .Select(t => t.Id)
             .ToHashSet();
-
-        Tracks = new ObservableCollection<TrackItemViewModel>(
-            source.Where(i => ids.Contains(i.Track.Id))); // conserva el orden de la fuente
-
-        var searching = !string.IsNullOrWhiteSpace(SearchText);
+        var visible = source.Where(i => ids.Contains(i.Track.Id)).ToList(); // conserva el orden de la fuente
         var playlist = Playlists.CurrentPlaylist;
-
-        Status = playlist is null
-            ? _allTracks.Count == 0 ? "Agrega una carpeta para empezar"
+        if (playlist is null)
+        {
+            Artists = new(LibraryGrouper.GroupArtists(visible.Select(i => i.Track))
+                .Select(g => new ArtistItemViewModel(g, _covers)));
+            if (_artistScope is { } artist)
+                visible = visible.Where(i =>
+                    string.Equals(i.Track.Artist.Trim(), artist, StringComparison.OrdinalIgnoreCase)).ToList();
+            Albums = new(LibraryGrouper.GroupAlbums(visible.Select(i => i.Track))
+                .Select(g => new AlbumItemViewModel(g, _covers)));
+            if (_albumScope is { } album)
+                visible = visible.Where(i => LibraryGrouper.AlbumKey(i.Track) == album.Key).ToList();
+        }
+        Tracks = new ObservableCollection<TrackItemViewModel>(visible);
+        var searching = !string.IsNullOrWhiteSpace(SearchText);
+        Status = playlist is not null
+            ? source.Count == 0 ? $"\"{playlist.Name}\" está vacía. Clic derecho en una canción para agregarla"
               : searching ? $"{Tracks.Count} de {source.Count} canciones"
-              : $"{_allTracks.Count} canciones en la biblioteca"
-            : source.Count == 0 ? $"\"{playlist.Name}\" está vacía. Clic derecho en una canción para agregarla"
-              : searching ? $"{Tracks.Count} de {source.Count} canciones"
-              : $"{playlist.Name}: {source.Count} canciones";
+              : $"{playlist.Name}: {source.Count} canciones"
+            : _allTracks.Count == 0 ? "Agrega una carpeta para empezar"
+            : ShowArtists ? Plural.Of(Artists.Count, "artista", "artistas")
+            : ShowAlbums ? Plural.Of(Albums.Count, "álbum", "álbumes")
+            : _albumScope is not null || _artistScope is not null ? Plural.Of(Tracks.Count, "canción", "canciones")
+            : searching ? $"{Tracks.Count} de {source.Count} canciones"
+            : $"{_allTracks.Count} canciones en la biblioteca";
+        NotifyBrowse();
     }
 
     [RelayCommand]
