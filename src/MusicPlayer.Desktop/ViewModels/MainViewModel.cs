@@ -303,7 +303,7 @@ public partial class MainViewModel : ViewModelBase
                 .Select(g => new ArtistItemViewModel(g, _covers)));
             if (_artistScope is { } artist)
                 visible = visible.Where(i =>
-                    string.Equals(i.Track.Artist.Trim(), artist, StringComparison.OrdinalIgnoreCase)).ToList();
+                    string.Equals(i.Track.AlbumOwner.Trim(), artist, StringComparison.OrdinalIgnoreCase)).ToList();
             Albums = new(LibraryGrouper.GroupAlbums(visible.Select(i => i.Track))
                 .Select(g => new AlbumItemViewModel(g, _covers)));
             if (_albumScope is { } album)

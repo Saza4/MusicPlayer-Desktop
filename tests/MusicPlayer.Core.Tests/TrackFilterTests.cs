@@ -50,4 +50,15 @@ public class TrackFilterTests
     {
         Assert.Empty(TrackFilter.Filter(Library, "zzz"));
     }
+
+    [Fact]
+    public void Filter_MatchesAlbumArtist()
+    {
+        var tracks = new[]
+        {
+        new Track { FilePath = "1", Title = "Song", Artist = "Someone", Album = "Hits", AlbumArtist = "Various Artists" }
+    };
+
+        Assert.Single(TrackFilter.Filter(tracks, "various"));
+    }
 }

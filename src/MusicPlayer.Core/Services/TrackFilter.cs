@@ -20,6 +20,7 @@ public static class TrackFilter
     private static bool Matches(CompareInfo compare, Track track, string term) =>
         Contains(compare, track.Title, term)
         || Contains(compare, track.Artist, term)
+        || Contains(compare, track.AlbumArtist, term)
         || Contains(compare, track.Album, term);
 
     private static bool Contains(CompareInfo compare, string? text, string term) =>

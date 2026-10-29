@@ -46,4 +46,22 @@ public class TrackSorterTests
 
         Assert.Equal(new[] { "3", "2", "1" }, sorted.Select(t => t.Title));
     }
+
+    [Fact]
+    public void Sort_CompilationFollowsTrackNumberNotTrackArtist()
+    {
+        Track C(string title, string artist, uint number) => new()
+        {
+            FilePath = title,
+            Title = title,
+            Artist = artist,
+            Album = "Hits",
+            AlbumArtist = "Various Artists",
+            TrackNumber = number
+        };
+
+        var sorted = TrackSorter.Sort(new[] { C("second", "Abe", 2), C("first", "Zed", 1) });
+
+        Assert.Equal(new[] { "first", "second" }, sorted.Select(t => t.Title));
+    }
 }

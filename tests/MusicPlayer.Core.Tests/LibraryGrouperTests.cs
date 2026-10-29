@@ -6,17 +6,18 @@ namespace MusicPlayer.Core.Tests;
 public class LibraryGrouperTests
 {
     private static Track T(string title, string artist = "A", string album = "X",
-                           uint disc = 1, uint number = 1, uint year = 0) =>
-        new()
-        {
-            FilePath = $"{artist}/{album}/{title}",
-            Title = title,
-            Artist = artist,
-            Album = album,
-            DiscNumber = disc,
-            TrackNumber = number,
-            Year = year
-        };
+                       uint disc = 1, uint number = 1, uint year = 0, string albumArtist = "") =>
+    new()
+    {
+        FilePath = $"{artist}/{album}/{title}",
+        Title = title,
+        Artist = artist,
+        Album = album,
+        DiscNumber = disc,
+        TrackNumber = number,
+        Year = year,
+        AlbumArtist = albumArtist
+    };
 
     [Fact]
     public void GroupAlbums_SameAlbumIgnoringCaseAndSpaces_IsOneGroup()
@@ -122,5 +123,53 @@ public class LibraryGrouperTests
         Assert.Equal(
             LibraryGrouper.AlbumKey(T("1", artist: "Queen ", album: "Opera")),
             LibraryGrouper.AlbumKey(T("2", artist: "queen", album: " OPERA")));
+    }
+
+    [Fact]
+    public void GroupAlbums_Compilation_IsOneAlbumUnderTheAlbumArtistInTrackOrder()
+    {
+        var album = Assert.Single(LibraryGrouper.GroupAlbums(new[]
+        {
+        T("second", artist: "Abe", album: "Hits", number: 2, albumArtist: "Various Artists"),
+        T("first", artist: "Zed", album: "Hits", number: 1, albumArtist: "Various Artists"),
+    }));
+
+        Assert.Equal("Various Artists", album.Artist);
+        Assert.Equal(new[] { "first", "second" }, album.Tracks.Select(t => t.Title));
+    }
+
+    [Fact]
+    public void GroupAlbums_SomeTracksWithoutAlbumArtist_SplitTheAlbum()
+    {
+        // Limitación conocida: la etiqueta debe estar en todas las pistas del álbum.
+        var albums = LibraryGrouper.GroupAlbums(new[]
+        {
+        T("1", artist: "A", album: "Hits", albumArtist: "Various Artists"),
+        T("2", artist: "B", album: "Hits")
+    });
+
+        Assert.Equal(2, albums.Count);
+    }
+
+    [Fact]
+    public void GroupArtists_GroupsByAlbumArtist()
+    {
+        var artists = LibraryGrouper.GroupArtists(new[]
+        {
+        T("1", artist: "A", album: "Hits", albumArtist: "Various Artists"),
+        T("2", artist: "B", album: "Hits", albumArtist: "Various Artists"),
+        T("3", artist: "A", album: "Solo")
+    });
+
+        Assert.Equal(new[] { "A", "Various Artists" }, artists.Select(a => a.Name));
+        Assert.Equal(2, artists.Single(a => a.Name == "Various Artists").TrackCount);
+    }
+
+    [Fact]
+    public void AlbumKey_UsesTheAlbumArtistWhenPresent()
+    {
+        Assert.Equal(
+            LibraryGrouper.AlbumKey(T("1", artist: "A", album: "Hits", albumArtist: "Various Artists")),
+            LibraryGrouper.AlbumKey(T("2", artist: "B", album: "Hits", albumArtist: " various artists")));
     }
 }

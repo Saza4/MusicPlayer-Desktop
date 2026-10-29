@@ -23,7 +23,7 @@ inversión de dependencias y pruebas unitarias**. No usa servicios de streaming.
 - **Carátulas bajo demanda** (incrustadas o `cover.jpg`) con caché LRU.
 - **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir y última canción.
 - **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists.
-- **Navegación por artista y álbum:** artistas → álbumes por año → pistas en orden de disco y número, con carátulas y reproducción del álbum o de la discografía.
+- **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
 
 ## Arquitectura
 
@@ -98,7 +98,6 @@ o `~/.config/MusicPlayer` (Linux).
 ## Hoja de ruta
 
 - Teclas multimedia del sistema
-- Vistas por artista y álbum
 - Editor de etiquetas
 
 ## Licencias

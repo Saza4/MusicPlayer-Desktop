@@ -6,7 +6,7 @@ public static class TrackSorter
 {
     /// <summary>Artista, álbum, disco, pista y título. Sin etiqueta de disco (0) cuenta como disco 1.</summary>
     public static IReadOnlyList<Track> Sort(IEnumerable<Track> tracks) =>
-        tracks.OrderBy(t => t.Artist, StringComparer.CurrentCultureIgnoreCase)
+        tracks.OrderBy(t => t.AlbumOwner, StringComparer.CurrentCultureIgnoreCase)
               .ThenBy(t => t.Album, StringComparer.CurrentCultureIgnoreCase)
               .ThenBy(t => Math.Max(t.DiscNumber, 1u))
               .ThenBy(t => t.TrackNumber)

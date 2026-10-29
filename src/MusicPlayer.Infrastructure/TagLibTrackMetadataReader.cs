@@ -20,6 +20,7 @@ public sealed class TagLibTrackMetadataReader : ITrackMetadataReader
                     ? Path.GetFileNameWithoutExtension(filePath)
                     : tag.Title.Trim(),
                 Artist = FirstNonEmpty(tag.FirstPerformer, tag.FirstAlbumArtist) ?? "Artista desconocido",
+                AlbumArtist = tag.FirstAlbumArtist?.Trim() ?? "",
                 Album = string.IsNullOrWhiteSpace(tag.Album) ? "Álbum desconocido" : tag.Album.Trim(),
                 Year = tag.Year,
                 Genre = tag.FirstGenre,

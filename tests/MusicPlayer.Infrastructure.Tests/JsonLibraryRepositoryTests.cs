@@ -21,7 +21,8 @@ public class JsonLibraryRepositoryTests : IDisposable
             Genre = "Rock",
             TrackNumber = 3,
             Duration = TimeSpan.FromSeconds(125.5),
-            DiscNumber = 2
+            DiscNumber = 2,
+            AlbumArtist = "Various Artists"
         };
 
         await new JsonLibraryRepository(FilePath)
@@ -37,6 +38,7 @@ public class JsonLibraryRepositoryTests : IDisposable
         Assert.Equal(track.Duration, t.Duration);
         Assert.Equal(track.AddedAt, t.AddedAt);
         Assert.Equal(2u, t.DiscNumber);
+        Assert.Equal("Various Artists", t.AlbumArtist);
         Assert.Equal(new[] { @"C:\Music" }, loaded.Folders);
     }
 
@@ -75,6 +77,7 @@ public class JsonLibraryRepositoryTests : IDisposable
         var loaded = await new JsonLibraryRepository(FilePath).LoadAsync();
 
         Assert.Equal(0u, Assert.Single(loaded.Tracks).DiscNumber);
+        Assert.Equal("", loaded.Tracks[0].AlbumArtist);
     }
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);
