@@ -1,9 +1,8 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
-    <img src="docs/app.png" alt="RetroBIOS" width="400">
-  </picture>
+  <img src="./docs/app.png" alt="MusicPlayer-Desktop" width="400">
 </p>
+
+# MusicPlayer-Desktop
 
 # MusicPlayer-Desktop
 
