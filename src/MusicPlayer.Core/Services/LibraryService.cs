@@ -121,4 +121,17 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         await repository.SaveAsync(_current, ct);
         return _current;
     }
+
+    /// <summary>Aplica etiquetas a varias pistas con un único guardado y reordena.</summary>
+    public async Task<LibrarySnapshot> ApplyTagsBatchAsync(
+        IReadOnlyDictionary<Guid, TrackTags> changes, CancellationToken ct = default)
+    {
+        if (changes.Count == 0)
+            return _current;
+
+        var updated = _current.Tracks.Select(t => changes.TryGetValue(t.Id, out var tags) ? tags.ApplyTo(t) : t);
+        _current = _current with { Tracks = TrackSorter.Sort(updated) };
+        await repository.SaveAsync(_current, ct);
+        return _current;
+    }
 }

@@ -155,6 +155,7 @@ public partial class MainViewModel : ViewModelBase
     public LyricsViewModel Lyrics { get; }
     public PlaylistViewModel Playlists { get; }
     public TagEditorViewModel TagEditor { get; }
+    public TagAutoFixViewModel AutoFix { get; }
 
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
     private readonly PlayQueue<TrackItemViewModel> _queue = new();
@@ -185,13 +186,15 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel(IAudioPlayer player, LibraryService library,
                          IFolderPickerService folderPicker, LyricsViewModel lyrics,
                          CoverArtLoader covers, PlaylistViewModel playlists,
-                         SettingsService settings, TagEditorViewModel tagEditor)
+                         SettingsService settings, TagEditorViewModel tagEditor,
+                         TagAutoFixViewModel autoFix)
     {
         _covers = covers;
         _settings = settings;
         Lyrics = lyrics;
         Playlists = playlists;
         TagEditor = tagEditor;
+        AutoFix = autoFix;
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
@@ -216,6 +219,9 @@ public partial class MainViewModel : ViewModelBase
         TagEditor.Saving += OnTagsSaving;
         TagEditor.Saved += OnTagsSaved;
         TagEditor.Notified += message => Status = message;
+        AutoFix.Saving += OnAutoFixSaving;
+        AutoFix.Applied += OnTagsSaved; // el mismo manejador del editor manual
+        AutoFix.Notified += message => Status = message;
     }
 
     // ---- Biblioteca ----
@@ -702,6 +708,18 @@ public partial class MainViewModel : ViewModelBase
         _albumScope = null;
         ApplySnapshot(snapshot);
         UpdateGapless();
+    }
+
+    // Revisa lo que se ve: un álbum o artista abierto, una playlist o la biblioteca filtrada.
+    [RelayCommand]
+    private void OpenAutoFix() =>
+        AutoFix.Begin(Tracks.Where(t => t.IsAvailable).Select(t => t.Track).ToList());
+
+    private void OnAutoFixSaving(IReadOnlySet<Guid> ids)
+    {
+        _player.PrepareNext(null); // suelta el archivo preparado
+        if (CurrentTrack is { } current && ids.Contains(current.Track.Id))
+            ClearCurrentTrack();
     }
 
     [RelayCommand]

@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+    <img src="docs/app.png" alt="RetroBIOS" width="400">
+  </picture>
+</p>
+
 # MusicPlayer-Desktop
 
 [![CI](https://github.com/Saza4/MusicPlayer-Desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/Saza4/MusicPlayer-Desktop/actions/workflows/ci.yml)
@@ -25,6 +32,7 @@ inversión de dependencias y pruebas unitarias**. No usa servicios de streaming.
 - **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists. Al agregar la carpeta nueva, las pistas movidas se reconocen por título, artista, álbum y duración y conservan sus playlists.
 - **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
 - **Editor de etiquetas:** corrige título, artista, artista del álbum, álbum, año, pista y disco directamente en el archivo (TagLibSharp). La canción conserva su identidad y sus playlists.
+- **Autocompletar/Limpiar etiquetas (local):** propone, con vista previa, título, artista y número de pista a partir del nombre del archivo, limpia basura de descargas ("Official Video", marcas de agua) y agrupa recopilatorios. Escribe de forma atómica (copia temporal, verificación y reemplazo) y permite deshacer.
 
 ## Arquitectura
 

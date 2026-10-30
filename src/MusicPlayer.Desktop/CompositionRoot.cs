@@ -61,6 +61,7 @@ public static class CompositionRoot
         services.AddSingleton<PlaylistViewModel>();
         services.AddSingleton<LyricsViewModel>();
         services.AddSingleton<TagEditorViewModel>();
+        services.AddSingleton<TagAutoFixViewModel>();
         services.AddSingleton<MainViewModel>();
 
         // Un registro que falte falla aquí, al arrancar, y no la primera vez que se use.

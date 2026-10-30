@@ -55,5 +55,29 @@ public class TagLibTrackTagWriterTests : IDisposable
         Assert.Equal(0u, track.Year);
     }
 
+    [Fact]
+    public void Write_LeavesNoTemporaryFilesBehind()
+    {
+        var path = CreateMp3("song.mp3");
+        new TagLibTrackTagWriter().Write(path, new TrackTags("Título", "Artista", "", "", 0, 1, 0));
+        Assert.Single(Directory.GetFiles(_dir));
+    }
+
+    [Fact]
+    public void Write_ReadOnlyFile_ThrowsAndKeepsTheFileUntouched()
+    {
+        var path = CreateMp3("readonly.mp3");
+        var before = File.ReadAllBytes(path);
+        File.SetAttributes(path, FileAttributes.ReadOnly);
+        try
+        {
+            Assert.Throws<UnauthorizedAccessException>(() =>
+                new TagLibTrackTagWriter().Write(path, new TrackTags("Nuevo", "", "", "", 0, 0, 0)));
+            Assert.Equal(before, File.ReadAllBytes(path));
+            Assert.Single(Directory.GetFiles(_dir));
+        }
+        finally { File.SetAttributes(path, FileAttributes.Normal); } // para que Dispose pueda borrar la carpeta
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

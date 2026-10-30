@@ -1,248 +1,487 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
-        x:Class="MusicPlayer.Desktop.Views.MainWindow"
-        x:DataType="vm:MainViewModel"
-        Icon="/Assets/app.ico"
-        Title="Music Player" Width="960" Height="600" MinWidth="640" MinHeight="400">
+<Window
+    x:Class="MusicPlayer.Desktop.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
+    Title="Music Player"
+    Width="960"
+    Height="600"
+    MinWidth="640"
+    MinHeight="400"
+    x:DataType="vm:MainViewModel"
+    Icon="/Assets/app.ico">
 
     <Window.Resources>
         <DataTemplate x:Key="LyricLineTemplate" x:DataType="vm:LyricLineViewModel">
-            <StackPanel Spacing="2" Margin="8,6" Background="Transparent"
-                        Classes.synced="{Binding IsSynced}"
-                        Classes.active="{Binding IsActive}">
-                <TextBlock Classes="lead" TextWrapping="Wrap"
-                           Text="{Binding Pronunciation}"
-                           IsVisible="{Binding ShowPronunciation}"
-                           FontSize="{Binding PronunciationFontSize}"/>
-                <TextBlock Classes="lead" TextWrapping="Wrap"
-                           Text="{Binding Text}"
-                           IsVisible="{Binding ShowOriginal}"
-                           FontSize="{Binding OriginalFontSize}"/>
-                <TextBlock TextWrapping="Wrap" FontStyle="Italic"
-                           Text="{Binding Translation}"
-                           IsVisible="{Binding ShowTranslation}"
-                           FontSize="{Binding TranslationFontSize}"/>
+            <StackPanel
+                Margin="8,6"
+                Background="Transparent"
+                Classes.active="{Binding IsActive}"
+                Classes.synced="{Binding IsSynced}"
+                Spacing="2">
+                <TextBlock
+                    Classes="lead"
+                    FontSize="{Binding PronunciationFontSize}"
+                    IsVisible="{Binding ShowPronunciation}"
+                    Text="{Binding Pronunciation}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Classes="lead"
+                    FontSize="{Binding OriginalFontSize}"
+                    IsVisible="{Binding ShowOriginal}"
+                    Text="{Binding Text}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    FontSize="{Binding TranslationFontSize}"
+                    FontStyle="Italic"
+                    IsVisible="{Binding ShowTranslation}"
+                    Text="{Binding Translation}"
+                    TextWrapping="Wrap" />
             </StackPanel>
         </DataTemplate>
     </Window.Resources>
 
     <Window.Styles>
-        <Style Selector="Style Selector" /> <!-- Preservado de estructura base -->
+        <Style Selector="Style Selector" />
+        <!--  Preservado de estructura base  -->
         <Style Selector="Grid.missing">
-            <Setter Property="Opacity" Value="0.45"/>
+            <Setter Property="Opacity" Value="0.45" />
         </Style>
         <Style Selector="ListBox.lyrics ListBoxItem">
-            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Padding" Value="0" />
         </Style>
-        <!-- La línea activa se resalta con el TextBlock, no con la selección del ListBox -->
+        <!--  La línea activa se resalta con el TextBlock, no con la selección del ListBox  -->
         <Style Selector="ListBox.lyrics ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="ListBox.lyrics ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="ListBox.lyrics StackPanel.synced">
-            <Setter Property="Opacity" Value="0.45"/>
+            <Setter Property="Opacity" Value="0.45" />
         </Style>
         <Style Selector="ListBox.lyrics StackPanel.synced.active">
-            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Opacity" Value="1" />
         </Style>
         <Style Selector="ListBox.lyrics StackPanel.active TextBlock.lead">
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontWeight" Value="Bold" />
         </Style>
     </Window.Styles>
 
     <Grid>
         <DockPanel>
 
-            <!-- Barra superior -->
-            <Border DockPanel.Dock="Top" Padding="16,12"
-                    BorderThickness="0,0,0,1" BorderBrush="#33FFFFFF">
+            <!--  Barra superior  -->
+            <Border
+                Padding="16,12"
+                BorderBrush="#33FFFFFF"
+                BorderThickness="0,0,0,1"
+                DockPanel.Dock="Top">
                 <DockPanel>
-                    <Button DockPanel.Dock="Left" Content="Agregar carpeta"
-                            Command="{Binding AddFolderCommand}"/>
-                    <TextBox DockPanel.Dock="Right" Width="280"
-                             Text="{Binding SearchText}"
-                             Watermark="Buscar por título, artista o álbum"/>
-                    <TextBlock Text="{Binding Status}" Margin="16,0"
-                               VerticalAlignment="Center" Opacity="0.7"/>
+                    <Button
+                        Command="{Binding AddFolderCommand}"
+                        Content="Agregar carpeta"
+                        DockPanel.Dock="Left" />
+                    <!--  Autocompletar/Limpiar etiquetas…  -->
+                    <Button
+                        Margin="8,0,0,0"
+                        Command="{Binding OpenAutoFixCommand}"
+                        Content="Limpiar etiquetas"
+                        DockPanel.Dock="Left" />
+                    <TextBox
+                        Width="280"
+                        DockPanel.Dock="Right"
+                        Text="{Binding SearchText}"
+                        Watermark="Buscar por título, artista o álbum" />
+                    <TextBlock
+                        Margin="16,0"
+                        VerticalAlignment="Center"
+                        Opacity="0.7"
+                        Text="{Binding Status}" />
                 </DockPanel>
             </Border>
 
-            <!-- Barra de confirmación de eliminación -->
-            <Border DockPanel.Dock="Top" Padding="16,10" Background="#33E57373"
-                    IsVisible="{Binding IsConfirmingDelete}">
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                        <Button Content="Eliminar del disco" Command="{Binding ConfirmDeleteTrackCommand}"/>
-                        <Button Content="Cancelar" Command="{Binding CancelDeleteTrackCommand}"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding DeletePrompt}" TextWrapping="Wrap"
-                               VerticalAlignment="Center" Margin="0,0,16,0"/>
-                </DockPanel>
-            </Border>
-
-            <!-- Barra de aviso -->
-            <Border DockPanel.Dock="Top" Padding="16,10" Background="#33FFB74D"
-                    IsVisible="{Binding HasMissing}">
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                        <Button Content="Volver a revisar" Command="{Binding CheckAvailabilityCommand}"
-                                IsVisible="{Binding !IsConfirmingPrune}"/>
-                        <Button Content="Quitar de la biblioteca…" Command="{Binding AskPruneCommand}"
-                                IsVisible="{Binding !IsConfirmingPrune}"/>
-                        <Button Content="Quitar" Command="{Binding ConfirmPruneCommand}"
-                                IsVisible="{Binding IsConfirmingPrune}"/>
-                        <Button Content="Cancelar" Command="{Binding CancelPruneCommand}"
-                                IsVisible="{Binding IsConfirmingPrune}"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding MissingPrompt}" TextWrapping="Wrap"
-                               VerticalAlignment="Center" Margin="0,0,16,0"/>
-                </DockPanel>
-            </Border>
-
-            <Border DockPanel.Dock="Top" Padding="16,12" Background="#22FFFFFF"
-                    IsVisible="{Binding TagEditor.IsOpen}">
+            <!--  Vista previa de sugerencias  -->
+            <Border
+                Padding="16,12"
+                Background="#22FFFFFF"
+                DockPanel.Dock="Top"
+                IsVisible="{Binding AutoFix.IsOpen}">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="{Binding TagEditor.Heading}" FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"/>
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
-                        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,8,8" Spacing="2">
-                            <TextBlock Text="Título" FontSize="12" Opacity="0.7"/>
-                            <TextBox Text="{Binding TagEditor.Title}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,0,0,8" Spacing="2">
-                            <TextBlock Text="Artista" FontSize="12" Opacity="0.7"/>
-                            <TextBox Text="{Binding TagEditor.Artist}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,8,0" Spacing="2">
-                            <TextBlock Text="Álbum" FontSize="12" Opacity="0.7"/>
-                            <TextBox Text="{Binding TagEditor.Album}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Grid.Row="1" Spacing="2">
-                            <TextBlock Text="Artista del álbum" FontSize="12" Opacity="0.7"/>
-                            <TextBox Text="{Binding TagEditor.AlbumArtist}"/>
-                        </StackPanel>
-                    </Grid>
+                    <TextBlock
+                        FontWeight="SemiBold"
+                        Text="{Binding AutoFix.Heading}"
+                        TextWrapping="Wrap" />
+                    <CheckBox Content="Usar la carpeta como álbum si falta" IsChecked="{Binding AutoFix.AlbumFromFolder}" />
+
+                    <ListBox MaxHeight="260" ItemsSource="{Binding AutoFix.Items}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TagSuggestionItemViewModel">
+                                <CheckBox Margin="4" IsChecked="{Binding IsSelected}">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock
+                                            FontWeight="SemiBold"
+                                            Text="{Binding FileName}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <TextBlock
+                                            FontSize="12"
+                                            Opacity="0.75"
+                                            Text="{Binding ChangesText}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <TextBlock
+                        FontSize="12"
+                        Opacity="0.6"
+                        Text="Se escribe en los archivos. Si suena alguna de estas canciones, se detendrá. Podrás deshacerlo después."
+                        TextWrapping="Wrap" />
+
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Año" FontSize="12" Opacity="0.7"/>
-                            <TextBox Width="90" Text="{Binding TagEditor.YearText}"/>
-                        </StackPanel>
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Pista" FontSize="12" Opacity="0.7"/>
-                            <TextBox Width="90" Text="{Binding TagEditor.TrackText}"/>
-                        </StackPanel>
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Disco" FontSize="12" Opacity="0.7"/>
-                            <TextBox Width="90" Text="{Binding TagEditor.DiscText}"/>
-                        </StackPanel>
-                    </StackPanel>
-                    <TextBlock Text="{Binding TagEditor.Error}" TextWrapping="Wrap" Foreground="#FFE57373"
-                               IsVisible="{Binding TagEditor.HasError}"/>
-                    <TextBlock Text="Se escribe en el archivo. Si esta canción suena, se detendrá. Un campo vacío borra la etiqueta."
-                               TextWrapping="Wrap" FontSize="12" Opacity="0.6"/>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Guardar" Command="{Binding TagEditor.SaveCommand}"/>
-                        <Button Content="Cancelar" Command="{Binding TagEditor.CancelCommand}"/>
+                        <Button Command="{Binding AutoFix.ApplyCommand}" Content="{Binding AutoFix.ApplyText}" />
+                        <Button Command="{Binding AutoFix.SelectAllCommand}" Content="Todas" />
+                        <Button Command="{Binding AutoFix.SelectNoneCommand}" Content="Ninguna" />
+                        <Button Command="{Binding AutoFix.CancelCommand}" Content="Cancelar" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <!-- Controles de reproducción -->
-            <Border DockPanel.Dock="Bottom" Padding="16,12"
-                    BorderThickness="0,1,0,0" BorderBrush="#33FFFFFF">
+            <!--  Deshacer el último lote  -->
+            <Border
+                Padding="16,10"
+                Background="#334CAF50"
+                DockPanel.Dock="Top"
+                IsVisible="{Binding AutoFix.HasUndo}">
+                <DockPanel>
+                    <StackPanel
+                        DockPanel.Dock="Right"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Button Command="{Binding AutoFix.UndoCommand}" Content="Deshacer" />
+                        <Button Command="{Binding AutoFix.DismissUndoCommand}" Content="Cerrar" />
+                    </StackPanel>
+                    <TextBlock
+                        Margin="0,0,16,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding AutoFix.UndoText}"
+                        TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+
+            <!--  Barra de confirmación de eliminación  -->
+            <Border
+                Padding="16,10"
+                Background="#33E57373"
+                DockPanel.Dock="Top"
+                IsVisible="{Binding IsConfirmingDelete}">
+                <DockPanel>
+                    <StackPanel
+                        DockPanel.Dock="Right"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Button Command="{Binding ConfirmDeleteTrackCommand}" Content="Eliminar del disco" />
+                        <Button Command="{Binding CancelDeleteTrackCommand}" Content="Cancelar" />
+                    </StackPanel>
+                    <TextBlock
+                        Margin="0,0,16,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding DeletePrompt}"
+                        TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+
+            <!--  Barra de aviso  -->
+            <Border
+                Padding="16,10"
+                Background="#33FFB74D"
+                DockPanel.Dock="Top"
+                IsVisible="{Binding HasMissing}">
+                <DockPanel>
+                    <StackPanel
+                        DockPanel.Dock="Right"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Button
+                            Command="{Binding CheckAvailabilityCommand}"
+                            Content="Volver a revisar"
+                            IsVisible="{Binding !IsConfirmingPrune}" />
+                        <Button
+                            Command="{Binding AskPruneCommand}"
+                            Content="Quitar de la biblioteca…"
+                            IsVisible="{Binding !IsConfirmingPrune}" />
+                        <Button
+                            Command="{Binding ConfirmPruneCommand}"
+                            Content="Quitar"
+                            IsVisible="{Binding IsConfirmingPrune}" />
+                        <Button
+                            Command="{Binding CancelPruneCommand}"
+                            Content="Cancelar"
+                            IsVisible="{Binding IsConfirmingPrune}" />
+                    </StackPanel>
+                    <TextBlock
+                        Margin="0,0,16,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding MissingPrompt}"
+                        TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+
+            <Border
+                Padding="16,12"
+                Background="#22FFFFFF"
+                DockPanel.Dock="Top"
+                IsVisible="{Binding TagEditor.IsOpen}">
                 <StackPanel Spacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-                        <Button Command="{Binding OpenImmersiveCommand}" Padding="0"
-                                Width="48" Height="48" ClipToBounds="True"
-                                ToolTip.Tip="Pantalla completa">
+                    <TextBlock
+                        FontWeight="SemiBold"
+                        Text="{Binding TagEditor.Heading}"
+                        TextTrimming="CharacterEllipsis" />
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Margin="0,0,8,8"
+                            Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Título" />
+                            <TextBox Text="{Binding TagEditor.Title}" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Margin="0,0,0,8"
+                            Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Artista" />
+                            <TextBox Text="{Binding TagEditor.Artist}" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            Margin="0,0,8,0"
+                            Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Álbum" />
+                            <TextBox Text="{Binding TagEditor.Album}" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Artista del álbum" />
+                            <TextBox Text="{Binding TagEditor.AlbumArtist}" />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Año" />
+                            <TextBox Width="90" Text="{Binding TagEditor.YearText}" />
+                        </StackPanel>
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Pista" />
+                            <TextBox Width="90" Text="{Binding TagEditor.TrackText}" />
+                        </StackPanel>
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Disco" />
+                            <TextBox Width="90" Text="{Binding TagEditor.DiscText}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock
+                        Foreground="#FFE57373"
+                        IsVisible="{Binding TagEditor.HasError}"
+                        Text="{Binding TagEditor.Error}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        FontSize="12"
+                        Opacity="0.6"
+                        Text="Se escribe en el archivo. Si esta canción suena, se detendrá. Un campo vacío borra la etiqueta."
+                        TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Command="{Binding TagEditor.SaveCommand}" Content="Guardar" />
+                        <Button Command="{Binding TagEditor.CancelCommand}" Content="Cancelar" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!--  Controles de reproducción  -->
+            <Border
+                Padding="16,12"
+                BorderBrush="#33FFFFFF"
+                BorderThickness="0,1,0,0"
+                DockPanel.Dock="Bottom">
+                <StackPanel Spacing="8">
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="12">
+                        <Button
+                            Width="48"
+                            Height="48"
+                            Padding="0"
+                            ClipToBounds="True"
+                            Command="{Binding OpenImmersiveCommand}"
+                            ToolTip.Tip="Pantalla completa">
                             <Panel>
-                                <TextBlock Text="♪" FontSize="22" HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" Opacity="0.5"/>
-                                <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill"/>
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="22"
+                                    Opacity="0.5"
+                                    Text="♪" />
+                                <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill" />
                             </Panel>
                         </Button>
-                        <TextBlock Text="{Binding NowPlaying}" VerticalAlignment="Center"
-                                   FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="500"/>
+                        <TextBlock
+                            MaxWidth="500"
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="{Binding NowPlaying}"
+                            TextTrimming="CharacterEllipsis" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                        <Button Content="Anterior" Command="{Binding PreviousCommand}"/>
-                        <Button Content="{Binding PlayPauseText}"
-                                Command="{Binding TogglePlayPauseCommand}"
-                                MinWidth="100" HorizontalContentAlignment="Center"/>
-                        <Button Content="Siguiente" Command="{Binding NextCommand}"/>
-                        <ToggleButton Content="Aleatorio" IsChecked="{Binding IsShuffleOn}"/>
-                        <Button Content="{Binding RepeatText}" Command="{Binding CycleRepeatCommand}"
-                                MinWidth="130" HorizontalContentAlignment="Center"/>
-                        <Button Content="Letra"
-                                Command="{Binding Lyrics.ToggleOpenCommand}"
-                                IsEnabled="{Binding Lyrics.IsAvailable}"/>
-                        <Button Content="Pantalla completa" Command="{Binding OpenImmersiveCommand}"/>
-                        <TextBlock Text="Vol." VerticalAlignment="Center" Margin="16,0,0,0" Opacity="0.7"/>
-                        <Slider Minimum="0" Maximum="1" Width="120" VerticalAlignment="Center"
-                                Value="{Binding Volume}"/>
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Button Command="{Binding PreviousCommand}" Content="Anterior" />
+                        <Button
+                            MinWidth="100"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding TogglePlayPauseCommand}"
+                            Content="{Binding PlayPauseText}" />
+                        <Button Command="{Binding NextCommand}" Content="Siguiente" />
+                        <ToggleButton Content="Aleatorio" IsChecked="{Binding IsShuffleOn}" />
+                        <Button
+                            MinWidth="130"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding CycleRepeatCommand}"
+                            Content="{Binding RepeatText}" />
+                        <Button
+                            Command="{Binding Lyrics.ToggleOpenCommand}"
+                            Content="Letra"
+                            IsEnabled="{Binding Lyrics.IsAvailable}" />
+                        <Button Command="{Binding OpenImmersiveCommand}" Content="Pantalla completa" />
+                        <TextBlock
+                            Margin="16,0,0,0"
+                            VerticalAlignment="Center"
+                            Opacity="0.7"
+                            Text="Vol." />
+                        <Slider
+                            Width="120"
+                            VerticalAlignment="Center"
+                            Maximum="1"
+                            Minimum="0"
+                            Value="{Binding Volume}" />
                     </StackPanel>
 
                     <Grid ColumnDefinitions="56,*,56">
-                        <TextBlock Grid.Column="0" Text="{Binding PositionText}"
-                                   VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" Minimum="0"
-                                Maximum="{Binding DurationSeconds}"
-                                Value="{Binding PositionSeconds}"/>
-                        <TextBlock Grid.Column="2" Text="{Binding DurationText}"
-                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        <TextBlock
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Text="{Binding PositionText}" />
+                        <Slider
+                            Grid.Column="1"
+                            Maximum="{Binding DurationSeconds}"
+                            Minimum="0"
+                            Value="{Binding PositionSeconds}" />
+                        <TextBlock
+                            Grid.Column="2"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Text="{Binding DurationText}" />
                     </Grid>
                 </StackPanel>
             </Border>
 
-            <!-- Barra lateral, Lista de canciones y Panel de letras -->
+            <!--  Barra lateral, Lista de canciones y Panel de letras  -->
             <Grid ColumnDefinitions="220,*,Auto">
                 <DockPanel Grid.Column="0" Margin="8,8,0,8">
-                    <!-- Panel de edición (crear / renombrar / confirmar eliminación) -->
-                    <Border DockPanel.Dock="Bottom" Margin="0,8,0,0" Padding="8" CornerRadius="8"
-                            Background="#18FFFFFF" IsVisible="{Binding Playlists.IsEditing}">
+                    <!--  Panel de edición (crear / renombrar / confirmar eliminación)  -->
+                    <Border
+                        Margin="0,8,0,0"
+                        Padding="8"
+                        Background="#18FFFFFF"
+                        CornerRadius="8"
+                        DockPanel.Dock="Bottom"
+                        IsVisible="{Binding Playlists.IsEditing}">
                         <StackPanel Spacing="6">
-                            <TextBlock Text="{Binding Playlists.Prompt}" TextWrapping="Wrap"
-                                       FontWeight="SemiBold"/>
-                            <TextBox x:Name="PlaylistNameBox" Watermark="Nombre" MaxLength="80"
-                                     Text="{Binding Playlists.NameDraft}"
-                                     IsVisible="{Binding Playlists.IsNameInput}"
-                                     KeyDown="OnPlaylistNameKeyDown"/>
-                            <TextBlock Text="{Binding Playlists.EditError}" TextWrapping="Wrap"
-                                       Foreground="#FFE57373"
-                                       IsVisible="{Binding Playlists.HasEditError}"/>
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="{Binding Playlists.Prompt}"
+                                TextWrapping="Wrap" />
+                            <TextBox
+                                x:Name="PlaylistNameBox"
+                                IsVisible="{Binding Playlists.IsNameInput}"
+                                KeyDown="OnPlaylistNameKeyDown"
+                                MaxLength="80"
+                                Text="{Binding Playlists.NameDraft}"
+                                Watermark="Nombre" />
+                            <TextBlock
+                                Foreground="#FFE57373"
+                                IsVisible="{Binding Playlists.HasEditError}"
+                                Text="{Binding Playlists.EditError}"
+                                TextWrapping="Wrap" />
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="{Binding Playlists.ConfirmText}"
-                                        Command="{Binding Playlists.ConfirmEditCommand}"/>
-                                <Button Content="Cancelar"
-                                        Command="{Binding Playlists.CancelEditCommand}"/>
+                                <Button Command="{Binding Playlists.ConfirmEditCommand}" Content="{Binding Playlists.ConfirmText}" />
+                                <Button Command="{Binding Playlists.CancelEditCommand}" Content="Cancelar" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                    <!-- Renombrar / eliminar: solo con una playlist seleccionada -->
-                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0"
-                                IsVisible="{Binding Playlists.HasPlaylistSelected}">
-                        <Button Content="Renombrar" Command="{Binding Playlists.BeginRenameCommand}"/>
-                        <Button Content="Eliminar" Command="{Binding Playlists.BeginDeleteCommand}"/>
+                    <!--  Renombrar / eliminar: solo con una playlist seleccionada  -->
+                    <StackPanel
+                        Margin="0,8,0,0"
+                        DockPanel.Dock="Bottom"
+                        IsVisible="{Binding Playlists.HasPlaylistSelected}"
+                        Orientation="Horizontal"
+                        Spacing="6">
+                        <Button Command="{Binding Playlists.BeginRenameCommand}" Content="Renombrar" />
+                        <Button Command="{Binding Playlists.BeginDeleteCommand}" Content="Eliminar" />
                     </StackPanel>
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                        <Button DockPanel.Dock="Right" Content="+" Padding="10,2"
-                                Command="{Binding Playlists.BeginCreateCommand}"
-                                ToolTip.Tip="Nueva playlist"/>
-                        <TextBlock Text="COLECCIONES" FontSize="12" Opacity="0.6"
-                                   VerticalAlignment="Center" Margin="8,0"/>
+                    <DockPanel Margin="0,0,0,6" DockPanel.Dock="Top">
+                        <Button
+                            Padding="10,2"
+                            Command="{Binding Playlists.BeginCreateCommand}"
+                            Content="+"
+                            DockPanel.Dock="Right"
+                            ToolTip.Tip="Nueva playlist" />
+                        <TextBlock
+                            Margin="8,0"
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            Opacity="0.6"
+                            Text="COLECCIONES" />
                     </DockPanel>
-                    <ListBox ItemsSource="{Binding Playlists.Items}"
-                             SelectedItem="{Binding Playlists.Selected}">
+                    <ListBox ItemsSource="{Binding Playlists.Items}" SelectedItem="{Binding Playlists.Selected}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:PlaylistItemViewModel">
                                 <DockPanel Margin="4">
-                                    <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}"
-                                               Opacity="0.6" Margin="8,0,0,0"/>
-                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock
+                                        Margin="8,0,0,0"
+                                        DockPanel.Dock="Right"
+                                        Opacity="0.6"
+                                        Text="{Binding CountText}" />
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                 </DockPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -250,79 +489,140 @@
                 </DockPanel>
 
                 <DockPanel Grid.Column="1" Margin="8">
-                    <TabStrip DockPanel.Dock="Top" Margin="0,0,0,6"
-                              IsVisible="{Binding ShowModeTabs}"
-                              SelectedIndex="{Binding BrowseIndex}">
-                        <TabStripItem Content="Canciones"/>
-                        <TabStripItem Content="Álbumes"/>
-                        <TabStripItem Content="Artistas"/>
+                    <TabStrip
+                        Margin="0,0,0,6"
+                        DockPanel.Dock="Top"
+                        IsVisible="{Binding ShowModeTabs}"
+                        SelectedIndex="{Binding BrowseIndex}">
+                        <TabStripItem Content="Canciones" />
+                        <TabStripItem Content="Álbumes" />
+                        <TabStripItem Content="Artistas" />
                     </TabStrip>
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6" IsVisible="{Binding ShowBackBar}">
-                        <Button DockPanel.Dock="Left" Content="{Binding BackText}" Command="{Binding GoBackCommand}"/>
-                        <Button DockPanel.Dock="Right" Content="▶ Reproducir" Command="{Binding PlayScopeCommand}"/>
-                        <TextBlock Text="{Binding BrowseTitle}" FontWeight="SemiBold" Margin="12,0"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    <DockPanel
+                        Margin="0,0,0,6"
+                        DockPanel.Dock="Top"
+                        IsVisible="{Binding ShowBackBar}">
+                        <Button
+                            Command="{Binding GoBackCommand}"
+                            Content="{Binding BackText}"
+                            DockPanel.Dock="Left" />
+                        <Button
+                            Command="{Binding PlayScopeCommand}"
+                            Content="▶ Reproducir"
+                            DockPanel.Dock="Right" />
+                        <TextBlock
+                            Margin="12,0"
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="{Binding BrowseTitle}"
+                            TextTrimming="CharacterEllipsis" />
                     </DockPanel>
                     <Panel>
-                        <!-- Canciones: el mismo ListBox de antes, con IsVisible nuevo -->
-                        <ListBox IsVisible="{Binding ShowSongs}"
-                                 ItemsSource="{Binding Tracks}"
-                                 SelectedItem="{Binding SelectedTrack}"
-                                 DoubleTapped="OnTrackDoubleTapped"
-                                 ContextRequested="OnTrackListContextRequested">
+                        <!--  Canciones: el mismo ListBox de antes, con IsVisible nuevo  -->
+                        <ListBox
+                            ContextRequested="OnTrackListContextRequested"
+                            DoubleTapped="OnTrackDoubleTapped"
+                            IsVisible="{Binding ShowSongs}"
+                            ItemsSource="{Binding Tracks}"
+                            SelectedItem="{Binding SelectedTrack}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TrackItemViewModel">
-                                    <Grid ColumnDefinitions="Auto,3*,2*,Auto" Margin="8,4"
-                                          Classes.missing="{Binding !IsAvailable}">
-                                        <!-- Thumbnail de Canciones -->
-                                        <Border Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0"
-                                                CornerRadius="4" ClipToBounds="True" Background="#22FFFFFF">
-                                            <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                    <Grid
+                                        Margin="8,4"
+                                        Classes.missing="{Binding !IsAvailable}"
+                                        ColumnDefinitions="Auto,3*,2*,Auto">
+                                        <!--  Thumbnail de Canciones  -->
+                                        <Border
+                                            Grid.Column="0"
+                                            Width="40"
+                                            Height="40"
+                                            Margin="0,0,12,0"
+                                            Background="#22FFFFFF"
+                                            ClipToBounds="True"
+                                            CornerRadius="4">
+                                            <Image Source="{Binding Cover}" Stretch="UniformToFill" />
                                         </Border>
-                                        <TextBlock Grid.Column="1" Text="{Binding Title}"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Artist}"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding TrailingText}"
-                                                   VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.7"/>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Text="{Binding Title}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            Opacity="0.7"
+                                            Text="{Binding Artist}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Opacity="0.7"
+                                            Text="{Binding TrailingText}" />
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <ListBox IsVisible="{Binding ShowAlbums}" ItemsSource="{Binding Albums}"
-                                 Tapped="OnBrowseTapped">
+                        <ListBox
+                            IsVisible="{Binding ShowAlbums}"
+                            ItemsSource="{Binding Albums}"
+                            Tapped="OnBrowseTapped">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:AlbumItemViewModel">
-                                    <Grid ColumnDefinitions="Auto,*" Margin="8,4">
-                                        <!-- Thumbnail de Álbumes -->
-                                        <Border Width="56" Height="56" Margin="0,0,12,0" CornerRadius="4"
-                                                ClipToBounds="True" Background="#22FFFFFF">
-                                            <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                    <Grid Margin="8,4" ColumnDefinitions="Auto,*">
+                                        <!--  Thumbnail de Álbumes  -->
+                                        <Border
+                                            Width="56"
+                                            Height="56"
+                                            Margin="0,0,12,0"
+                                            Background="#22FFFFFF"
+                                            ClipToBounds="True"
+                                            CornerRadius="4">
+                                            <Image Source="{Binding Cover}" Stretch="UniformToFill" />
                                         </Border>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Subtitle}" Opacity="0.7"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Spacing="2">
+                                            <TextBlock
+                                                FontWeight="SemiBold"
+                                                Text="{Binding Title}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                Opacity="0.7"
+                                                Text="{Binding Subtitle}"
+                                                TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <ListBox IsVisible="{Binding ShowArtists}" ItemsSource="{Binding Artists}"
-                                 Tapped="OnBrowseTapped">
+                        <ListBox
+                            IsVisible="{Binding ShowArtists}"
+                            ItemsSource="{Binding Artists}"
+                            Tapped="OnBrowseTapped">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ArtistItemViewModel">
-                                    <Grid ColumnDefinitions="Auto,*" Margin="8,4">
-                                        <!-- Thumbnail de Artistas -->
-                                        <Border Width="56" Height="56" Margin="0,0,12,0" CornerRadius="4"
-                                                ClipToBounds="True" Background="#22FFFFFF">
-                                            <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                    <Grid Margin="8,4" ColumnDefinitions="Auto,*">
+                                        <!--  Thumbnail de Artistas  -->
+                                        <Border
+                                            Width="56"
+                                            Height="56"
+                                            Margin="0,0,12,0"
+                                            Background="#22FFFFFF"
+                                            ClipToBounds="True"
+                                            CornerRadius="4">
+                                            <Image Source="{Binding Cover}" Stretch="UniformToFill" />
                                         </Border>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Summary}" Opacity="0.7"/>
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Spacing="2">
+                                            <TextBlock
+                                                FontWeight="SemiBold"
+                                                Text="{Binding Name}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Opacity="0.7" Text="{Binding Summary}" />
                                         </StackPanel>
                                     </Grid>
                                 </DataTemplate>
@@ -331,113 +631,175 @@
                     </Panel>
                 </DockPanel>
 
-                <Border Grid.Column="2" Width="380" Margin="0,8,8,8" Padding="8"
-                        IsVisible="{Binding Lyrics.ShowPanel}"
-                        BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="8">
+                <Border
+                    Grid.Column="2"
+                    Width="380"
+                    Margin="0,8,8,8"
+                    Padding="8"
+                    BorderBrush="#33FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    IsVisible="{Binding Lyrics.ShowPanel}">
                     <DockPanel>
-                        <Button DockPanel.Dock="Top" Margin="0,0,0,8"
-                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                Content="Traducción y pronunciación">
+                        <Button
+                            Margin="0,0,0,8"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Content="Traducción y pronunciación"
+                            DockPanel.Dock="Top">
                             <Button.Flyout>
                                 <Flyout Placement="Bottom">
-                                    <StackPanel Spacing="4" MinWidth="260">
-                                        <CheckBox Content="Mostrar traducción"
-                                                  IsChecked="{Binding Lyrics.ShowTranslation}"
-                                                  IsEnabled="{Binding Lyrics.HasTranslation}"/>
-                                        <CheckBox Content="Mostrar pronunciación"
-                                                  IsChecked="{Binding Lyrics.ShowPronunciation}"
-                                                  IsEnabled="{Binding Lyrics.HasPronunciation}"/>
-                                        <CheckBox Content="Ocultar original"
-                                                  IsChecked="{Binding Lyrics.HideOriginal}"
-                                                  IsEnabled="{Binding Lyrics.HasExtras}"/>
-                                        <Separator Margin="0,4"/>
-                                        <CheckBox Content="Pronunciación en texto grande"
-                                                  IsChecked="{Binding Lyrics.EmphasizePronunciation}"
-                                                  IsEnabled="{Binding Lyrics.HasPronunciation}"/>
-                                        <TextBlock Text="Esta canción no tiene archivos .lrc de traducción ni de pronunciación."
-                                                   TextWrapping="Wrap" FontSize="12" Opacity="0.6"
-                                                   IsVisible="{Binding !Lyrics.HasExtras}"/>
+                                    <StackPanel MinWidth="260" Spacing="4">
+                                        <CheckBox
+                                            Content="Mostrar traducción"
+                                            IsChecked="{Binding Lyrics.ShowTranslation}"
+                                            IsEnabled="{Binding Lyrics.HasTranslation}" />
+                                        <CheckBox
+                                            Content="Mostrar pronunciación"
+                                            IsChecked="{Binding Lyrics.ShowPronunciation}"
+                                            IsEnabled="{Binding Lyrics.HasPronunciation}" />
+                                        <CheckBox
+                                            Content="Ocultar original"
+                                            IsChecked="{Binding Lyrics.HideOriginal}"
+                                            IsEnabled="{Binding Lyrics.HasExtras}" />
+                                        <Separator Margin="0,4" />
+                                        <CheckBox
+                                            Content="Pronunciación en texto grande"
+                                            IsChecked="{Binding Lyrics.EmphasizePronunciation}"
+                                            IsEnabled="{Binding Lyrics.HasPronunciation}" />
+                                        <TextBlock
+                                            FontSize="12"
+                                            IsVisible="{Binding !Lyrics.HasExtras}"
+                                            Opacity="0.6"
+                                            Text="Esta canción no tiene archivos .lrc de traducción ni de pronunciación."
+                                            TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Flyout>
                             </Button.Flyout>
                         </Button>
-                        <ListBox Classes="lyrics" Background="Transparent"
-                                 ItemsSource="{Binding Lyrics.Lines}"
-                                 SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
-                                 ItemTemplate="{StaticResource LyricLineTemplate}"
-                                 Tapped="OnLyricTapped"/>
+                        <ListBox
+                            Background="Transparent"
+                            Classes="lyrics"
+                            ItemTemplate="{StaticResource LyricLineTemplate}"
+                            ItemsSource="{Binding Lyrics.Lines}"
+                            SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
+                            Tapped="OnLyricTapped" />
                     </DockPanel>
                 </Border>
             </Grid>
 
         </DockPanel>
 
-        <!-- Modo inmersivo -->
+        <!--  Modo inmersivo  -->
         <ThemeVariantScope RequestedThemeVariant="Dark">
-            <Grid IsVisible="{Binding IsImmersive}" Background="#FF101010">
-                <!-- Fondo: la portada ampliada y desenfocada -->
-                <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill"
-                       Effect="blur(60)" Opacity="0.9"/>
-                <!-- Velo en degradado para que el texto siempre se lea -->
+            <Grid Background="#FF101010" IsVisible="{Binding IsImmersive}">
+                <!--  Fondo: la portada ampliada y desenfocada  -->
+                <Image
+                    Effect="blur(60)"
+                    Opacity="0.9"
+                    Source="{Binding NowPlayingCover}"
+                    Stretch="UniformToFill" />
+                <!--  Velo en degradado para que el texto siempre se lea  -->
                 <Border>
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                            <GradientStop Color="#99000000" Offset="0"/>
-                            <GradientStop Color="#E6000000" Offset="1"/>
+                            <GradientStop Offset="0" Color="#99000000" />
+                            <GradientStop Offset="1" Color="#E6000000" />
                         </LinearGradientBrush>
                     </Border.Background>
                 </Border>
-                <Button HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16"
-                        Content="✕  Cerrar" Command="{Binding CloseImmersiveCommand}"/>
-                <Grid ColumnDefinitions="*,*" Margin="48,72,48,32">
-                    <!-- Izquierda: carátula, datos y controles -->
-                    <StackPanel Grid.Column="0" Spacing="16" MaxWidth="400"
-                                HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Width="360" Height="360" CornerRadius="12" ClipToBounds="True"
-                                Background="#22FFFFFF">
+                <Button
+                    Margin="16"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Command="{Binding CloseImmersiveCommand}"
+                    Content="✕  Cerrar" />
+                <Grid Margin="48,72,48,32" ColumnDefinitions="*,*">
+                    <!--  Izquierda: carátula, datos y controles  -->
+                    <StackPanel
+                        Grid.Column="0"
+                        MaxWidth="400"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="16">
+                        <Border
+                            Width="360"
+                            Height="360"
+                            Background="#22FFFFFF"
+                            ClipToBounds="True"
+                            CornerRadius="12">
                             <Panel>
-                                <TextBlock Text="♪" FontSize="96" Opacity="0.4"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill"/>
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="96"
+                                    Opacity="0.4"
+                                    Text="♪" />
+                                <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill" />
                             </Panel>
                         </Border>
                         <StackPanel Spacing="2">
-                            <TextBlock Text="{Binding CurrentTrack.Title}" FontSize="22"
-                                       FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding CurrentTrack.Artist}" Opacity="0.7"
-                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock
+                                FontSize="22"
+                                FontWeight="Bold"
+                                Text="{Binding CurrentTrack.Title}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Opacity="0.7"
+                                Text="{Binding CurrentTrack.Artist}"
+                                TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <Grid ColumnDefinitions="48,*,48">
-                            <TextBlock Grid.Column="0" Text="{Binding PositionText}"
-                                       VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="0"
-                                    Maximum="{Binding DurationSeconds}"
-                                    Value="{Binding PositionSeconds}"/>
-                            <TextBlock Grid.Column="2" Text="{Binding DurationText}"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            <TextBlock
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                Text="{Binding PositionText}" />
+                            <Slider
+                                Grid.Column="1"
+                                Maximum="{Binding DurationSeconds}"
+                                Minimum="0"
+                                Value="{Binding PositionSeconds}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Text="{Binding DurationText}" />
                         </Grid>
-                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                            <Button Content="Anterior" Command="{Binding PreviousCommand}"/>
-                            <Button Content="{Binding PlayPauseText}"
-                                    Command="{Binding TogglePlayPauseCommand}"
-                                    MinWidth="100" HorizontalContentAlignment="Center"/>
-                            <Button Content="Siguiente" Command="{Binding NextCommand}"/>
-                            <ToggleButton Content="Aleatorio" IsChecked="{Binding IsShuffleOn}"/>
-                            <Button Content="{Binding RepeatText}" Command="{Binding CycleRepeatCommand}"
-                                    MinWidth="130" HorizontalContentAlignment="Center"/>
+                        <StackPanel
+                            HorizontalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                            <Button Command="{Binding PreviousCommand}" Content="Anterior" />
+                            <Button
+                                MinWidth="100"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding TogglePlayPauseCommand}"
+                                Content="{Binding PlayPauseText}" />
+                            <Button Command="{Binding NextCommand}" Content="Siguiente" />
+                            <ToggleButton Content="Aleatorio" IsChecked="{Binding IsShuffleOn}" />
+                            <Button
+                                MinWidth="130"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding CycleRepeatCommand}"
+                                Content="{Binding RepeatText}" />
                         </StackPanel>
                     </StackPanel>
-                    <!-- Derecha: letras con la misma plantilla que el panel lateral -->
+                    <!--  Derecha: letras con la misma plantilla que el panel lateral  -->
                     <Panel Grid.Column="1" Margin="32,0,0,0">
-                        <ListBox Classes="lyrics" Background="Transparent"
-                                 IsVisible="{Binding Lyrics.IsAvailable}"
-                                 ItemsSource="{Binding Lyrics.Lines}"
-                                 SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
-                                 ItemTemplate="{StaticResource LyricLineTemplate}"
-                                 Tapped="OnLyricTapped"/>
-                        <TextBlock Text="Sin letra disponible para esta canción" Opacity="0.6"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   IsVisible="{Binding !Lyrics.IsAvailable}"/>
+                        <ListBox
+                            Background="Transparent"
+                            Classes="lyrics"
+                            IsVisible="{Binding Lyrics.IsAvailable}"
+                            ItemTemplate="{StaticResource LyricLineTemplate}"
+                            ItemsSource="{Binding Lyrics.Lines}"
+                            SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
+                            Tapped="OnLyricTapped" />
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding !Lyrics.IsAvailable}"
+                            Opacity="0.6"
+                            Text="Sin letra disponible para esta canción" />
                     </Panel>
                 </Grid>
             </Grid>
