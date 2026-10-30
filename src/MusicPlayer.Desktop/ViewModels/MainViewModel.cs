@@ -74,7 +74,7 @@ public partial class MainViewModel : ViewModelBase
             var songs = MissingCount == 1 ? "1 canción" : $"{MissingCount} canciones";
             return IsConfirmingPrune
                 ? $"¿Quitar {songs} de la biblioteca y de sus playlists? Los archivos no se tocan. Si desconectaste un disco, conéctalo y cancela."
-                : $"{songs} no disponible{(MissingCount == 1 ? "" : "s")}: el archivo se movió, se borró o el disco está desconectado.";
+                : $"{songs} no disponible{(MissingCount == 1 ? "" : "s")}: el archivo se movió, se borró o el disco está desconectado. " + "Si lo moviste, agrega su nueva carpeta y se reubicará con sus playlists.";
         }
     }
 
@@ -259,8 +259,11 @@ public partial class MainViewModel : ViewModelBase
         {
             Status = "Escaneando…";
             var progress = new Progress<int>(count => Status = $"Escaneando… {count} canciones");
-            ApplySnapshot(await _library.AddFolderAsync(folder, progress));
+            var result = await _library.ScanFolderAsync(folder, progress);
+            ApplySnapshot(result.Snapshot);
             _ = CheckAvailabilityAsync();
+            if (result.Relocated > 0) // ApplySnapshot escribe el estado general: este mensaje va después
+                Status = $"{Plural.Of(result.Relocated, "canción reubicada", "canciones reubicadas")}, con sus playlists";
         }
         catch (Exception ex)
         {

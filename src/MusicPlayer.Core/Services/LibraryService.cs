@@ -16,6 +16,10 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
     }
 
     public async Task<LibrarySnapshot> AddFolderAsync(
+    string folder, IProgress<int>? progress = null, CancellationToken ct = default) =>
+    (await ScanFolderAsync(folder, progress, ct)).Snapshot;
+
+    public async Task<AddFolderResult> ScanFolderAsync(
         string folder, IProgress<int>? progress = null, CancellationToken ct = default)
     {
         var found = await scanner.ScanAsync(folder, progress, ct);
@@ -24,11 +28,25 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             .DistinctBy(t => t.FilePath, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(t => t.FilePath, StringComparer.OrdinalIgnoreCase);
 
+        // Rutas que la biblioteca aún no conocía: candidatas a ser pistas movidas.
+        var fresh = found.Where(t => !byPath.ContainsKey(t.FilePath)).ToList();
+        var missing = fresh.Count == 0
+            ? new List<Track>()
+            : await Task.Run(() => byPath.Values.Where(t => !File.Exists(t.FilePath)).ToList(), ct);
+
         foreach (var track in found)
         {
-            byPath[track.FilePath] = byPath.TryGetValue(track.FilePath, out var old)
-                ? track with { Id = old.Id, AddedAt = old.AddedAt }
+            byPath[track.FilePath] = byPath.TryGetValue(track.FilePath, out var known)
+                ? track with { Id = known.Id, AddedAt = known.AddedAt }
                 : track;
+        }
+
+        var relocated = 0;
+        foreach (var (oldTrack, movedTrack) in TrackRelocator.Match(missing, fresh))
+        {
+            byPath.Remove(oldTrack.FilePath);
+            byPath[movedTrack.FilePath] = movedTrack with { Id = oldTrack.Id, AddedAt = oldTrack.AddedAt };
+            relocated++;
         }
 
         var folders = _current.Folders.Contains(folder, StringComparer.OrdinalIgnoreCase)
@@ -37,7 +55,7 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
 
         _current = new LibrarySnapshot(TrackSorter.Sort(byPath.Values), folders);
         await repository.SaveAsync(_current, ct);
-        return _current;
+        return new AddFolderResult(_current, relocated);
     }
 
     public async Task<RemoveResult> RemoveTracksAsync(IEnumerable<Guid> ids, bool deleteFiles)

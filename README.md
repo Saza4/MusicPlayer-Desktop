@@ -22,7 +22,7 @@ inversión de dependencias y pruebas unitarias**. No usa servicios de streaming.
 - **Modo inmersivo** con fondo desenfocado a partir de la carátula.
 - **Carátulas bajo demanda** (incrustadas o `cover.jpg`) con caché LRU.
 - **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir y última canción.
-- **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists.
+- **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists. Al agregar la carpeta nueva, las pistas movidas se reconocen por título, artista, álbum y duración y conservan sus playlists.
 - **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
 
 ## Arquitectura

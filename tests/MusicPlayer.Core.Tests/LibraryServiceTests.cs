@@ -196,5 +196,58 @@ public class LibraryServiceTests : IDisposable
         Assert.Equal(1, repo.SaveCount); // solo el guardado de AddFolderAsync
     }
 
+    [Fact]
+    public async Task ScanFolderAsync_FileMovedToAnotherFolder_KeepsTheOriginalId()
+    {
+        var original = Touch("a/song.mp3");
+        var service = NewService(new InMemoryRepository());
+        var first = await service.AddFolderAsync(Path.Combine(_root, "a"));
+
+        var moved = Path.Combine(_root, "b", "song.mp3");
+        Directory.CreateDirectory(Path.GetDirectoryName(moved)!);
+        File.Move(original, moved);
+
+        var result = await service.ScanFolderAsync(Path.Combine(_root, "b"));
+
+        var track = Assert.Single(result.Snapshot.Tracks);
+        Assert.Equal(1, result.Relocated);
+        Assert.Equal(first.Tracks[0].Id, track.Id);
+        Assert.Equal(first.Tracks[0].AddedAt, track.AddedAt);
+        Assert.Equal(moved, track.FilePath);
+    }
+
+    [Fact]
+    public async Task ScanFolderAsync_CopiedFile_IsANewTrackNotARelocation()
+    {
+        Touch("a/song.mp3");
+        var service = NewService(new InMemoryRepository());
+        await service.AddFolderAsync(Path.Combine(_root, "a"));
+
+        Touch("b/song.mp3"); // el original sigue existiendo
+        var result = await service.ScanFolderAsync(Path.Combine(_root, "b"));
+
+        Assert.Equal(0, result.Relocated);
+        Assert.Equal(2, result.Snapshot.Tracks.Count);
+    }
+
+    [Fact]
+    public async Task ScanFolderAsync_AmbiguousMatch_LeavesEverythingAlone()
+    {
+        var first = Touch("a/song.mp3");
+        var second = Touch("c/song.mp3");
+        var service = NewService(new InMemoryRepository());
+        await service.AddFolderAsync(Path.Combine(_root, "a"));
+        await service.AddFolderAsync(Path.Combine(_root, "c"));
+
+        File.Delete(first);
+        File.Delete(second);
+        Touch("b/song.mp3"); // un candidato para dos ausentes idénticas
+
+        var result = await service.ScanFolderAsync(Path.Combine(_root, "b"));
+
+        Assert.Equal(0, result.Relocated);
+        Assert.Equal(3, result.Snapshot.Tracks.Count);
+    }
+
     public void Dispose() => Directory.Delete(_root, recursive: true);
 }
