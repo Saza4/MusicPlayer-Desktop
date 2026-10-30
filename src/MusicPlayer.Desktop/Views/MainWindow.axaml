@@ -3,7 +3,8 @@
         xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
         x:Class="MusicPlayer.Desktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Title="MusicPlayer" Width="960" Height="600" MinWidth="640" MinHeight="400">
+        Icon="/Assets/app.ico"
+        Title="Music Player" Width="960" Height="600" MinWidth="640" MinHeight="400">
 
     <Window.Resources>
         <DataTemplate x:Key="LyricLineTemplate" x:DataType="vm:LyricLineViewModel">
