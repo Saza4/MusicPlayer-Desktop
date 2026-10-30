@@ -160,6 +160,10 @@ public partial class MainWindow : Window
             entries.Add(remove);
         }
 
+        var edit = new MenuItem { Header = "Editar etiquetas…" };
+        edit.Click += (_, _) => vm.TagEditor.Begin(item);
+        entries.Add(edit);
+
         entries.Add(new Separator());
         var unlink = new MenuItem { Header = "Quitar de la biblioteca" };
         unlink.Click += (_, _) => vm.UnlinkTrackCommand.Execute(item);

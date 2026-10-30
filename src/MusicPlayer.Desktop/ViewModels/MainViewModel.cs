@@ -154,6 +154,7 @@ public partial class MainViewModel : ViewModelBase
 
     public LyricsViewModel Lyrics { get; }
     public PlaylistViewModel Playlists { get; }
+    public TagEditorViewModel TagEditor { get; }
 
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
     private readonly PlayQueue<TrackItemViewModel> _queue = new();
@@ -184,12 +185,13 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel(IAudioPlayer player, LibraryService library,
                          IFolderPickerService folderPicker, LyricsViewModel lyrics,
                          CoverArtLoader covers, PlaylistViewModel playlists,
-                         SettingsService settings)
+                         SettingsService settings, TagEditorViewModel tagEditor)
     {
         _covers = covers;
         _settings = settings;
         Lyrics = lyrics;
         Playlists = playlists;
+        TagEditor = tagEditor;
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
@@ -211,6 +213,9 @@ public partial class MainViewModel : ViewModelBase
 
         Playlists.Changed += (_, _) => ApplyFilter();
         Playlists.Notified += message => Status = message;
+        TagEditor.Saving += OnTagsSaving;
+        TagEditor.Saved += OnTagsSaved;
+        TagEditor.Notified += message => Status = message;
     }
 
     // ---- Biblioteca ----
@@ -680,6 +685,23 @@ public partial class MainViewModel : ViewModelBase
         {
             StartPlayback(next);
         }
+    }
+
+    // El archivo debe quedar libre: en Windows no se puede escribir en uno que el reproductor tiene abierto.
+    private void OnTagsSaving(Track track)
+    {
+        _player.PrepareNext(null);
+        if (CurrentTrack?.Track.Id == track.Id)
+            ClearCurrentTrack();
+    }
+
+    private void OnTagsSaved(LibrarySnapshot snapshot)
+    {
+        // El álbum o artista abierto pudo cambiar de clave: se vuelve a la vista general.
+        _artistScope = null;
+        _albumScope = null;
+        ApplySnapshot(snapshot);
+        UpdateGapless();
     }
 
     [RelayCommand]

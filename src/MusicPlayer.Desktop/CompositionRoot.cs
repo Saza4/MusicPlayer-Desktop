@@ -24,6 +24,8 @@ public static class CompositionRoot
         services.AddSingleton<LibraryScanner>();
         services.AddSingleton<ILibraryRepository>(_ => new JsonLibraryRepository(AppPaths.Library));
         services.AddSingleton<LibraryService>();
+        services.AddSingleton<ITrackTagWriter, TagLibTrackTagWriter>();
+        services.AddSingleton<TagEditor>();
 
         // Playlists y ajustes
         services.AddSingleton<IPlaylistRepository>(_ => new JsonPlaylistRepository(AppPaths.Playlists));
@@ -58,6 +60,7 @@ public static class CompositionRoot
         services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();
         services.AddSingleton<PlaylistViewModel>();
         services.AddSingleton<LyricsViewModel>();
+        services.AddSingleton<TagEditorViewModel>();
         services.AddSingleton<MainViewModel>();
 
         // Un registro que falte falla aquí, al arrancar, y no la primera vez que se use.

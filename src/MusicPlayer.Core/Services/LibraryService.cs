@@ -109,4 +109,16 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         var missing = await FindMissingAsync(ct);
         return await RemoveTracksAsync(missing.Select(t => t.Id), deleteFiles: false);
     }
+
+    /// <summary>Aplica las etiquetas a una pista de la biblioteca, conservando su Id, y reordena.</summary>
+    public async Task<LibrarySnapshot> ApplyTagsAsync(Guid trackId, TrackTags tags, CancellationToken ct = default)
+    {
+        if (!_current.Tracks.Any(t => t.Id == trackId))
+            return _current;
+
+        var updated = _current.Tracks.Select(t => t.Id == trackId ? tags.ApplyTo(t) : t);
+        _current = _current with { Tracks = TrackSorter.Sort(updated) };
+        await repository.SaveAsync(_current, ct);
+        return _current;
+    }
 }

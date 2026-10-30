@@ -101,6 +101,54 @@
                 </DockPanel>
             </Border>
 
+            <Border DockPanel.Dock="Top" Padding="16,12" Background="#22FFFFFF"
+                    IsVisible="{Binding TagEditor.IsOpen}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{Binding TagEditor.Heading}" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,8,8" Spacing="2">
+                            <TextBlock Text="Título" FontSize="12" Opacity="0.7"/>
+                            <TextBox Text="{Binding TagEditor.Title}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,0,0,8" Spacing="2">
+                            <TextBlock Text="Artista" FontSize="12" Opacity="0.7"/>
+                            <TextBox Text="{Binding TagEditor.Artist}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,8,0" Spacing="2">
+                            <TextBlock Text="Álbum" FontSize="12" Opacity="0.7"/>
+                            <TextBox Text="{Binding TagEditor.Album}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Grid.Row="1" Spacing="2">
+                            <TextBlock Text="Artista del álbum" FontSize="12" Opacity="0.7"/>
+                            <TextBox Text="{Binding TagEditor.AlbumArtist}"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Año" FontSize="12" Opacity="0.7"/>
+                            <TextBox Width="90" Text="{Binding TagEditor.YearText}"/>
+                        </StackPanel>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Pista" FontSize="12" Opacity="0.7"/>
+                            <TextBox Width="90" Text="{Binding TagEditor.TrackText}"/>
+                        </StackPanel>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Disco" FontSize="12" Opacity="0.7"/>
+                            <TextBox Width="90" Text="{Binding TagEditor.DiscText}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Text="{Binding TagEditor.Error}" TextWrapping="Wrap" Foreground="#FFE57373"
+                               IsVisible="{Binding TagEditor.HasError}"/>
+                    <TextBlock Text="Se escribe en el archivo. Si esta canción suena, se detendrá. Un campo vacío borra la etiqueta."
+                               TextWrapping="Wrap" FontSize="12" Opacity="0.6"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Guardar" Command="{Binding TagEditor.SaveCommand}"/>
+                        <Button Content="Cancelar" Command="{Binding TagEditor.CancelCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Controles de reproducción -->
             <Border DockPanel.Dock="Bottom" Padding="16,12"
                     BorderThickness="0,1,0,0" BorderBrush="#33FFFFFF">
