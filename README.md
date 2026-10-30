@@ -4,8 +4,6 @@
 
 # MusicPlayer-Desktop
 
-# MusicPlayer-Desktop
-
 [![CI](https://github.com/Saza4/MusicPlayer-Desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/Saza4/MusicPlayer-Desktop/actions/workflows/ci.yml)
 
 Reproductor de música de escritorio para archivos locales, hecho con **C#, .NET 8 y Avalonia UI**.
