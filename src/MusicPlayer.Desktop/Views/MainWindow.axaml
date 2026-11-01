@@ -66,6 +66,128 @@
         <Style Selector="ListBox.lyrics StackPanel.active TextBlock.lead">
             <Setter Property="FontWeight" Value="Bold" />
         </Style>
+
+        <!--  ===== Barra multimedia: iconos planos sin caja (fondo solo al pasar el cursor) =====  -->
+        <Style Selector=":is(Button).icon">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector=":is(Button).icon /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="100" />
+        </Style>
+        <Style Selector=":is(Button).icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#22808080" />
+        </Style>
+        <Style Selector=":is(Button).icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#33808080" />
+        </Style>
+        <Style Selector=":is(Button).icon:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector=":is(Button).icon:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#22808080" />
+        </Style>
+        <Style Selector=":is(Button).icon:checked:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#33808080" />
+        </Style>
+        <Style Selector=":is(Button).icon PathIcon">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector=":is(Button).icon.skip PathIcon">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+        </Style>
+        <Style Selector=":is(Button).icon:pointerover PathIcon">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <!--  Estado activo (Aleatorio, Repetir, Letra abierta): color de acento  -->
+        <Style Selector=":is(Button).icon.active PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector=":is(Button).icon.active TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+        </Style>
+        <Style Selector=":is(Button).icon:disabled PathIcon">
+            <Setter Property="Opacity" Value="0.3" />
+        </Style>
+
+        <!--  Botón principal Reproducir/Pausa: círculo sólido, más grande  -->
+        <Style Selector="Button.play">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransform" Value="none" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.play /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="100" />
+        </Style>
+        <Style Selector="Button.play:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
+        </Style>
+        <Style Selector="Button.play:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#FFFFFFFF" />
+        </Style>
+        <Style Selector="Button.play:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.96)" />
+        </Style>
+        <Style Selector="Button.play:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#FFE0E0E0" />
+        </Style>
+        <Style Selector="Button.play:disabled">
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+        <Style Selector="Button.play:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#FFFFFFFF" />
+        </Style>
+        <!--  Toggle Reproducir/Pausa: los dos iconos se funden con una pequeña escala  -->
+        <Style Selector="Panel.pp PathIcon">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Foreground" Value="#FF101010" />
+            <Setter Property="RenderTransform" Value="none" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel.pp PathIcon.glyph-pause">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="RenderTransform" Value="scale(0.5)" />
+        </Style>
+        <Style Selector="Panel.pp.playing PathIcon.glyph-pause">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="RenderTransform" Value="none" />
+        </Style>
+        <Style Selector="Panel.pp.playing PathIcon.glyph-play">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="RenderTransform" Value="scale(0.5)" />
+        </Style>
     </Window.Styles>
 
     <Grid>
@@ -324,17 +446,19 @@
                 </StackPanel>
             </Border>
 
-            <!--  Controles de reproducción  -->
+            <!--  Controles de reproducción: [carátula + título] [controles + progreso] [letra, pantalla completa, volumen]  -->
             <Border
                 Padding="16,12"
                 BorderBrush="#33FFFFFF"
                 BorderThickness="0,1,0,0"
                 DockPanel.Dock="Bottom">
-                <StackPanel Spacing="8">
-                    <StackPanel
-                        HorizontalAlignment="Center"
-                        Orientation="Horizontal"
-                        Spacing="12">
+                <Grid ColumnDefinitions="*,2*,*">
+
+                    <!--  Izquierda: carátula y título  -->
+                    <Grid
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        ColumnDefinitions="Auto,*">
                         <Button
                             Width="48"
                             Height="48"
@@ -353,65 +477,156 @@
                             </Panel>
                         </Button>
                         <TextBlock
-                            MaxWidth="500"
+                            Grid.Column="1"
+                            Margin="12,0,12,0"
                             VerticalAlignment="Center"
                             FontWeight="SemiBold"
                             Text="{Binding NowPlaying}"
                             TextTrimming="CharacterEllipsis" />
+                    </Grid>
+
+                    <!--  Centro: Aleatorio · Anterior · Reproducir/Pausa · Siguiente · Repetir, y progreso  -->
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Spacing="6">
+                        <StackPanel
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                            <ToggleButton
+                                AutomationProperties.Name="Aleatorio"
+                                Classes="icon"
+                                Classes.active="{Binding IsShuffleOn}"
+                                IsChecked="{Binding IsShuffleOn}"
+                                ToolTip.Tip="Aleatorio">
+                                <Panel Width="36" Height="36">
+                                    <PathIcon
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Data="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+                                    <Ellipse
+                                        Width="4"
+                                        Height="4"
+                                        Margin="0,0,0,3"
+                                        VerticalAlignment="Bottom"
+                                        Fill="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        IsVisible="{Binding IsShuffleOn}" />
+                                </Panel>
+                            </ToggleButton>
+                            <Button
+                                AutomationProperties.Name="Anterior"
+                                Classes="icon skip"
+                                Command="{Binding PreviousCommand}"
+                                ToolTip.Tip="Anterior">
+                                <PathIcon Data="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                            </Button>
+                            <Button
+                                AutomationProperties.Name="{Binding PlayPauseText}"
+                                Classes="play"
+                                Command="{Binding TogglePlayPauseCommand}"
+                                ToolTip.Tip="{Binding PlayPauseText}">
+                                <Panel Classes="pp" Classes.playing="{Binding IsPlaying}">
+                                    <PathIcon Classes="glyph-play" Data="M8 5v14l11-7z" />
+                                    <PathIcon Classes="glyph-pause" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                </Panel>
+                            </Button>
+                            <Button
+                                AutomationProperties.Name="Siguiente"
+                                Classes="icon skip"
+                                Command="{Binding NextCommand}"
+                                ToolTip.Tip="Siguiente">
+                                <PathIcon Data="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                            </Button>
+                            <Button
+                                AutomationProperties.Name="{Binding RepeatText}"
+                                Classes="icon"
+                                Classes.active="{Binding RepeatText, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter='Repetir: no'}"
+                                Command="{Binding CycleRepeatCommand}"
+                                ToolTip.Tip="{Binding RepeatText}">
+                                <Panel Width="36" Height="36">
+                                    <PathIcon
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Data="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="8"
+                                        FontWeight="Bold"
+                                        IsVisible="{Binding RepeatText, Converter={x:Static ObjectConverters.Equal}, ConverterParameter='Repetir: una'}"
+                                        Text="1" />
+                                    <Ellipse
+                                        Width="4"
+                                        Height="4"
+                                        Margin="0,0,0,3"
+                                        VerticalAlignment="Bottom"
+                                        Fill="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        IsVisible="{Binding RepeatText, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter='Repetir: no'}" />
+                                </Panel>
+                            </Button>
+                        </StackPanel>
+                        <Grid ColumnDefinitions="56,*,56">
+                            <TextBlock
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                Text="{Binding PositionText}" />
+                            <Slider
+                                Grid.Column="1"
+                                Maximum="{Binding DurationSeconds}"
+                                Minimum="0"
+                                Value="{Binding PositionSeconds}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Text="{Binding DurationText}" />
+                        </Grid>
                     </StackPanel>
 
+                    <!--  Derecha: Letra, Pantalla completa y Volumen  -->
                     <StackPanel
-                        HorizontalAlignment="Center"
+                        Grid.Column="2"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
                         Orientation="Horizontal"
-                        Spacing="8">
-                        <Button Command="{Binding PreviousCommand}" Content="Anterior" />
+                        Spacing="4">
                         <Button
-                            MinWidth="100"
-                            HorizontalContentAlignment="Center"
-                            Command="{Binding TogglePlayPauseCommand}"
-                            Content="{Binding PlayPauseText}" />
-                        <Button Command="{Binding NextCommand}" Content="Siguiente" />
-                        <ToggleButton Content="Aleatorio" IsChecked="{Binding IsShuffleOn}" />
-                        <Button
-                            MinWidth="130"
-                            HorizontalContentAlignment="Center"
-                            Command="{Binding CycleRepeatCommand}"
-                            Content="{Binding RepeatText}" />
-                        <Button
+                            AutomationProperties.Name="Letra"
+                            Classes="icon"
+                            Classes.active="{Binding Lyrics.ShowPanel}"
                             Command="{Binding Lyrics.ToggleOpenCommand}"
-                            Content="Letra"
-                            IsEnabled="{Binding Lyrics.IsAvailable}" />
-                        <Button Command="{Binding OpenImmersiveCommand}" Content="Pantalla completa" />
-                        <TextBlock
-                            Margin="16,0,0,0"
-                            VerticalAlignment="Center"
-                            Opacity="0.7"
-                            Text="Vol." />
+                            IsEnabled="{Binding Lyrics.IsAvailable}"
+                            ToolTip.Tip="Letra">
+                            <PathIcon Data="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z" />
+                        </Button>
+                        <Button
+                            AutomationProperties.Name="Pantalla completa"
+                            Classes="icon"
+                            Command="{Binding OpenImmersiveCommand}"
+                            ToolTip.Tip="Pantalla completa">
+                            <PathIcon Data="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                        </Button>
+                        <Button
+                            Margin="8,0,0,0"
+                            AutomationProperties.Name="{Binding MuteText}"
+                            Classes="icon"
+                            Command="{Binding ToggleMuteCommand}"
+                            ToolTip.Tip="{Binding MuteText}">
+                            <Panel>
+                                <PathIcon Data="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" IsVisible="{Binding !IsMuted}" />
+                                <PathIcon Data="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" IsVisible="{Binding IsMuted}" />
+                            </Panel>
+                        </Button>
                         <Slider
-                            Width="120"
+                            Width="100"
                             VerticalAlignment="Center"
                             Maximum="1"
                             Minimum="0"
                             Value="{Binding Volume}" />
                     </StackPanel>
-
-                    <Grid ColumnDefinitions="56,*,56">
-                        <TextBlock
-                            Grid.Column="0"
-                            VerticalAlignment="Center"
-                            Text="{Binding PositionText}" />
-                        <Slider
-                            Grid.Column="1"
-                            Maximum="{Binding DurationSeconds}"
-                            Minimum="0"
-                            Value="{Binding PositionSeconds}" />
-                        <TextBlock
-                            Grid.Column="2"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Text="{Binding DurationText}" />
-                    </Grid>
-                </StackPanel>
+                </Grid>
             </Border>
 
             <!--  Barra lateral, Lista de canciones y Panel de letras  -->
@@ -712,8 +927,12 @@
                     Margin="16"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
+                    AutomationProperties.Name="Cerrar"
+                    Classes="icon"
                     Command="{Binding CloseImmersiveCommand}"
-                    Content="✕  Cerrar" />
+                    ToolTip.Tip="Cerrar">
+                    <PathIcon Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                </Button>
                 <Grid Margin="48,72,48,32" ColumnDefinitions="*,*">
                     <!--  Izquierda: carátula, datos y controles  -->
                     <StackPanel
@@ -767,21 +986,80 @@
                         </Grid>
                         <StackPanel
                             HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
                             Orientation="Horizontal"
                             Spacing="8">
-                            <Button Command="{Binding PreviousCommand}" Content="Anterior" />
+                            <ToggleButton
+                                AutomationProperties.Name="Aleatorio"
+                                Classes="icon"
+                                Classes.active="{Binding IsShuffleOn}"
+                                IsChecked="{Binding IsShuffleOn}"
+                                ToolTip.Tip="Aleatorio">
+                                <Panel Width="36" Height="36">
+                                    <PathIcon
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Data="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+                                    <Ellipse
+                                        Width="4"
+                                        Height="4"
+                                        Margin="0,0,0,3"
+                                        VerticalAlignment="Bottom"
+                                        Fill="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        IsVisible="{Binding IsShuffleOn}" />
+                                </Panel>
+                            </ToggleButton>
                             <Button
-                                MinWidth="100"
-                                HorizontalContentAlignment="Center"
+                                AutomationProperties.Name="Anterior"
+                                Classes="icon skip"
+                                Command="{Binding PreviousCommand}"
+                                ToolTip.Tip="Anterior">
+                                <PathIcon Data="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                            </Button>
+                            <Button
+                                AutomationProperties.Name="{Binding PlayPauseText}"
+                                Classes="play"
                                 Command="{Binding TogglePlayPauseCommand}"
-                                Content="{Binding PlayPauseText}" />
-                            <Button Command="{Binding NextCommand}" Content="Siguiente" />
-                            <ToggleButton Content="Aleatorio" IsChecked="{Binding IsShuffleOn}" />
+                                ToolTip.Tip="{Binding PlayPauseText}">
+                                <Panel Classes="pp" Classes.playing="{Binding IsPlaying}">
+                                    <PathIcon Classes="glyph-play" Data="M8 5v14l11-7z" />
+                                    <PathIcon Classes="glyph-pause" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                </Panel>
+                            </Button>
                             <Button
-                                MinWidth="130"
-                                HorizontalContentAlignment="Center"
+                                AutomationProperties.Name="Siguiente"
+                                Classes="icon skip"
+                                Command="{Binding NextCommand}"
+                                ToolTip.Tip="Siguiente">
+                                <PathIcon Data="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                            </Button>
+                            <Button
+                                AutomationProperties.Name="{Binding RepeatText}"
+                                Classes="icon"
+                                Classes.active="{Binding RepeatText, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter='Repetir: no'}"
                                 Command="{Binding CycleRepeatCommand}"
-                                Content="{Binding RepeatText}" />
+                                ToolTip.Tip="{Binding RepeatText}">
+                                <Panel Width="36" Height="36">
+                                    <PathIcon
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Data="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="8"
+                                        FontWeight="Bold"
+                                        IsVisible="{Binding RepeatText, Converter={x:Static ObjectConverters.Equal}, ConverterParameter='Repetir: una'}"
+                                        Text="1" />
+                                    <Ellipse
+                                        Width="4"
+                                        Height="4"
+                                        Margin="0,0,0,3"
+                                        VerticalAlignment="Bottom"
+                                        Fill="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        IsVisible="{Binding RepeatText, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter='Repetir: no'}" />
+                                </Panel>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
                     <!--  Derecha: letras con la misma plantilla que el panel lateral  -->

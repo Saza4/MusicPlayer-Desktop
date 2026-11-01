@@ -542,10 +542,23 @@ public partial class MainViewModel : ViewModelBase
 
         DurationText = TimeFormatter.Format(_player.Duration);
         CurrentTrack = item;
+        SyncSelectionWith(item);
         _ = Lyrics.LoadAsync(item.Track);
         _ = LoadNowPlayingCoverAsync(item.Track);
         _settings.Update(s => s with { LastTrackId = item.Track.Id });
         NowPlaying = $"{item.Title} — {item.Artist}";
+    }
+
+    /// <summary>
+    /// Lleva el resaltado de la lista a la pista que suena (Siguiente, Anterior, avance automático, doble clic).
+    /// Se busca por Id: tras reescanear, la cola puede tener una instancia distinta a la que muestra la lista.
+    /// Si la pista no está en la lista visible (otra playlist, filtro activo), no se toca la selección.
+    /// </summary>
+    private void SyncSelectionWith(TrackItemViewModel item)
+    {
+        var visible = Tracks.FirstOrDefault(i => i.Track.Id == item.Track.Id);
+        if (visible is not null && !ReferenceEquals(SelectedTrack, visible))
+            SelectedTrack = visible;
     }
 
     // El reproductor pasó solo a la pista preparada: aquí solo se pone al día la cola y lo que se ve.
@@ -769,8 +782,20 @@ public partial class MainViewModel : ViewModelBase
             _player.Seek(TimeSpan.FromSeconds(value));
     }
 
+    // Silencio (mute): un clic deja el volumen en 0 y otro clic devuelve el nivel anterior
+    private double _volumeBeforeMute = 1.0; // último volumen distinto de cero
+
+    public bool IsMuted => Volume <= 0;
+    public string MuteText => IsMuted ? "Desactivar silenciar" : "Silenciar";
+
+    [RelayCommand]
+    private void ToggleMute() => Volume = IsMuted ? _volumeBeforeMute : 0;
+
     partial void OnVolumeChanged(double value)
     {
+        if (value > 0) _volumeBeforeMute = value;
+        OnPropertyChanged(nameof(IsMuted));
+        OnPropertyChanged(nameof(MuteText));
         _player.Volume = value;
         if (!_restoring)
             _settings.Update(s => s with { Volume = value });
