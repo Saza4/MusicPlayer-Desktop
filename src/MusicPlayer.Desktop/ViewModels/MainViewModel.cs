@@ -157,6 +157,7 @@ public partial class MainViewModel : ViewModelBase
     public TagEditorViewModel TagEditor { get; }
     public TagAutoFixViewModel AutoFix { get; }
     public ConvertViewModel Conversion { get; }
+    public AlbumCoverViewModel AlbumCover { get; }
 
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
     private readonly PlayQueue<TrackItemViewModel> _queue = new();
@@ -188,7 +189,8 @@ public partial class MainViewModel : ViewModelBase
                          IFolderPickerService folderPicker, LyricsViewModel lyrics,
                          CoverArtLoader covers, PlaylistViewModel playlists,
                          SettingsService settings, TagEditorViewModel tagEditor,
-                         TagAutoFixViewModel autoFix, ConvertViewModel conversion)
+                         TagAutoFixViewModel autoFix, ConvertViewModel conversion,
+                         AlbumCoverViewModel albumCover)
     {
         _covers = covers;
         _settings = settings;
@@ -197,6 +199,7 @@ public partial class MainViewModel : ViewModelBase
         TagEditor = tagEditor;
         AutoFix = autoFix;
         Conversion = conversion;
+        AlbumCover = albumCover;
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
@@ -226,6 +229,9 @@ public partial class MainViewModel : ViewModelBase
         AutoFix.Notified += message => Status = message;
         Conversion.Added += ApplySnapshot;
         Conversion.Notified += message => Status = message;
+        AlbumCover.Applied += ApplySnapshot;
+        AlbumCover.Notified += message => Status = message;
+        AlbumCover.Saving += OnTagsSaving;
     }
 
     // ---- Biblioteca ----

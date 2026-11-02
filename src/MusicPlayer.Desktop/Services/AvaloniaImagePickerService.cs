@@ -7,7 +7,7 @@ namespace MusicPlayer.Desktop.Services;
 
 public sealed class AvaloniaImagePickerService : IImagePickerService
 {
-    public async Task<string?> PickImageAsync()
+    public async Task<string?> PickImageAsync(string title = "Elige la carátula")
     {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime
             { MainWindow: { } owner })
@@ -15,7 +15,7 @@ public sealed class AvaloniaImagePickerService : IImagePickerService
 
         var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Elige la carátula",
+            Title = title,
             AllowMultiple = false,
             FileTypeFilter = new[]
             {

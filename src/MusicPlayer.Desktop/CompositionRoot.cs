@@ -65,6 +65,7 @@ public static class CompositionRoot
 
         services.AddSingleton<IImagePickerService, AvaloniaImagePickerService>();
         services.AddSingleton<ConvertViewModel>();
+        services.AddSingleton<AlbumCoverViewModel>();
 
         // Interfaz
         services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();

@@ -27,7 +27,13 @@ public class CoverEditorTests
     private sealed class FakeWriter : ICoverArtWriter
     {
         public List<(string Path, byte[]? Image)> Calls { get; } = new();
-        public void Write(string filePath, byte[]? image) => Calls.Add((filePath, image));
+        public HashSet<string> Failing { get; } = new();
+
+        public void Write(string filePath, byte[]? image)
+        {
+            if (Failing.Contains(filePath)) throw new IOException("bloqueado");
+            Calls.Add((filePath, image));
+        }
     }
 
     private static async Task<(CoverEditor Editor, FakeWriter Writer, Track Track)> SetUp()
@@ -91,6 +97,44 @@ public class CoverEditorTests
         var (editor, writer, _) = await SetUp();
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => editor.SetAsync(Guid.NewGuid(), Png));
+
+        Assert.Empty(writer.Calls);
+    }
+
+    private static Track Song(string file) => new() { FilePath = file, Title = file };
+
+    [Fact]
+    public async Task SetMany_WritesTheImageToEveryTrack()
+    {
+        var (editor, writer, _) = await SetUp();
+
+        var result = await editor.SetManyAsync(new[] { Song("a.mp3"), Song("b.mp3") }, Png);
+
+        Assert.Equal(2, result.Written);
+        Assert.Empty(result.Errors);
+        Assert.Equal(new[] { "a.mp3", "b.mp3" }, writer.Calls.Select(c => c.Path));
+    }
+
+    [Fact]
+    public async Task SetMany_OneFailure_KeepsGoingAndReportsIt()
+    {
+        var (editor, writer, _) = await SetUp();
+        writer.Failing.Add("a.mp3");
+
+        var result = await editor.SetManyAsync(new[] { Song("a.mp3"), Song("b.mp3") }, Png);
+
+        Assert.Equal(1, result.Written);
+        Assert.Contains("a.mp3", Assert.Single(result.Errors));
+        Assert.Equal("b.mp3", Assert.Single(writer.Calls).Path);
+    }
+
+    [Fact]
+    public async Task SetMany_InvalidImage_ThrowsBeforeWritingAnything()
+    {
+        var (editor, writer, _) = await SetUp();
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            editor.SetManyAsync(new[] { Song("a.mp3") }, new byte[] { 1, 2, 3 }));
 
         Assert.Empty(writer.Calls);
     }

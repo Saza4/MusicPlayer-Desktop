@@ -168,6 +168,10 @@ public partial class MainWindow : Window
         convert.Click += (_, _) => vm.Conversion.Begin(new[] { item.Track }, item.Title);
         entries.Add(convert);
 
+        var albumCover = new MenuItem { Header = "Carátula del álbum…" };
+        albumCover.Click += (_, _) => _ = vm.AlbumCover.ApplyAsync(item.Track);
+        entries.Add(albumCover);
+
         entries.Add(new Separator());
         var unlink = new MenuItem { Header = "Quitar de la biblioteca" };
         unlink.Click += (_, _) => vm.UnlinkTrackCommand.Execute(item);
