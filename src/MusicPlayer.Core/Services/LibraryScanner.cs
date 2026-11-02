@@ -39,4 +39,8 @@ public sealed class LibraryScanner(ITrackMetadataReader reader)
             return tracks;
         }, ct);
     }
+
+    /// <summary>Lee los metadatos de archivos concretos, sin recorrer carpetas.</summary>
+    public Task<IReadOnlyList<Track>> ReadFilesAsync(IEnumerable<string> paths, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<Track>>(() => paths.Select(reader.Read).OfType<Track>().ToList(), ct);
 }

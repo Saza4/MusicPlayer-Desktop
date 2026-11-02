@@ -250,4 +250,30 @@ public class LibraryServiceTests : IDisposable
     }
 
     public void Dispose() => Directory.Delete(_root, recursive: true);
+
+    [Fact]
+    public async Task AddFilesAsync_AddsOnlyTheGivenFilesAndSaves()
+    {
+        var one = Touch("a/one.mp3");
+        Touch("a/two.mp3");
+        var repo = new InMemoryRepository();
+
+        var snapshot = await NewService(repo).AddFilesAsync(new[] { one });
+
+        Assert.Equal("one", Assert.Single(snapshot.Tracks).Title);
+        Assert.Equal(1, repo.SaveCount);
+    }
+
+    [Fact]
+    public async Task AddFilesAsync_KnownPath_KeepsItsId()
+    {
+        var one = Touch("a/one.mp3");
+        var service = NewService(new InMemoryRepository());
+
+        var first = await service.AddFilesAsync(new[] { one });
+        var second = await service.AddFilesAsync(new[] { one });
+
+        Assert.Single(second.Tracks);
+        Assert.Equal(first.Tracks[0].Id, second.Tracks[0].Id);
+    }
 }

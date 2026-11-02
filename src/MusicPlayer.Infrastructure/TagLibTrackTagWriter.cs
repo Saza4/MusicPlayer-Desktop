@@ -5,31 +5,12 @@ namespace MusicPlayer.Infrastructure;
 
 public sealed class TagLibTrackTagWriter : ITrackTagWriter
 {
-    /// <summary>
-    /// Edita una copia temporal, la verifica y la intercambia por el original. Si algo falla,
-    /// el original queda intacto. Cuesta copiar el archivo entero, a cambio de no arriesgarlo.
-    /// </summary>
-    public void Write(string filePath, TrackTags tags)
-    {
-        if (new FileInfo(filePath).IsReadOnly)
-            throw new UnauthorizedAccessException("El archivo es de solo lectura.");
-
-        // La copia conserva la extensión: TagLib decide el formato por ella.
-        var directory = Path.GetDirectoryName(Path.GetFullPath(filePath))!;
-        var temp = Path.Combine(directory, $"~tags-{Guid.NewGuid():N}{Path.GetExtension(filePath)}");
-
-        try
+    public void Write(string filePath, TrackTags tags) =>
+        SafeFileEdit.Run(filePath, temp =>
         {
-            File.Copy(filePath, temp);
             Apply(temp, tags);
             Verify(temp, tags);
-            File.Replace(temp, filePath, destinationBackupFileName: null);
-        }
-        finally
-        {
-            if (File.Exists(temp)) File.Delete(temp);
-        }
-    }
+        });
 
     private static void Apply(string path, TrackTags tags)
     {

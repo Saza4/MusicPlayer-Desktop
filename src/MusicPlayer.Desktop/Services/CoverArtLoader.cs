@@ -10,7 +10,7 @@ using MusicPlayer.Core.Services;
 
 namespace MusicPlayer.Desktop.Services;
 
-public sealed class CoverArtLoader(ICoverArtProvider provider)
+public sealed class CoverArtLoader(ICoverArtProvider provider, ICoverArtCache cache)
 {
     private const int ThumbnailWidth = 96;
     private const int LargeWidth = 640;
@@ -82,4 +82,10 @@ public sealed class CoverArtLoader(ICoverArtProvider provider)
                 return null; // imagen corrupta o formato no soportado
             }
         }, ct);
+
+    public void Invalidate(string filePath)
+    {
+        cache.Invalidate(filePath);
+        _thumbnails.Remove(filePath);
+    }
 }

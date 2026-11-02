@@ -30,6 +30,8 @@ inversión de dependencias y pruebas unitarias**. No usa servicios de streaming.
 - **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
 - **Editor de etiquetas:** corrige título, artista, artista del álbum, álbum, año, pista y disco directamente en el archivo (TagLibSharp). La canción conserva su identidad y sus playlists.
 - **Autocompletar/Limpiar etiquetas (local):** propone, con vista previa, título, artista y número de pista a partir del nombre del archivo, limpia basura de descargas ("Official Video", marcas de agua) y agrupa recopilatorios. Escribe de forma atómica (copia temporal, verificación y reemplazo) y permite deshacer.
+- **Carátulas editables:** elige una imagen JPG o PNG o quita la actual, directamente en el archivo (TagLibSharp, escritura atómica).
+- **Convertir formato (local):** MP3, FLAC, WAV y M4A con el `ffmpeg` instalado en tu equipo. Copia etiquetas y carátula, no toca el original y no usa la red.
 
 ## Arquitectura
 
@@ -65,6 +67,7 @@ ninguna librería externa. Algunas decisiones:
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - Binarios nativos de BASS (ver abajo)
+- (Opcional) [ffmpeg](https://ffmpeg.org/download.html) para convertir formatos. En Windows: `winget install Gyan.FFmpeg`. No se incluye en este repositorio.
 
 ## Compilar y ejecutar
 

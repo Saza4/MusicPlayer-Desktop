@@ -46,4 +46,16 @@ public class LruCacheTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new LruCache<string, int>(0));
     }
+
+    [Fact]
+    public void Remove_ForgetsTheKeyAndFreesItsSlot()
+    {
+        var cache = new LruCache<string, int>(2);
+        cache.Set("a", 1);
+
+        Assert.True(cache.Remove("a"));
+        Assert.False(cache.Remove("a"));
+        Assert.False(cache.TryGet("a", out _));
+        Assert.Equal(0, cache.Count);
+    }
 }

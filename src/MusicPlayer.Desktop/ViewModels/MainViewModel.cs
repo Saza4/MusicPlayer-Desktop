@@ -156,6 +156,7 @@ public partial class MainViewModel : ViewModelBase
     public PlaylistViewModel Playlists { get; }
     public TagEditorViewModel TagEditor { get; }
     public TagAutoFixViewModel AutoFix { get; }
+    public ConvertViewModel Conversion { get; }
 
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
     private readonly PlayQueue<TrackItemViewModel> _queue = new();
@@ -187,7 +188,7 @@ public partial class MainViewModel : ViewModelBase
                          IFolderPickerService folderPicker, LyricsViewModel lyrics,
                          CoverArtLoader covers, PlaylistViewModel playlists,
                          SettingsService settings, TagEditorViewModel tagEditor,
-                         TagAutoFixViewModel autoFix)
+                         TagAutoFixViewModel autoFix, ConvertViewModel conversion)
     {
         _covers = covers;
         _settings = settings;
@@ -195,6 +196,7 @@ public partial class MainViewModel : ViewModelBase
         Playlists = playlists;
         TagEditor = tagEditor;
         AutoFix = autoFix;
+        Conversion = conversion;
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
@@ -222,6 +224,8 @@ public partial class MainViewModel : ViewModelBase
         AutoFix.Saving += OnAutoFixSaving;
         AutoFix.Applied += OnTagsSaved; // el mismo manejador del editor manual
         AutoFix.Notified += message => Status = message;
+        Conversion.Added += ApplySnapshot;
+        Conversion.Notified += message => Status = message;
     }
 
     // ---- Biblioteca ----
@@ -727,6 +731,10 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void OpenAutoFix() =>
         AutoFix.Begin(Tracks.Where(t => t.IsAvailable).Select(t => t.Track).ToList());
+
+    [RelayCommand]
+    private void OpenConvert() =>
+        Conversion.Begin(Tracks.Where(t => t.IsAvailable).Select(t => t.Track).ToList(), "");
 
     private void OnAutoFixSaving(IReadOnlySet<Guid> ids)
     {

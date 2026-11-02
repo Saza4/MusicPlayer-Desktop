@@ -3,7 +3,7 @@ using MusicPlayer.Core.Models;
 
 namespace MusicPlayer.Core.Services;
 
-public sealed class CachedCoverArtProvider(ICoverArtProvider inner, int capacity = 32) : ICoverArtProvider
+public sealed class CachedCoverArtProvider(ICoverArtProvider inner, int capacity = 32) : ICoverArtProvider, ICoverArtCache
 {
     private readonly LruCache<string, byte[]?> _cache = new(capacity, StringComparer.OrdinalIgnoreCase);
 
@@ -16,4 +16,5 @@ public sealed class CachedCoverArtProvider(ICoverArtProvider inner, int capacity
         _cache.Set(track.FilePath, cover); // también guarda los "sin carátula"
         return cover;
     }
+    public void Invalidate(string filePath) => _cache.Remove(filePath);
 }

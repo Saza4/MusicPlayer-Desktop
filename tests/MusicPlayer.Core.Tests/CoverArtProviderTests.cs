@@ -88,4 +88,17 @@ public class CoverArtProviderTests
 
         Assert.Null(await provider.GetCoverAsync(Song("a.mp3")));
     }
+
+    [Fact]
+    public async Task Cached_Invalidate_ReadsTheFileAgain()
+    {
+        var inner = new FakeProvider(new byte[] { 1 });
+        var cached = new CachedCoverArtProvider(inner);
+        await cached.GetCoverAsync(Song("a.mp3"));
+
+        cached.Invalidate("a.mp3");
+        await cached.GetCoverAsync(Song("a.mp3"));
+
+        Assert.Equal(2, inner.Calls);
+    }
 }

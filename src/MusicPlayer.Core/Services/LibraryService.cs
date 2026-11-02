@@ -134,4 +134,25 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         await repository.SaveAsync(_current, ct);
         return _current;
     }
+
+    /// <summary>Agrega archivos concretos (por ejemplo, los recién convertidos), conservando el Id de los ya conocidos.</summary>
+    public async Task<LibrarySnapshot> AddFilesAsync(IEnumerable<string> paths, CancellationToken ct = default)
+    {
+        var found = await scanner.ReadFilesAsync(paths, ct);
+        if (found.Count == 0)
+            return _current;
+
+        var byPath = _current.Tracks
+            .DistinctBy(t => t.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(t => t.FilePath, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var track in found)
+            byPath[track.FilePath] = byPath.TryGetValue(track.FilePath, out var known)
+                ? track with { Id = known.Id, AddedAt = known.AddedAt }
+                : track;
+
+        _current = _current with { Tracks = TrackSorter.Sort(byPath.Values) };
+        await repository.SaveAsync(_current, ct);
+        return _current;
+    }
 }

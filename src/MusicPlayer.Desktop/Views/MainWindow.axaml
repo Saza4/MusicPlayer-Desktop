@@ -204,11 +204,16 @@
                         Command="{Binding AddFolderCommand}"
                         Content="Agregar carpeta"
                         DockPanel.Dock="Left" />
-                    <!--  Autocompletar/Limpiar etiquetas…  -->
+                    <!--  Autocompletar/Limpiar etiquetas… o editor de etiquetas  -->
                     <Button
                         Margin="8,0,0,0"
                         Command="{Binding OpenAutoFixCommand}"
                         Content="Limpiar etiquetas"
+                        DockPanel.Dock="Left" />
+                    <Button
+                        Margin="8,0,0,0"
+                        Command="{Binding OpenConvertCommand}"
+                        Content="Convertir lo que veo…"
                         DockPanel.Dock="Left" />
                     <TextBox
                         Width="280"
@@ -221,6 +226,62 @@
                         Opacity="0.7"
                         Text="{Binding Status}" />
                 </DockPanel>
+            </Border>
+
+            <!--  Convertir formato  -->
+            <Border
+                Padding="16,12"
+                Background="#22FFFFFF"
+                DockPanel.Dock="Top"
+                IsVisible="{Binding Conversion.IsOpen}">
+                <StackPanel Spacing="8">
+                    <TextBlock
+                        FontWeight="SemiBold"
+                        Text="{Binding Conversion.Heading}"
+                        TextWrapping="Wrap" />
+
+                    <TextBlock
+                        Foreground="#FFE57373"
+                        IsVisible="{Binding !Conversion.HasConverter}"
+                        Text="No se encontró ffmpeg. Instálalo (en Windows: winget install Gyan.FFmpeg), reinicia la app y vuelve a intentarlo."
+                        TextWrapping="Wrap" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Formato" />
+                            <ComboBox
+                                MinWidth="110"
+                                ItemsSource="{Binding Conversion.Formats}"
+                                SelectedItem="{Binding Conversion.Format}" />
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding Conversion.UsesBitrate}" Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Calidad (kbps)" />
+                            <ComboBox
+                                MinWidth="110"
+                                ItemsSource="{Binding Conversion.Bitrates}"
+                                SelectedItem="{Binding Conversion.Bitrate}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <CheckBox Content="Agregar los archivos nuevos a la biblioteca" IsChecked="{Binding Conversion.AddToLibrary}" />
+                    <TextBlock
+                        FontSize="12"
+                        Opacity="0.6"
+                        Text="Los originales no se modifican: el resultado queda junto a ellos. Convertir de MP3 o M4A a FLAC o WAV no mejora la calidad."
+                        TextWrapping="Wrap" />
+                    <TextBlock IsVisible="{Binding Conversion.IsBusy}" Text="{Binding Conversion.ProgressText}" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Command="{Binding Conversion.StartCommand}" Content="Convertir" />
+                        <Button Command="{Binding Conversion.CancelCommand}" Content="Cancelar" />
+                    </StackPanel>
+                </StackPanel>
             </Border>
 
             <!--  Vista previa de sugerencias  -->
@@ -406,6 +467,41 @@
                             <TextBox Text="{Binding TagEditor.AlbumArtist}" />
                         </StackPanel>
                     </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border
+                            Width="96"
+                            Height="96"
+                            Background="#22FFFFFF"
+                            ClipToBounds="True"
+                            CornerRadius="6">
+                            <Panel>
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="36"
+                                    Opacity="0.4"
+                                    Text="♪" />
+                                <Image Source="{Binding TagEditor.CoverPreview}" Stretch="UniformToFill" />
+                            </Panel>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center" Spacing="6">
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.7"
+                                Text="Carátula (JPG o PNG)" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Command="{Binding TagEditor.ChooseCoverCommand}" Content="Elegir imagen…" />
+                                <Button Command="{Binding TagEditor.RemoveCoverCommand}" Content="Quitar" />
+                            </StackPanel>
+                            <TextBlock
+                                FontSize="12"
+                                Opacity="0.6"
+                                Text="{Binding TagEditor.CoverNote}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <StackPanel Spacing="2">
                             <TextBlock

@@ -164,6 +164,10 @@ public partial class MainWindow : Window
         edit.Click += (_, _) => vm.TagEditor.Begin(item);
         entries.Add(edit);
 
+        var convert = new MenuItem { Header = "Convertir formato…" };
+        convert.Click += (_, _) => vm.Conversion.Begin(new[] { item.Track }, item.Title);
+        entries.Add(convert);
+
         entries.Add(new Separator());
         var unlink = new MenuItem { Header = "Quitar de la biblioteca" };
         unlink.Click += (_, _) => vm.UnlinkTrackCommand.Execute(item);

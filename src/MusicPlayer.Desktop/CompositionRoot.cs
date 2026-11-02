@@ -47,14 +47,24 @@ public static class CompositionRoot
                 baseProvider, parser, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         });
 
-        // Carátulas: incrustada primero, cover.jpg de respaldo, con caché.
-        services.AddSingleton<ICoverArtProvider>(_ => new CachedCoverArtProvider(
+        // Carátulas: la caché es un solo objeto visto como proveedor y como "invalidable".
+        services.AddSingleton(_ => new CachedCoverArtProvider(
             new CompositeCoverArtProvider(new ICoverArtProvider[]
             {
-                new EmbeddedCoverArtProvider(),
-                new FolderCoverArtProvider()
+        new EmbeddedCoverArtProvider(),
+        new FolderCoverArtProvider()
             })));
+        services.AddSingleton<ICoverArtProvider>(sp => sp.GetRequiredService<CachedCoverArtProvider>());
+        services.AddSingleton<ICoverArtCache>(sp => sp.GetRequiredService<CachedCoverArtProvider>());
         services.AddSingleton<CoverArtLoader>();
+
+        services.AddSingleton<ICoverArtWriter, TagLibCoverArtWriter>();
+        services.AddSingleton<CoverEditor>();
+        services.AddSingleton<IAudioConverter, FfmpegAudioConverter>();
+        services.AddSingleton<ConversionService>();
+
+        services.AddSingleton<IImagePickerService, AvaloniaImagePickerService>();
+        services.AddSingleton<ConvertViewModel>();
 
         // Interfaz
         services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();

@@ -53,4 +53,14 @@ public sealed class LruCache<TKey, TValue> where TKey : notnull
             }
         }
     }
+
+    public bool Remove(TKey key)
+    {
+        lock (_lock)
+        {
+            if (!_map.Remove(key, out var node)) return false;
+            _order.Remove(node);
+            return true;
+        }
+    }
 }
