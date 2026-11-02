@@ -23,6 +23,7 @@ inversión de dependencias y pruebas unitarias**. No usa servicios de streaming.
 - **Playlists:** crear, renombrar, eliminar, agregar y quitar canciones.
 - **Letras:** `.lrc` sincronizado (auto-scroll y salto al pulsar una línea) o texto USLT incrustado.
   Traducción y pronunciación desde archivos hermanos (`cancion.es.lrc`, `cancion.rom.lrc`).
+- **Incrustar letra:** guarda un `.lrc` dentro de las etiquetas del archivo (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) con escritura atómica y verificación, para que la letra viaje con la canción.
 - **Modo inmersivo** con fondo desenfocado a partir de la carátula.
 - **Carátulas bajo demanda** (incrustadas o `cover.jpg`) con caché LRU.
 - **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir y última canción.

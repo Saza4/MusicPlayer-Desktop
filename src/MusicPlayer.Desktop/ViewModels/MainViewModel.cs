@@ -158,6 +158,7 @@ public partial class MainViewModel : ViewModelBase
     public TagAutoFixViewModel AutoFix { get; }
     public ConvertViewModel Conversion { get; }
     public AlbumCoverViewModel AlbumCover { get; }
+    public EmbedLyricsViewModel EmbedLyrics { get; }
 
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
     private readonly PlayQueue<TrackItemViewModel> _queue = new();
@@ -190,7 +191,7 @@ public partial class MainViewModel : ViewModelBase
                          CoverArtLoader covers, PlaylistViewModel playlists,
                          SettingsService settings, TagEditorViewModel tagEditor,
                          TagAutoFixViewModel autoFix, ConvertViewModel conversion,
-                         AlbumCoverViewModel albumCover)
+                         AlbumCoverViewModel albumCover, EmbedLyricsViewModel embedLyrics)
     {
         _covers = covers;
         _settings = settings;
@@ -200,6 +201,7 @@ public partial class MainViewModel : ViewModelBase
         AutoFix = autoFix;
         Conversion = conversion;
         AlbumCover = albumCover;
+        EmbedLyrics = embedLyrics;
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
@@ -232,6 +234,8 @@ public partial class MainViewModel : ViewModelBase
         AlbumCover.Applied += ApplySnapshot;
         AlbumCover.Notified += message => Status = message;
         AlbumCover.Saving += OnTagsSaving;
+        EmbedLyrics.Notified += message => Status = message;
+        EmbedLyrics.Saving += OnTagsSaving;
     }
 
     // ---- Biblioteca ----

@@ -172,6 +172,10 @@ public partial class MainWindow : Window
         albumCover.Click += (_, _) => _ = vm.AlbumCover.ApplyAsync(item.Track);
         entries.Add(albumCover);
 
+        var embedLyrics = new MenuItem { Header = "Incrustar letra (.lrc)…" };
+        embedLyrics.Click += (_, _) => _ = vm.EmbedLyrics.EmbedAsync(item.Track);
+        entries.Add(embedLyrics);
+
         entries.Add(new Separator());
         var unlink = new MenuItem { Header = "Quitar de la biblioteca" };
         unlink.Click += (_, _) => vm.UnlinkTrackCommand.Execute(item);

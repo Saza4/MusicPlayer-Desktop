@@ -60,12 +60,16 @@ public static class CompositionRoot
 
         services.AddSingleton<ICoverArtWriter, TagLibCoverArtWriter>();
         services.AddSingleton<CoverEditor>();
+        services.AddSingleton<ILyricsWriter, TagLibLyricsWriter>();
+        services.AddSingleton<LyricsEditor>();
         services.AddSingleton<IAudioConverter, FfmpegAudioConverter>();
         services.AddSingleton<ConversionService>();
 
         services.AddSingleton<IImagePickerService, AvaloniaImagePickerService>();
+        services.AddSingleton<ILyricsPickerService, AvaloniaLyricsPickerService>();
         services.AddSingleton<ConvertViewModel>();
         services.AddSingleton<AlbumCoverViewModel>();
+        services.AddSingleton<EmbedLyricsViewModel>();
 
         // Interfaz
         services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();
