@@ -9,6 +9,7 @@
     MinWidth="640"
     MinHeight="400"
     x:DataType="vm:MainViewModel"
+    Background="#0F0F0F"
     Icon="/Assets/app.ico">
 
     <Window.Resources>
@@ -67,7 +68,7 @@
             <Setter Property="FontWeight" Value="Bold" />
         </Style>
 
-        <!--  ===== Barra multimedia: iconos planos sin caja (fondo solo al pasar el cursor) =====  -->
+        <!--  Barra multimedia: iconos planos sin caja (fondo solo al pasar el cursor)  -->
         <Style Selector=":is(Button).icon">
             <Setter Property="Width" Value="36" />
             <Setter Property="Height" Value="36" />
@@ -196,7 +197,8 @@
             <!--  Barra superior  -->
             <Border
                 Padding="16,12"
-                BorderBrush="#33FFFFFF"
+                Background="#000000"
+                BorderBrush="#1FFFFFFF"
                 BorderThickness="0,0,0,1"
                 DockPanel.Dock="Top">
                 <DockPanel>
@@ -231,7 +233,7 @@
             <!--  Convertir formato  -->
             <Border
                 Padding="16,12"
-                Background="#22FFFFFF"
+                Background="#000000"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding Conversion.IsOpen}">
                 <StackPanel Spacing="8">
@@ -287,7 +289,7 @@
             <!--  Vista previa de sugerencias  -->
             <Border
                 Padding="16,12"
-                Background="#22FFFFFF"
+                Background="#000000"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding AutoFix.IsOpen}">
                 <StackPanel Spacing="8">
@@ -414,7 +416,7 @@
 
             <Border
                 Padding="16,12"
-                Background="#22FFFFFF"
+                Background="#000000"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding TagEditor.IsOpen}">
                 <StackPanel Spacing="8">
@@ -545,7 +547,8 @@
             <!--  Controles de reproducción: [carátula + título] [controles + progreso] [letra, pantalla completa, volumen]  -->
             <Border
                 Padding="16,12"
-                BorderBrush="#33FFFFFF"
+                Background="#000000"
+                BorderBrush="#1FFFFFFF"
                 BorderThickness="0,1,0,0"
                 DockPanel.Dock="Bottom">
                 <Grid ColumnDefinitions="*,2*,*">
@@ -732,7 +735,7 @@
                     <Border
                         Margin="0,8,0,0"
                         Padding="8"
-                        Background="#18FFFFFF"
+                        Background="#000000"
                         CornerRadius="8"
                         DockPanel.Dock="Bottom"
                         IsVisible="{Binding Playlists.IsEditing}">
@@ -947,7 +950,8 @@
                     Width="380"
                     Margin="0,8,8,8"
                     Padding="8"
-                    BorderBrush="#33FFFFFF"
+                    Background="#000000"
+                    BorderBrush="#1FFFFFFF"
                     BorderThickness="1"
                     CornerRadius="8"
                     IsVisible="{Binding Lyrics.ShowPanel}">
