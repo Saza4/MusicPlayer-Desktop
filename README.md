@@ -15,6 +15,7 @@ inversión de dependencias y pruebas unitarias**. No usa servicios de streaming.
 ## Funciones
 
 - **Reproducción** de `.mp3`, `.flac`, `.wav` y `.m4a` con seek, volumen, anterior y siguiente, **sin silencios entre pistas** (BASSmix).
+- **Atajo de teclado:** la barra espaciadora reproduce y pausa en toda la ventana, salvo al escribir o marcar opciones.
 - **Aleatorio** (Fisher-Yates sobre una lista de índices) y **repetir** (no / todas / una).
 - **Cola dinámica:** "Reproducir siguiente" y "Agregar a la cola" desde el clic derecho.
 - **Biblioteca:** escaneo de carpetas en segundo plano, metadatos con TagLibSharp, orden por

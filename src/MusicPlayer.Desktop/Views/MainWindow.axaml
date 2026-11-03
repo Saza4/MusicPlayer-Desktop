@@ -834,6 +834,7 @@
                     <Panel>
                         <!--  Canciones: el mismo ListBox de antes, con IsVisible nuevo  -->
                         <ListBox
+                            x:Name="SongList"
                             ContextRequested="OnTrackListContextRequested"
                             DoubleTapped="OnTrackDoubleTapped"
                             IsVisible="{Binding ShowSongs}"

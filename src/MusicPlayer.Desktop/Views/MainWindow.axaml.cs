@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using MusicPlayer.Desktop.ViewModels;
 
@@ -17,6 +18,10 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // Tunnel: la ventana ve la tecla antes que el control enfocado, que usaría la barra para lo suyo.
+        AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        Opened += OnOpened;
+
         DataContextChanged += (_, _) =>
         {
             if (DataContext is not MainViewModel vm) return;
@@ -25,6 +30,30 @@ public partial class MainWindow : Window
             vm.Playlists.PropertyChanged += OnPlaylistsPropertyChanged;
         };
     }
+
+    // Al abrir: la ventana toma el foco del teclado y el foco lógico queda en la lista, no en el aire.
+    private void OnOpened(object? sender, EventArgs e)
+    {
+        Activate();
+        this.FindControl<ListBox>("SongList")?.Focus();
+    }
+
+    // Barra espaciadora: reproducir/pausar en toda la ventana, salvo donde se necesita para otra cosa.
+    private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Space
+            || e.KeyModifiers != KeyModifiers.None
+            || DataContext is not MainViewModel vm
+            || UsesSpace(e.Source))
+            return;
+
+        vm.TogglePlayPauseCommand.Execute(null);
+        e.Handled = true; // el botón o la fila enfocados no reciben la tecla
+    }
+
+    // Controles que usan la barra para lo suyo: escribir, abrir una lista, marcar una casilla, activar un menú.
+    private static bool UsesSpace(object? source) =>
+        source is TextBox or ComboBox or ComboBoxItem or CheckBox or MenuItem;
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -115,8 +144,7 @@ public partial class MainWindow : Window
         {
             vm.SelectedTrack = item;
             vm.PlayTrackCommand.Execute(item);
-        }
-        ;
+        };
         entries.Add(play);
 
         var playNext = new MenuItem { Header = "Reproducir siguiente" };
@@ -138,8 +166,7 @@ public partial class MainWindow : Window
             {
                 Header = MenuText(target.Name) + (alreadyIn ? "  ✓" : ""),
                 IsEnabled = !alreadyIn
-            }
-            ;
+            };
             entry.Click += (_, _) => _ = vm.Playlists.AddTrackAsync(item.Track, target);
             targets.Add(entry);
         }
