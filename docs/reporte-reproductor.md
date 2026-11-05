@@ -102,7 +102,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | 7   | Incrustar un `.lrc` en las etiquetas del archivo          | Core, Infrastructure, Desktop | Entregado                                                                           | v1.2.0 (ver sección 6) |
 | 8   | Barra espaciadora global y foco inicial                   | Desktop                       | Entregado (commit `f95fb1b`); no figura en las notas                                | v1.2.0                 |
 | 9   | Pausa mejorada                                            | Desktop                       | Sin cambio propio en el código: corresponde a la barra espaciadora (#8) (deducción) | v1.2.0                 |
-| 11  | Atajos `←` `→`, `Ctrl+↑` `Ctrl+↓` y `M`                   | Core, Desktop                 | Entregado; compila y pasa pruebas.                                                  | Sin publicar           |
+| 11  | Atajos `←` `→`, `Ctrl+↑` `Ctrl+↓` y `M`                   | Core, Desktop                 | Hecho (probado a mano en Windows); compila y pasa pruebas                           | Sin publicar           |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
 
 ### 4.2 Novedades de la serie v1.1.0
@@ -318,7 +318,7 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 
 **CI:** compila y pasa las pruebas en Linux. Eso demuestra el build y la lógica, no que BASS cargue ni que la interfaz funcione allí.
 
-**Pruebas manuales confirmadas:** FLAC y M4A, y letras `.lrc`.
+**Pruebas manuales confirmadas:** FLAC y M4A, letras `.lrc` y los atajos de teclado (salto, volumen y silencio).
 
 **Captura del 4 de noviembre de 2026 (Windows):** la app arranca con el tema oscuro, la barra de íconos (aleatorio, anterior, reproducir, siguiente, repetir) y el botón **Convertir lo que veo…**. La pista cargada muestra su duración en la barra de reproducción (4:55), un valor que viene de `IAudioPlayer.Duration`, así que BASS abrió el archivo. Aunque la captura no demuestra que suene. El autor confirmó manualmente que la reproducción y la reproducción sin silencios funcionan.
 
@@ -363,7 +363,7 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 - Mantener pulsada la barra repite el cambio de estado.
 - La barra ya no activa un botón enfocado: Enter sí lo hace.
 - La lista de controles que se quedan con las teclas es por tipo (`OwnsKeyboard`). Si se añade uno nuevo (`RadioButton`, `ToggleSwitch`), hay que sumarlo.
-- Los atajos nuevos pasan la prueba (lista en la especificación).
+- Los atajos de salto, volumen y silencio se probaron a mano en Windows y funcionan.
 - Windows puede negar el foco a una ventana nueva lanzada desde la terminal.
 
 **Plataforma**
