@@ -68,4 +68,25 @@
         x:Key="ThemeOverlayBorderHoverBrush"
         Opacity="0.2"
         Color="{DynamicResource ThemeOverlay}" />
+
+    <!--
+        Isla flotante («ahora suena»): negro y blanco FIJOS, igual que el modo inmersivo, en cualquier tema.
+        Son la única excepción con literales de este archivo: la isla imita un recorte de la pantalla.
+        El botón Reproducir/Pausa y los iconos activos de la isla sí usan ThemePrimaryBrush y ThemeAccentBrush
+        (ThemeFactory ya exige contraste 3:1 de esos dos colores sobre negro).
+    -->
+    <SolidColorBrush x:Key="ThemeIslandBackgroundBrush" Color="#000000" />
+    <SolidColorBrush x:Key="ThemeIslandTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeIslandSecondaryTextBrush"
+        Opacity="0.6"
+        Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeIslandTrackBrush"
+        Opacity="0.2"
+        Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeIslandPlaceholderBrush"
+        Opacity="0.1333333333"
+        Color="#FFFFFF" />
 </ResourceDictionary>

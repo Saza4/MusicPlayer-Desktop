@@ -53,6 +53,9 @@
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderStrongBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
         </Style>
+
+        <!--  Botones de reproducción (.icon, .skip, .play, .pp): los comparten MainWindow y la isla  -->
+        <StyleInclude Source="avares://MusicPlayer.Desktop/Themes/PlayerButtonStyles.axaml" />
     </Application.Styles>
 
     <Application.Resources>
