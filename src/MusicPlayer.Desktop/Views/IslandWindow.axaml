@@ -1,0 +1,77 @@
+<Window
+    x:Class="MusicPlayer.Desktop.Views.IslandWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
+    Title="Isla"
+    x:DataType="vm:MainViewModel"
+    Background="Transparent"
+    CanResize="False"
+    ShowActivated="False"
+    ShowInTaskbar="False"
+    SystemDecorations="None"
+    Topmost="True"
+    TransparencyLevelHint="Transparent"
+    WindowStartupLocation="Manual">
+    <!--
+        Isla flotante de «ahora suena». Las medidas salen de IslandMetrics (se asignan en el código).
+        Fondo negro y texto blanco fijos (ThemeIsland*); el acento sigue el tema.
+        La ventana mide la pastilla más el margen de sombra: fuera de la pastilla no hay fondo.
+    -->
+    <!--  Opacidad 0 hasta que se muestra; el fundido (IslandMetrics.FadeDuration) se asigna en el código  -->
+    <Panel x:Name="Root" Opacity="0">
+
+        <ThemeVariantScope RequestedThemeVariant="Dark">
+            <Border
+                x:Name="Pill"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Background="{DynamicResource ThemeIslandBackgroundBrush}"
+                TextElement.Foreground="{DynamicResource ThemeIslandTextBrush}">
+
+                <!--  Colapsada: miniatura a la izquierda, onda a la derecha  -->
+                <Grid x:Name="Collapsed" ColumnDefinitions="Auto,*,Auto">
+                    <Panel x:Name="CollapsedCover" VerticalAlignment="Center">
+                        <!--  Sin carátula: marcador neutro con una nota  -->
+                        <Border
+                            x:Name="CollapsedPlaceholder"
+                            Background="{DynamicResource ThemeIslandPlaceholderBrush}"
+                            IsVisible="{Binding NowPlayingCover, Converter={x:Static ObjectConverters.IsNull}}">
+                            <PathIcon
+                                Width="12"
+                                Height="12"
+                                Data="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                                Foreground="{DynamicResource ThemeIslandSecondaryTextBrush}" />
+                        </Border>
+                        <Border x:Name="CollapsedArt" ClipToBounds="True">
+                            <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill" />
+                        </Border>
+                    </Panel>
+
+                    <!--  Onda: estática por ahora (M7 la anima mientras suena)  -->
+                    <StackPanel
+                        x:Name="Wave"
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="2">
+                        <Border Classes="bar" Height="8" />
+                        <Border Classes="bar" Height="14" />
+                        <Border Classes="bar" Height="10" />
+                        <Border Classes="bar" Height="16" />
+                        <Border Classes="bar" Height="6" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </ThemeVariantScope>
+    </Panel>
+
+    <Window.Styles>
+        <Style Selector="StackPanel#Wave > Border.bar">
+            <Setter Property="Width" Value="3" />
+            <Setter Property="CornerRadius" Value="1.5" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush}" />
+        </Style>
+    </Window.Styles>
+</Window>

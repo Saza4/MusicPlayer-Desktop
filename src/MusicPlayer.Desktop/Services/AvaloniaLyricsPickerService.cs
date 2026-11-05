@@ -1,11 +1,14 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using MusicPlayer.Core.Services;
 
 namespace MusicPlayer.Desktop.Services;
 
-public sealed class AvaloniaLyricsPickerService : ILyricsPickerService
+// El selector se abre dentro de ModalTracker.Begin(): mientras está abierto, la isla no aparece.
+public sealed class AvaloniaLyricsPickerService(ModalTracker modals) : ILyricsPickerService
 {
     public async Task<string?> PickLyricsAsync(string title)
     {
@@ -13,15 +16,19 @@ public sealed class AvaloniaLyricsPickerService : ILyricsPickerService
             { MainWindow: { } owner })
             return null;
 
-        var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        IReadOnlyList<IStorageFile> files;
+        using (modals.Begin())
         {
-            Title = title,
-            AllowMultiple = false,
-            FileTypeFilter = new[]
+            files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                new FilePickerFileType("Letras (.lrc o .txt)") { Patterns = new[] { "*.lrc", "*.txt" } }
-            }
-        });
+                Title = title,
+                AllowMultiple = false,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType("Letras (.lrc o .txt)") { Patterns = new[] { "*.lrc", "*.txt" } }
+                }
+            });
+        }
 
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }

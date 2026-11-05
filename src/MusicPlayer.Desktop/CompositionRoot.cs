@@ -65,6 +65,8 @@ public static class CompositionRoot
         services.AddSingleton<IAudioConverter, FfmpegAudioConverter>();
         services.AddSingleton<ConversionService>();
 
+        // Los selectores avisan a ModalTracker mientras están abiertos (la isla no aparece encima).
+        services.AddSingleton<ModalTracker>();
         services.AddSingleton<IImagePickerService, AvaloniaImagePickerService>();
         services.AddSingleton<ILyricsPickerService, AvaloniaLyricsPickerService>();
         services.AddSingleton<ConvertViewModel>();
@@ -83,6 +85,7 @@ public static class CompositionRoot
         services.AddSingleton<TagEditorViewModel>();
         services.AddSingleton<TagAutoFixViewModel>();
         services.AddSingleton<MainViewModel>();
+        services.AddSingleton<IslandController>(); // isla flotante de «ahora suena» (solo Windows)
 
         // Un registro que falte falla aquí, al arrancar, y no la primera vez que se use.
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });

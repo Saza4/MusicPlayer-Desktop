@@ -1,0 +1,102 @@
+using System;
+using System.ComponentModel;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Threading;
+using MusicPlayer.Core.Services;
+using MusicPlayer.Desktop.ViewModels;
+using MusicPlayer.Desktop.Views;
+
+namespace MusicPlayer.Desktop.Services;
+
+/// <summary>
+/// Decide cuándo se ve la isla (regla en <see cref="IslandVisibility"/>) y la crea la primera vez que hace falta.
+/// Cada cambio relevante reinicia una espera corta (<see cref="IslandMetrics.VisibilityDelay"/>): solo se actúa
+/// cuando el estado se estabiliza, así un Alt+Tab rápido de ida y vuelta, o el hueco entre cerrar un selector y
+/// reactivarse la ventana principal, no hacen parpadear la isla. Solo funciona en Windows.
+/// </summary>
+public sealed class IslandController : IDisposable
+{
+    private readonly MainViewModel _viewModel;
+    private readonly ModalTracker _modals;
+    private readonly DispatcherTimer _settle;
+    private Window? _main;
+    private IslandWindow? _island;
+
+    public IslandController(MainViewModel viewModel, ModalTracker modals)
+    {
+        _viewModel = viewModel;
+        _modals = modals;
+        _settle = new DispatcherTimer(IslandMetrics.VisibilityDelay, DispatcherPriority.Normal, (_, _) => Apply());
+    }
+
+    public void Attach(Window main)
+    {
+        if (!OperatingSystem.IsWindows() || _main is not null) return;
+
+        _main = main;
+        _viewModel.PropertyChanged += OnViewModelChanged;
+        _modals.Changed += OnModalsChanged;
+        main.PropertyChanged += OnMainWindowChanged;
+        main.Closed += OnMainWindowClosed;
+        Schedule();
+    }
+
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MainViewModel.CurrentTrack)
+            or nameof(MainViewModel.ShowIsland)
+            or nameof(MainViewModel.IsImmersive))
+            Schedule();
+    }
+
+    private void OnModalsChanged(object? sender, EventArgs e) => Schedule();
+
+    private void OnMainWindowChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == WindowBase.IsActiveProperty || e.Property == Window.WindowStateProperty)
+            Schedule();
+    }
+
+    private void OnMainWindowClosed(object? sender, EventArgs e) => Dispose();
+
+    private void Schedule()
+    {
+        _settle.Stop();
+        _settle.Start();
+    }
+
+    private void Apply()
+    {
+        _settle.Stop();
+        if (_main is null) return;
+
+        var mainActive = _main.IsActive && _main.WindowState != WindowState.Minimized;
+        var show = IslandVisibility.ShouldShow(
+            hasTrack: _viewModel.CurrentTrack is not null,
+            showIsland: _viewModel.ShowIsland,
+            isImmersive: _viewModel.IsImmersive,
+            isMainWindowActive: mainActive,
+            isModalOpen: _modals.IsOpen);
+
+        if (show)
+            (_island ??= new IslandWindow { DataContext = _viewModel }).ShowFaded();
+        else
+            _island?.HideFaded();
+    }
+
+    public void Dispose()
+    {
+        _settle.Stop();
+        _viewModel.PropertyChanged -= OnViewModelChanged;
+        _modals.Changed -= OnModalsChanged;
+        if (_main is not null)
+        {
+            _main.PropertyChanged -= OnMainWindowChanged;
+            _main.Closed -= OnMainWindowClosed;
+            _main = null;
+        }
+        _island?.Close();
+        _island = null;
+    }
+}

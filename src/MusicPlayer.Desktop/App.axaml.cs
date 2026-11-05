@@ -1,9 +1,11 @@
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using MusicPlayer.Core.Services;
+using MusicPlayer.Desktop.Services;
 using MusicPlayer.Desktop.ViewModels;
 using MusicPlayer.Desktop.Views;
 
@@ -30,6 +32,10 @@ public partial class App : Application
             viewModel.Themes.Initialize();
 
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
+
+            // La isla es una segunda ventana: la app termina al cerrar la principal, no la última.
+            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
+            services.GetRequiredService<IslandController>().Attach(desktop.MainWindow);
 
             // Guarda los ajustes pendientes y libera lo que el contenedor creó (incluido BASS).
             desktop.Exit += (_, _) =>

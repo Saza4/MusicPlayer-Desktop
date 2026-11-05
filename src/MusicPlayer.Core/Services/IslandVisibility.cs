@@ -5,9 +5,11 @@ public static class IslandVisibility
 {
     /// <summary>
     /// La isla se ve si hay pista cargada, el ajuste «Mostrar isla» está activo, no se está en
-    /// modo inmersivo y la ventana principal no está activa (minimizada o detrás de otra ventana):
-    /// con la ventana principal activa, la isla solo duplicaría sus controles.
+    /// modo inmersivo, la ventana principal no está activa (minimizada o detrás de otra ventana)
+    /// y no hay un selector ni un diálogo de la app abierto. Con la ventana principal activa la
+    /// isla solo duplicaría sus controles, y un selector desactiva la ventana sin que el usuario
+    /// haya salido de la app.
     /// </summary>
-    public static bool ShouldShow(bool hasTrack, bool showIsland, bool isImmersive, bool isMainWindowActive) =>
-        hasTrack && showIsland && !isImmersive && !isMainWindowActive;
+    public static bool ShouldShow(bool hasTrack, bool showIsland, bool isImmersive, bool isMainWindowActive, bool isModalOpen) =>
+        hasTrack && showIsland && !isImmersive && !isMainWindowActive && !isModalOpen;
 }

@@ -138,6 +138,25 @@ Probado en Windows 11 con una ventana mínima (360×180, `SystemDecorations=None
 
 `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` se aplica siempre (con `OperatingSystem.IsWindows()`), por seguridad. La opción C (región de recorte) queda como alternativa si B muestra parpadeo en M5.
 
+## Resultado de M4
+
+Sonda automática en Windows 11 al 100 % (pantalla 1920×1032 de área de trabajo). La app reprodujo una pista con volumen 0 y los datos del usuario se restauraron al terminar. Una ventana propia de la sonda («Sonda») hizo de «otra app», sin tocar las del usuario ni mover el ratón.
+
+| Control | Resultado |
+|---|---|
+| `MainWindow` activa con pista | Sin isla |
+| Otra app activa | La isla aparece; **puerta M4: el foco sigue en «Sonda»** |
+| Tamaño | 212×52 px = (180 + 2·16) × (36 + 16) DIPs × 1,0 |
+| Posición | `L=854`, `T=8`: centrada y a 8 px del área de trabajo |
+| Estilos | `WS_EX_NOACTIVATE`, `WS_EX_TOOLWINDOW` y `WS_EX_TOPMOST` |
+| Volver a `MainWindow` / minimizar / restaurar | Oculta / visible / oculta |
+| Selector de carpetas abierto y cancelado | La isla no aparece en ningún momento (muestreo cada 100 ms) |
+| Cerrar `MainWindow` | El proceso termina |
+
+Pendiente: 125/150 % y varios monitores (M9). El margen de sombra (16 DIPs a los lados y debajo) sí captura clics. Es el coste aceptado de la B híbrida: en reposo son tiras de 16 px junto a la pastilla.
+
+Ubicación final: `ModalTracker` e `IslandPlacement` (DIPs → píxeles físicos y centrado) están en **Core** con pruebas, porque no dependen de la interfaz.
+
 ## Archivos
 
 Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Services/ModalTracker.cs`, `Themes/PlayerButtonStyles.axaml`.
