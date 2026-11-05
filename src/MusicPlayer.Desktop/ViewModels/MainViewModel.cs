@@ -188,6 +188,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private double _durationSeconds = 1; // Slider.Maximum debe ser > 0
     [ObservableProperty] private string _positionText = "0:00";
     [ObservableProperty] private string _durationText = "0:00";
+    [ObservableProperty] private string _remainingText = ""; // «−1:31»; vacío sin pista
+
+    private void UpdateRemainingText() =>
+        RemainingText = TimeText.Remaining(TimeSpan.FromSeconds(PositionSeconds), _player.Duration);
 
     public string PlayPauseText => IsPlaying ? "Pausa" : "Reproducir";
 
@@ -501,6 +505,7 @@ public partial class MainViewModel : ViewModelBase
 
         PositionText = "0:00";
         DurationText = "0:00";
+        RemainingText = "";
         CurrentTrack = null;
         NowPlaying = "Nada en reproducción";
         NowPlayingCover = null;
@@ -564,6 +569,7 @@ public partial class MainViewModel : ViewModelBase
         finally { _isUpdatingFromTimer = false; }
 
         DurationText = TimeFormatter.Format(_player.Duration);
+        UpdateRemainingText(); // si la posición ya era 0, OnPositionSecondsChanged no se dispara
         CurrentTrack = item;
         SyncSelectionWith(item);
         _ = Lyrics.LoadAsync(item.Track);
@@ -812,6 +818,7 @@ public partial class MainViewModel : ViewModelBase
         Lyrics.UpdatePosition(TimeSpan.FromSeconds(value));
 
         PositionText = TimeFormatter.Format(TimeSpan.FromSeconds(value));
+        UpdateRemainingText();
 
         // Si el cambio vino del usuario (arrastrando el Slider), saltar a ese punto.
         if (!_isUpdatingFromTimer)
