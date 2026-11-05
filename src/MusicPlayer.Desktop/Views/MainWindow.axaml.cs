@@ -12,14 +12,20 @@ namespace MusicPlayer.Desktop.Views;
 
 public partial class MainWindow : Window
 {
+    private const long RepeatIntervalMs = 100;
+
     private WindowState _stateBeforeImmersive = WindowState.Normal;
+    private long _lastStepAt;
+    private bool _muteKeyDown;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        // Tunnel: la ventana ve la tecla antes que el control enfocado, que usaría la barra para lo suyo.
+        // Tunnel: la ventana ve la tecla antes que el control enfocado, que la usaría para lo suyo.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        AddHandler(KeyUpEvent, OnPreviewKeyUp, RoutingStrategies.Tunnel);
+        Deactivated += (_, _) => _muteKeyDown = false; // si se suelta la M con otra ventana en primer plano
         Opened += OnOpened;
 
         DataContextChanged += (_, _) =>
@@ -38,22 +44,67 @@ public partial class MainWindow : Window
         this.FindControl<ListBox>("SongList")?.Focus();
     }
 
-    // Barra espaciadora: reproducir/pausar en toda la ventana, salvo donde se necesita para otra cosa.
+    // Atajos en toda la ventana, salvo donde el control enfocado necesita la tecla para lo suyo:
+    //   Espacio reproduce/pausa · M silencia · ← → saltan 5 s · Ctrl+↑ Ctrl+↓ cambian el volumen.
+    // ↑ ↓ sin modificador no se tocan: mueven la selección de las listas.
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Space
-            || e.KeyModifiers != KeyModifiers.None
-            || DataContext is not MainViewModel vm
-            || UsesSpace(e.Source))
+        if (DataContext is not MainViewModel vm || OwnsKeyboard(e.Source))
             return;
 
-        vm.TogglePlayPauseCommand.Execute(null);
-        e.Handled = true; // el botón o la fila enfocados no reciben la tecla
+        switch (e.Key, e.KeyModifiers)
+        {
+            case (Key.Space, KeyModifiers.None) when e.Source is not CheckBox:
+                vm.TogglePlayPauseCommand.Execute(null);
+                break;
+
+            case (Key.M, KeyModifiers.None):
+                if (!_muteKeyDown) // mantener la tecla no debe alternar una y otra vez
+                {
+                    _muteKeyDown = true;
+                    vm.ToggleMuteCommand.Execute(null);
+                }
+                break;
+
+            case (Key.Left, KeyModifiers.None):
+                if (!IsTooSoon()) vm.SeekBy(-1);
+                break;
+            case (Key.Right, KeyModifiers.None):
+                if (!IsTooSoon()) vm.SeekBy(+1);
+                break;
+            case (Key.Up, KeyModifiers.Control):
+                if (!IsTooSoon()) vm.ChangeVolume(+1);
+                break;
+            case (Key.Down, KeyModifiers.Control):
+                if (!IsTooSoon()) vm.ChangeVolume(-1);
+                break;
+
+            default:
+                return;
+        }
+
+        e.Handled = true; // el botón, el slider o la fila enfocados no reciben la tecla
     }
 
-    // Controles que usan la barra para lo suyo: escribir, abrir una lista, marcar una casilla, activar un menú.
-    private static bool UsesSpace(object? source) =>
-        source is TextBox or ComboBox or ComboBoxItem or CheckBox or MenuItem;
+    private void OnPreviewKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.M) _muteKeyDown = false;
+    }
+
+    // Limita la repetición de una tecla mantenida (saltos y volumen) a un paso cada RepeatInterval ms.
+    private bool IsTooSoon()
+    {
+        var now = Environment.TickCount64;
+        if (now >= _lastStepAt && now - _lastStepAt < RepeatIntervalMs)
+            return true;
+
+        _lastStepAt = now;
+        return false;
+    }
+
+    // Controles que usan estas teclas para lo suyo: escribir, abrir una lista desplegable, navegar un menú.
+    private static bool OwnsKeyboard(object? source) =>
+        source is TextBox or ComboBox or ComboBoxItem or MenuItem or Avalonia.Controls.ContextMenu;
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

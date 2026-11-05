@@ -809,6 +809,17 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleMute() => Volume = IsMuted ? _volumeBeforeMute : 0;
 
+    // Atajos de teclado: direction es +1 (adelante / subir) o -1 (atrás / bajar).
+    public void SeekBy(int direction)
+    {
+        var position = TimeSpan.FromSeconds(PositionSeconds);
+        if (PlaybackShortcuts.SeekTarget(position, _player.Duration, direction) is { } target)
+            PositionSeconds = target.TotalSeconds; // fuera del temporizador: OnPositionSecondsChanged hace el Seek
+    }
+
+    public void ChangeVolume(int direction) =>
+        Volume = PlaybackShortcuts.StepVolume(Volume, direction);
+
     partial void OnVolumeChanged(double value)
     {
         if (value > 0) _volumeBeforeMute = value;
