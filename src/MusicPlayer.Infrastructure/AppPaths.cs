@@ -9,4 +9,7 @@ public static class AppPaths
     public static string Settings => Path.Combine(DataDirectory, "settings.json");
     public static string Playlists => Path.Combine(DataDirectory, "playlists.json");
     public static string Library => Path.Combine(DataDirectory, "library.json");
+
+    /// <summary>Carpeta de los temas de usuario (archivos <c>.json</c>).</summary>
+    public static string Themes => Path.Combine(DataDirectory, "themes");
 }
