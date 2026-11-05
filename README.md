@@ -8,32 +8,44 @@
 
 Reproductor de música de escritorio para archivos locales, hecho con **C#, .NET 8 y Avalonia UI**.
 Es un proyecto personal y formativo, pensado como referencia de **Clean Architecture, MVVM, SOLID,
-inversión de dependencias y pruebas unitarias**. No usa servicios de streaming. Motivado principalmente por querer ampliar conocimientos y, en cierto modo, por el deseo de tener mi propio reproductor de música local para no depender de servicios de suscripción de pago.
+inversión de dependencias y pruebas unitarias**. No usa servicios de streaming ni la red: todas las
+funciones trabajan sobre tus archivos. Motivado principalmente por querer ampliar conocimientos y, en cierto modo, por el deseo de tener mi propio reproductor de música local para no depender de servicios de suscripción de pago.
 
 ![Captura](docs/screenshot.png)
 
 ## Funciones
 
-- **Reproducción** de `.mp3`, `.flac`, `.wav` y `.m4a` con seek, volumen, anterior y siguiente, **sin silencios entre pistas** (BASSmix).
-- **Atajo de teclado:** la barra espaciadora reproduce y pausa en toda la ventana, salvo al escribir o marcar opciones.
+**Reproducción**
+
+- Formatos `.mp3`, `.flac`, `.wav` y `.m4a` con seek, volumen, anterior y siguiente, **sin silencios entre pistas** (BASSmix).
+- **Silencio con memoria:** el botón de volumen silencia y restaura el nivel anterior.
 - **Aleatorio** (Fisher-Yates sobre una lista de índices) y **repetir** (no / todas / una).
 - **Cola dinámica:** "Reproducir siguiente" y "Agregar a la cola" desde el clic derecho.
-- **Biblioteca:** escaneo de carpetas en segundo plano, metadatos con TagLibSharp, orden por
-  artista, álbum, disco y pista, persistencia en JSON. Quitar canciones de la biblioteca o del disco.
+- **Atajo de teclado:** la barra espaciadora reproduce y pausa en toda la ventana, salvo al escribir o marcar opciones. Al abrir la app, el foco queda en la lista de canciones.
+- **Barra multimedia con íconos vectoriales** y la lista sincronizada con la pista que suena.
+
+**Biblioteca**
+
+- Escaneo de carpetas en segundo plano, metadatos con TagLibSharp, orden por artista, álbum, disco y pista, y persistencia en JSON. Quitar canciones de la biblioteca o del disco.
 - **Búsqueda en tiempo real** por título, artista y álbum, sin distinguir mayúsculas ni acentos.
-- **Playlists:** crear, renombrar, eliminar, agregar y quitar canciones.
-- **Letras:** `.lrc` sincronizado (auto-scroll y salto al pulsar una línea) o texto USLT incrustado.
-  Traducción y pronunciación desde archivos hermanos (`cancion.es.lrc`, `cancion.rom.lrc`).
-- **Incrustar letra:** guarda un `.lrc` dentro de las etiquetas del archivo (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) con escritura atómica y verificación, para que la letra viaje con la canción.
-- **Modo inmersivo** con fondo desenfocado a partir de la carátula.
-- **Carátulas bajo demanda** (incrustadas o `cover.jpg`) con caché LRU.
-- **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir y última canción.
-- **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists. Al agregar la carpeta nueva, las pistas movidas se reconocen por título, artista, álbum y duración y conservan sus playlists.
 - **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
+- **Playlists:** crear, renombrar, eliminar, agregar y quitar canciones.
+- **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists. Al agregar la carpeta nueva, las pistas movidas se reconocen por título, artista, álbum y duración y conservan sus playlists.
+- **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir y última canción.
+
+**Letras y carátulas**
+
+- **Letras:** `.lrc` sincronizado (auto-scroll y salto al pulsar una línea) o texto USLT incrustado. Traducción y pronunciación desde archivos hermanos (`cancion.es.lrc`, `cancion.rom.lrc`).
+- **Incrustar letra:** guarda un `.lrc` dentro de las etiquetas del archivo (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) con escritura atómica y verificación, para que la letra viaje con la canción.
+- **Carátulas bajo demanda** (incrustadas o `cover.jpg`) con caché LRU.
+- **Carátulas editables:** elige una imagen JPG o PNG (máx. 10 MB) o quita la actual, directamente en el archivo (TagLibSharp, escritura atómica). También puedes aplicar una imagen a todo un álbum de una vez.
+- **Modo inmersivo** con fondo desenfocado a partir de la carátula.
+
+**Herramientas de etiquetas y archivos**
+
 - **Editor de etiquetas:** corrige título, artista, artista del álbum, álbum, año, pista y disco directamente en el archivo (TagLibSharp). La canción conserva su identidad y sus playlists.
 - **Autocompletar/Limpiar etiquetas (local):** propone, con vista previa, título, artista y número de pista a partir del nombre del archivo, limpia basura de descargas ("Official Video", marcas de agua) y agrupa recopilatorios. Escribe de forma atómica (copia temporal, verificación y reemplazo) y permite deshacer.
-- **Carátulas editables:** elige una imagen JPG o PNG o quita la actual, directamente en el archivo (TagLibSharp, escritura atómica). También puedes aplicar una imagen a todo un álbum de una vez.
-- **Convertir formato (local):** MP3, FLAC, WAV y M4A con el `ffmpeg` instalado en tu equipo. Copia etiquetas y carátula, no toca el original y no usa la red.
+- **Convertir formato (local):** MP3, FLAC, WAV y M4A con el `ffmpeg` instalado en tu equipo, para una canción o para toda la lista visible ("Convertir lo que veo…"). Copia etiquetas y carátula, no toca el original, agrega los archivos nuevos a la biblioteca (opcional) y no usa la red.
 
 ## Arquitectura
 
@@ -41,20 +53,22 @@ inversión de dependencias y pruebas unitarias**. No usa servicios de streaming.
 graph TD
     Desktop["MusicPlayer.Desktop<br/>Avalonia, MVVM, composición"] --> Core
     Desktop --> Audio["MusicPlayer.Audio<br/>ManagedBass"]
-    Desktop --> Infra["MusicPlayer.Infrastructure<br/>TagLibSharp, JSON"]
+    Desktop --> Infra["MusicPlayer.Infrastructure<br/>TagLibSharp, JSON, ffmpeg"]
     Audio --> Core["MusicPlayer.Core<br/>modelos, interfaces, servicios"]
     Infra --> Core
 ```
 
-Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz, el sistema operativo ni
-ninguna librería externa. Algunas decisiones:
+Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ninguna librería externa
+(solo usa `System.IO` de .NET para trabajar con archivos). Algunas decisiones:
 
 - **Lógica pura y probada:** la cola (`PlayQueue<T>`), el filtro, el orden, el parser `.lrc`, la
-  combinación de letras y las reglas de visualización viven en Core y se prueban sin UI ni disco.
+  combinación de letras, el agrupador de álbumes y las reglas de conversión viven en Core y se prueban sin UI. La mayoría tampoco toca el disco.
 - **Proveedores componibles:** letras y carátulas siguen el patrón _composite_ y _decorator_, de modo
   que añadir una fuente nueva no modifica las existentes.
 - **Persistencia segura:** escritura atómica (archivo temporal y mover), copia `.corrupt` si el JSON
   se daña y DTOs propios para que el formato no dependa de los modelos.
+- **Escritura atómica en los archivos de audio:** el editor de etiquetas, el de carátulas y el de letras trabajan sobre una copia temporal, la verifican y la intercambian con el original. Si algo falla, el original queda intacto.
+- **Identidad estable de las pistas:** el `Id` de cada canción se conserva al reescanear, reubicar archivos y editar etiquetas, así que las playlists sobreviven.
 - **Un solo punto de composición:** el contenedor de dependencias vive únicamente en
   `MusicPlayer.Desktop/CompositionRoot.cs`.
 
@@ -69,7 +83,7 @@ ninguna librería externa. Algunas decisiones:
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - Binarios nativos de BASS (ver abajo)
-- (Opcional) [ffmpeg](https://ffmpeg.org/download.html) para convertir formatos. En Windows: `winget install Gyan.FFmpeg`. No se incluye en este repositorio.
+- (Opcional) [ffmpeg](https://ffmpeg.org/download.html) para convertir formatos. En Windows: `winget install Gyan.FFmpeg`. Se busca junto al ejecutable y luego en el `PATH`; si lo instalas con la app abierta, reiníciala. No se incluye en este repositorio.
 
 ## Compilar y ejecutar
 
@@ -99,7 +113,18 @@ dotnet test
 ```
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
-`MusicPlayer.Infrastructure.Tests` para repositorios JSON y proveedores de archivos.
+`MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
+Hay 255 pruebas (216 en Core y 39 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+código de vista (menús, selectores, foco y teclado), que se prueban a mano.
+
+## Limitaciones conocidas
+
+- **Letras incrustadas:** USLT es texto sin sincronizar por especificación; los tiempos `[mm:ss.xx]` viajan dentro del texto y solo esta app los interpreta. Solo UTF-8 de hasta 1 MB. No se incrustan las traducciones ni la pronunciación. La escritura en FLAC y M4A confía en el mapeo de TagLib y no tiene prueba automática (las pruebas usan MP3).
+- **Conversión:** convertir a WAV pierde en la práctica las etiquetas y la carátula. Convertir de un formato con pérdida a FLAC o WAV no mejora la calidad.
+- **Carátulas:** no se redimensionan, así que una portada pesada infla el archivo.
+- **Linux:** el audio y la interfaz no se han probado.
+
+El detalle completo está en [`docs/reporte-reproductor.md`](docs/reporte-reproductor.md).
 
 ## Datos del usuario
 
@@ -108,7 +133,9 @@ o `~/.config/MusicPlayer` (Linux).
 
 ## Hoja de ruta
 
-- Teclas multimedia del sistema
+- Integración con el sistema: SMTC en Windows y MPRIS en Linux
+- Más atajos de teclado: saltar unos segundos, volumen y silencio
+- Probar el audio y la interfaz en Linux
 
 ## Licencias
 
