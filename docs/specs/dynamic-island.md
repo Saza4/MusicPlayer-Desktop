@@ -47,9 +47,16 @@ Fuera de alcance: Spotlight/Siri, expansión automática al cambiar de pista, ar
 
 ## Decisiones (resueltas)
 
-1. **Visible solo cuando `MainWindow` no está activa** (minimizada o detrás de otra ventana). Con `MainWindow` activa, la isla duplica los controles y tapa el centro de su barra superior. La regla es una función pura de Core, `IslandVisibility.ShouldShow(hasTrack, showIsland, isImmersive, isMainWindowActive)`, con pruebas. Contra el parpadeo, `IslandController` espera ~150 ms (constante en `IslandMetrics`) a que el estado se estabilice antes de mostrar u ocultar, y lo hace con fundido de opacidad. Un cambio que se revierte dentro de ese plazo (por ejemplo, Alt+Tab rápido) no produce nada visible.
+1. **Visible solo cuando `MainWindow` no está activa** (minimizada o detrás de otra ventana). Con `MainWindow` activa, la isla duplica los controles y tapa el centro de su barra superior. La regla es una función pura de Core, `IslandVisibility.ShouldShow(hasTrack, showIsland, isImmersive, isMainWindowActive, isModalOpen)` (el último parámetro, desde M4; ver decisión 4), con pruebas. Contra el parpadeo, `IslandController` espera ~150 ms (constante en `IslandMetrics`) a que el estado se estabilice antes de mostrar u ocultar, y lo hace con fundido de opacidad. Un cambio que se revierte dentro de ese plazo (por ejemplo, Alt+Tab rápido) no produce nada visible.
 2. **Dónde va «Mostrar isla».** Recomiendo un botón `.icon` en el `StackPanel` derecho de la barra de reproducción (junto a Letra y Pantalla completa), con clase `.active` cuando está activo, `ToolTip` y `AutomationProperties.Name`. Es un `Button` con comando, no `ToggleButton`, para no pelear con el atajo global de Espacio (`OnPreviewKeyDown`). Se oculta si la plataforma no es Windows.
 3. **Modo inmersivo:** recomiendo **ocultar** la isla mientras `IsImmersive` (ya es pantalla completa con los mismos controles y la isla tapa el contenido).
+4. **Selectores y diálogos de la app.** Los selectores nativos (carpeta de música en «Agregar carpeta», imagen en «Carátula del álbum…» y en el editor de etiquetas, letra en «Incrustar letra (.lrc)…») son modales de `MainWindow`: al abrirse la desactivan, y sin más la isla aparecería encima del selector. **La isla no se muestra mientras haya un selector o un diálogo propio de la app abierto.**
+   - **Detección:** `Services/ModalTracker.cs` (singleton en `CompositionRoot`), un contador con `IDisposable Begin()`, `bool IsOpen` y evento `Changed`. Los tres servicios de selector (`AvaloniaFolderPickerService`, `AvaloniaImagePickerService`, `AvaloniaLyricsPickerService`) reciben el `ModalTracker` y envuelven su `await` en `using (_modals.Begin())`. El contador admite anidamiento y se libera aunque el selector lance una excepción.
+   - **Regla:** `IslandVisibility.ShouldShow` recibe un quinto parámetro `isModalOpen`; con `true`, la isla no se muestra. `IslandController` reevalúa en `ModalTracker.Changed`. Al cerrar el selector, `MainWindow` vuelve a activarse, así que la isla sigue oculta sin parpadear: el retardo de 150 ms absorbe el hueco entre «se cierra el selector» y «se activa `MainWindow`».
+   - **Convención (se añade a CLAUDE.md en M10):** todo selector o ventana de diálogo nuevo se abre dentro de `ModalTracker.Begin()`.
+   - **Hoy no hay diálogos propios:** la app no crea otras ventanas (el editor de etiquetas, conversión, autocompletar y confirmaciones son paneles dentro de `MainWindow`), y los menús contextuales, el flyout de «Tema» y los tooltips son popups que no desactivan `MainWindow`.
+   - **Alternativa descartada:** comprobar por Win32 si la ventana en primer plano pertenece a nuestro proceso. Es más genérica, pero depende del orden de los eventos de activación y solo vale en Windows; la explícita es predecible y comprobable.
+   - **No es un modal:** «Carpeta de temas» abre el Explorador, que es otra app. Ahí la isla sí aparece, porque el usuario salió de la app.
 
 ## Diseño
 
@@ -133,8 +140,8 @@ Probado en Windows 11 con una ventana mínima (360×180, `SystemDecorations=None
 
 ## Archivos
 
-Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Themes/PlayerButtonStyles.axaml`.
-Modificados (Desktop): `App.axaml(.cs)`, `CompositionRoot.cs`, `MainViewModel.cs`, `MainWindow.axaml` (estilos movidos y botón «Mostrar isla»), `Themes/ThemeBrushes.axaml`.
+Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Services/ModalTracker.cs`, `Themes/PlayerButtonStyles.axaml`.
+Modificados (Desktop): `App.axaml(.cs)`, `CompositionRoot.cs`, `MainViewModel.cs`, `MainWindow.axaml` (estilos movidos y botón «Mostrar isla»), `Themes/ThemeBrushes.axaml`, los tres servicios de selector.
 Excepciones a «solo Desktop», necesarias por la convención del repositorio: Core (`AppSettings.ShowIsland`, `IslandVisibility`, `TimeText.Remaining`), y sus pruebas en `tests/MusicPlayer.Core.Tests` y `tests/MusicPlayer.Infrastructure.Tests` (`JsonSettingsRepositoryTests`). Al terminar se actualizan `README.md` y `docs/reporte-reproductor.md`.
 
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
@@ -144,8 +151,8 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 | M0 | **Spike** (hecho): ventana mínima; se elige la B híbrida | Tabla de resultados en la spec |
 | M1 | Ajuste `ShowIsland` (Core + VM) e `IslandVisibility.ShouldShow(hasTrack, showIsland, isImmersive, isMainWindowActive)` | Pruebas: JSON parcial → `true`, ida y vuelta con `false`, tabla de reglas de visibilidad |
 | M2 | `TimeText.Remaining` y `RemainingText` | Pruebas (0, <1 s, minutos, horas, duración desconocida) |
-| M3 | Pinceles `ThemeIsland*` y estilos movidos a `PlayerButtonStyles.axaml` | Captura de `MainWindow` idéntica a la anterior |
-| M4 | `IslandWindow` colapsada, posición y `IslandController` (mostrar/ocultar con pista y `MainWindow` no activa, retardo de 150 ms y fundido, cierre con la app, Linux sin efecto) | Manual: aparece al minimizar o pasar a otra app, desaparece al volver a `MainWindow` o limpiar la pista, la app cierra. `GetWindowRect` coincide con DIPs × escala. **Puerta:** al aparecer la isla, el Bloc de notas sigue recibiendo lo que se escribe |
+| M3 | Pinceles `ThemeIsland*` y estilos movidos a `PlayerButtonStyles.axaml` (**hecho**) | 15 capturas idénticas píxel a píxel antes y después (Oscuro, Claro, Medianoche × reposo, hover en `.icon`, reproduciendo, aleatorio + repetir, inmersivo). Arnés con `RenderTargetBitmap`, hover simulado con `:pointerover` y pruebas de impacto desactivadas para que el cursor real no interfiera; dos pasadas sin cambios dieron 0 px de ruido |
+| M4 | `IslandWindow` colapsada, posición, `ModalTracker` (con `isModalOpen` en `IslandVisibility`) e `IslandController` (mostrar/ocultar con pista y `MainWindow` no activa, retardo de 150 ms y fundido, cierre con la app, Linux sin efecto). Push de `feature/isla` para comprobar el CI en Ubuntu | Manual: aparece al minimizar o pasar a otra app, desaparece al volver a `MainWindow` o limpiar la pista, **no aparece con un selector abierto**, la app cierra. CI en verde en Windows y Ubuntu. `GetWindowRect` coincide con DIPs × escala. **Puerta:** al aparecer la isla, el Bloc de notas sigue recibiendo lo que se escribe |
 | M5 | Expansión con hover (B híbrida), animación y constantes en un solo archivo | Capturas; entrar/salir repetido sin saltos; redimensionar con el cursor encima no mueve la pastilla ni la colapsa |
 | M6 | Contenido expandido: textos, progreso con seek (`SeekToFraction`, sin bucle), controles, accesibilidad | Botones ejecutan los comandos reales; ellipsis sin cambiar el ancho; un clic en la barra produce un solo `Seek`. **Puerta:** pulsar un botón de la isla con el Bloc de notas enfocado conserva su foco |
 | M7 | Onda animada solo al sonar; medición de CPU | Pausa = estática; ventana oculta sin consumo notable |
@@ -158,7 +165,8 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 - Automática: `dotnet build -c Release` (solo la CS8602 conocida) y `dotnet test -c Release` (341 + nuevas).
 - Manual en Windows (checklist, criterio 12):
   1. Sin pista, no hay isla. Con pista y `MainWindow` activa, tampoco. Al minimizar o pasar a otra app, aparece arriba al centro con margen de 8 px, con fundido; al volver a `MainWindow`, desaparece. Un Alt+Tab rápido de ida y vuelta no la hace parpadear.
-  2. Pausa: sigue visible, colapsada y con la onda estática.
+  2. «Agregar carpeta», «Carátula del álbum…», imagen del editor de etiquetas e «Incrustar letra (.lrc)…»: con el selector abierto la isla no aparece, tampoco al aceptar o cancelar. «Carpeta de temas» (Explorador) sí la muestra.
+  2b. Pausa: sigue visible, colapsada y con la onda estática.
   3. Pasar el cursor expande en ~0,4 s; salir colapsa a los ~200 ms; entrar y salir rápido no produce saltos.
   4. Escribir en otra app y pulsar los botones de la isla: el foco no cambia.
   5. Clic sobre lo que hay bajo las zonas transparentes funciona.
