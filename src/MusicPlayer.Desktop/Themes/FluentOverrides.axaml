@@ -1,0 +1,123 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Claves de Fluent que la app redefine a partir de los colores del tema. Se incluye dos veces desde App.axaml
+        (en ThemeDictionaries Dark y Light), de modo que cualquier tema las usa. El color del texto sigue siendo el de
+        la variante de Fluent. La opacidad de cada pincel es el alfa del literal original (n/255):
+        0.0784313725 = 0x14, 0.1019607843 = 0x1A, 0.1215686275 = 0x1F, 0.1490196078 = 0x26, 0.2 = 0x33.
+    -->
+
+    <!--  Fondos base  -->
+    <SolidColorBrush x:Key="SystemRegionBrush" Color="{DynamicResource ThemeBackground}" />
+    <SolidColorBrush x:Key="SolidBackgroundFillColorBaseBrush" Color="{DynamicResource ThemeBackground}" />
+    <SolidColorBrush x:Key="SolidBackgroundFillColorSecondaryBrush" Color="{DynamicResource ThemeSurface}" />
+    <SolidColorBrush x:Key="SolidBackgroundFillColorTertiaryBrush" Color="{DynamicResource ThemeSurface}" />
+    <SolidColorBrush x:Key="LayerFillColorDefaultBrush" Color="{DynamicResource ThemeSurface}" />
+    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="{DynamicResource ThemeSurface}" />
+
+    <!--  Botones: velo translúcido, se integra sobre el fondo y sobre las superficies  -->
+    <SolidColorBrush
+        x:Key="ButtonBackground"
+        Opacity="0.0784313725"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ButtonBackgroundPointerOver"
+        Opacity="0.1490196078"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ButtonBackgroundPressed"
+        Opacity="0.1019607843"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ButtonBorderBrush"
+        Opacity="0.1215686275"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ButtonBorderBrushPointerOver"
+        Opacity="0.2"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ButtonBorderBrushPressed"
+        Opacity="0.1215686275"
+        Color="{DynamicResource ThemeOverlay}" />
+
+    <!--  Cuadro de búsqueda y listas desplegables  -->
+    <SolidColorBrush
+        x:Key="TextControlBackground"
+        Opacity="0.0784313725"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="TextControlBackgroundPointerOver"
+        Opacity="0.1019607843"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{DynamicResource ThemeBackground}" />
+    <SolidColorBrush
+        x:Key="TextControlBorderBrush"
+        Opacity="0.1215686275"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="TextControlBorderBrushPointerOver"
+        Opacity="0.2"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ComboBoxBackground"
+        Opacity="0.0784313725"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ComboBoxBackgroundPointerOver"
+        Opacity="0.1490196078"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ComboBoxBackgroundPressed"
+        Opacity="0.1019607843"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{DynamicResource ThemeSurface}" />
+    <SolidColorBrush
+        x:Key="ComboBoxDropDownBorderBrush"
+        Opacity="0.1490196078"
+        Color="{DynamicResource ThemeOverlay}" />
+
+    <!--  Filas de listas y colecciones: hover y selección con el velo  -->
+    <SolidColorBrush
+        x:Key="ListBoxItemBackgroundPointerOver"
+        Opacity="0.0784313725"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ListBoxItemBackgroundPressed"
+        Opacity="0.1019607843"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ListBoxItemBackgroundSelected"
+        Opacity="0.1215686275"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ListBoxItemBackgroundSelectedPointerOver"
+        Opacity="0.1490196078"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ListBoxItemBackgroundSelectedPressed"
+        Opacity="0.1215686275"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush x:Key="ListBoxItemForegroundSelected" Color="{DynamicResource SystemBaseHighColor}" />
+    <SolidColorBrush x:Key="ListBoxItemForegroundSelectedPointerOver" Color="{DynamicResource SystemBaseHighColor}" />
+    <SolidColorBrush x:Key="ListBoxItemForegroundSelectedPressed" Color="{DynamicResource SystemBaseHighColor}" />
+
+    <!--  Menús  -->
+    <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{DynamicResource ThemeSurface}" />
+    <SolidColorBrush
+        x:Key="MenuFlyoutPresenterBorderBrush"
+        Opacity="0.1490196078"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush x:Key="ContextMenuBackground" Color="{DynamicResource ThemeSurface}" />
+    <SolidColorBrush
+        x:Key="ContextMenuBorderBrush"
+        Opacity="0.1490196078"
+        Color="{DynamicResource ThemeOverlay}" />
+
+    <!--  Sliders: el relleno y el pulgar toman el acento del tema (por defecto, el acento del sistema)  -->
+    <SolidColorBrush x:Key="SliderTrackValueFill" Color="{DynamicResource ThemeAccent}" />
+    <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="{DynamicResource ThemeAccent}" />
+    <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{DynamicResource ThemeAccent}" />
+    <SolidColorBrush x:Key="SliderThumbBackground" Color="{DynamicResource ThemeAccent}" />
+    <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="{DynamicResource ThemeAccent}" />
+    <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="{DynamicResource ThemeAccent}" />
+</ResourceDictionary>

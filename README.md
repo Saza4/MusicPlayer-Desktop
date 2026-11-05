@@ -41,6 +41,11 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 - **Carátulas editables:** elige una imagen JPG o PNG (máx. 10 MB) o quita la actual, directamente en el archivo (TagLibSharp, escritura atómica). También puedes aplicar una imagen a todo un álbum de una vez.
 - **Modo inmersivo** con fondo desenfocado a partir de la carátula.
 
+**Temas**
+
+- **Claro, oscuro y modo del sistema** desde el botón «Tema». La lista previsualiza en vivo toda la app al pasar el cursor o moverse con las flechas; clic o `Enter` confirma y `Esc` vuelve al tema anterior. El tema por defecto es Oscuro.
+- **Temas propios:** archivos `.json` en `%APPDATA%\MusicPlayer\themes` (`~/.config/MusicPlayer/themes` en Linux), solo datos y sin código. Ver [Temas de usuario](#temas-de-usuario).
+
 **Herramientas de etiquetas y archivos**
 
 - **Editor de etiquetas:** corrige título, artista, artista del álbum, álbum, año, pista y disco directamente en el archivo (TagLibSharp). La canción conserva su identidad y sus playlists.
@@ -114,7 +119,7 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 271 pruebas (232 en Core y 39 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 341 pruebas (284 en Core y 57 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco y teclado), que se prueban a mano.
 
 ## Limitaciones conocidas
@@ -122,6 +127,7 @@ código de vista (menús, selectores, foco y teclado), que se prueban a mano.
 - **Letras incrustadas:** USLT es texto sin sincronizar por especificación; los tiempos `[mm:ss.xx]` viajan dentro del texto y solo esta app los interpreta. Solo UTF-8 de hasta 1 MB. No se incrustan las traducciones ni la pronunciación. La escritura en FLAC y M4A confía en el mapeo de TagLib y no tiene prueba automática (las pruebas usan MP3).
 - **Conversión:** convertir a WAV pierde en la práctica las etiquetas y la carátula. Convertir de un formato con pérdida a FLAC o WAV no mejora la calidad.
 - **Carátulas:** no se redimensionan, así que una portada pesada infla el archivo.
+- **Temas:** el texto sigue la variante base (clara u oscura) y no se puede personalizar. El modo inmersivo es siempre oscuro: solo el botón Reproducir/Pausa y los iconos activos siguen el tema.
 - **Linux:** el audio y la interfaz no se han probado.
 
 El detalle completo está en [`docs/reporte-reproductor.md`](docs/reporte-reproductor.md).
@@ -130,6 +136,34 @@ El detalle completo está en [`docs/reporte-reproductor.md`](docs/reporte-reprod
 
 `library.json`, `playlists.json` y `settings.json` se guardan en `%APPDATA%\MusicPlayer` (Windows)
 o `~/.config/MusicPlayer` (Linux).
+
+## Temas de usuario
+
+Un tema es un archivo `.json` en la carpeta `themes` (el botón «Tema» tiene un acceso a ella). El nombre del archivo es su identificador, y la lista se vuelve a leer cada vez que se abre el selector.
+
+```json
+{
+  "formatVersion": 1,
+  "name": "Medianoche",
+  "base": "dark",
+  "colors": {
+    "background": "#0B0F1A",
+    "surface": "#05070D",
+    "overlay": "#C0CAF5",
+    "primary": "#7AA2F7",
+    "onPrimary": "#0B0F1A",
+    "accent": "#BB9AF7",
+    "danger": "#F7768E",
+    "success": "#9ECE6A",
+    "warning": "#E0AF68"
+  }
+}
+```
+
+- `base` (`dark` o `light`) decide el color del texto y de los controles; si falta, vale `dark`. Todos los colores son opcionales y los que falten heredan los de la base. Se escriben solo como `#RRGGBB`.
+- Un color con formato no válido se ignora (hereda el de la base). Un archivo mal formado, con `formatVersion` distinto de `1` o con un nombre reservado (`system`, `light`, `dark`) se descarta.
+- Un tema se rechaza si el texto no se lee sobre `background` o `surface`, si `onPrimary` no se lee sobre `primary`, o si `primary` o `accent` no se ven sobre el velo negro del modo inmersivo (contraste mínimo 3:1). El motivo aparece en la línea de estado al abrir el selector.
+- `accent` es opcional: sin él se usa el color de acento del sistema.
 
 ## Hoja de ruta
 

@@ -25,6 +25,10 @@ public partial class App : Application
 
             var services = CompositionRoot.Build();
             var viewModel = services.GetRequiredService<MainViewModel>();
+
+            // El tema elegido se aplica antes de mostrar la ventana, para que no parpadee en Oscuro.
+            viewModel.Themes.Initialize();
+
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
 
             // Guarda los ajustes pendientes y libera lo que el contenedor creó (incluido BASS).

@@ -323,10 +323,9 @@ public class ThemeFactoryTests
     }
 
     [Fact]
-    public void Create_ExactlyAtMinimumContrast_Passes()
+    public void Create_PrimaryAboveAndBelowTheMinimumContrast_PassesAndFails()
     {
-        // #767676 sobre blanco es el clásico 4.54:1; #6F6F6F contra negro da justo por encima de 3:1.
-        // Se comprueba el límite con un gris cuyo contraste contra negro es >= 3 y otro justo por debajo.
+        // Contra el velo negro: un gris medio supera el mínimo de 3:1 y uno oscuro no.
         var ok = Full();
         ok["primary"] = "#6F6F6F"; // ~3.8:1 contra negro
         ok["onPrimary"] = "#000000";

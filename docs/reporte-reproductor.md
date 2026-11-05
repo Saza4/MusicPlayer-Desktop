@@ -71,10 +71,10 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 
 | Proyecto                     | Responsabilidad                           | Piezas principales                                                                                                                                                                                                                                                                                                                         |
 | ---------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MusicPlayer.Core`           | Modelos, contratos y lógica pura          | `Track`, `TrackTags`, `LibrarySnapshot`, `PlayQueue<T>`, `LibraryScanner`, `LibraryService`, `PlaylistManager`, `TrackFilter`, `TrackSorter`, `LibraryGrouper`, `LrcLyricParser`, `LyricsMerger`, `LruCache`, `CachedCoverArtProvider`, `TagEditor`, `CoverEditor`, `AlbumScope`, `LyricsEditor`, `ConversionPlanner`, `ConversionService` |
+| `MusicPlayer.Core`           | Modelos, contratos y lógica pura          | `Track`, `TrackTags`, `LibrarySnapshot`, `PlayQueue<T>`, `LibraryScanner`, `LibraryService`, `PlaylistManager`, `TrackFilter`, `TrackSorter`, `LibraryGrouper`, `LrcLyricParser`, `LyricsMerger`, `LruCache`, `CachedCoverArtProvider`, `TagEditor`, `CoverEditor`, `AlbumScope`, `LyricsEditor`, `ConversionPlanner`, `ConversionService`, `ThemeFactory`, `ThemeCatalog`, `BuiltInThemes`, `ColorContrast` |
 | `MusicPlayer.Audio`          | Motor de sonido                           | `BassAudioPlayer` (implementa `IAudioPlayer` con BASS y BASSmix)                                                                                                                                                                                                                                                                           |
-| `MusicPlayer.Infrastructure` | Acceso a archivos y herramientas externas | `TagLibTrackMetadataReader`, `TagLibTrackTagWriter`, `TagLibCoverArtWriter`, `TagLibLyricsWriter`, `SafeFileEdit`, `EmbeddedCoverArtProvider`, `FolderCoverArtProvider`, `EmbeddedLyricsProvider`, `LrcFileLyricsProvider`, `CompanionLyricsProvider`, `FfmpegAudioConverter`, repositorios JSON, `AtomicJson`, `AppPaths`                 |
-| `MusicPlayer.Desktop`        | Interfaz y composición                    | `MainWindow`, `MainViewModel`, `LyricsViewModel`, `PlaylistViewModel`, `TagEditorViewModel`, `TagAutoFixViewModel`, `ConvertViewModel`, `AlbumCoverViewModel`, `EmbedLyricsViewModel`, `CoverArtLoader`, selectores de archivos y carpetas, `CompositionRoot`                                                                              |
+| `MusicPlayer.Infrastructure` | Acceso a archivos y herramientas externas | `TagLibTrackMetadataReader`, `TagLibTrackTagWriter`, `TagLibCoverArtWriter`, `TagLibLyricsWriter`, `SafeFileEdit`, `EmbeddedCoverArtProvider`, `FolderCoverArtProvider`, `EmbeddedLyricsProvider`, `LrcFileLyricsProvider`, `CompanionLyricsProvider`, `FfmpegAudioConverter`, `JsonThemeRepository`, repositorios JSON, `AtomicJson`, `AppPaths` |
+| `MusicPlayer.Desktop`        | Interfaz y composición                    | `MainWindow`, `MainViewModel`, `LyricsViewModel`, `PlaylistViewModel`, `TagEditorViewModel`, `TagAutoFixViewModel`, `ConvertViewModel`, `AlbumCoverViewModel`, `EmbedLyricsViewModel`, `ThemeViewModel`, `ThemeService`, `CoverArtLoader`, selectores de archivos y carpetas, `CompositionRoot`                                                                              |
 | `tests/`                     | Pruebas                                   | `MusicPlayer.Core.Tests`, `MusicPlayer.Infrastructure.Tests`                                                                                                                                                                                                                                                                               |
 
 **Decisiones transversales:**
@@ -103,6 +103,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | 8   | Barra espaciadora global y foco inicial                   | Desktop                       | Entregado (commit `f95fb1b`); no figura en las notas                                | v1.2.0                 |
 | 9   | Pausa mejorada                                            | Desktop                       | Sin cambio propio en el código: corresponde a la barra espaciadora (#8) (deducción) | v1.2.0                 |
 | 11  | Atajos `←` `→`, `Ctrl+↑` `Ctrl+↓` y `M`                   | Core, Desktop                 | Hecho (probado a mano en Windows); compila y pasa pruebas                           | Sin publicar           |
+| 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | Sin publicar |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
 
 ### 4.2 Novedades de la serie v1.1.0
@@ -174,7 +175,7 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 
 - **Pausa mejorada:** entre v1.1.0 y v1.2.0 no cambia nada en `MusicPlayer.Audio` ni en `TogglePlayPause` (`MainViewModel`). El único cambio de reproducir y pausar de la release es el manejador de la barra espaciadora (commit `f95fb1b`). _Deducción:_ la nota «Pausa mejorada» describe ese cambio; «transición suave y sin interrupciones» va más allá de lo que hace el código.
 - **Estilos globales** (commit `b382184`):
-  - `App.axaml` fija `RequestedThemeVariant="Dark"`: la app ya no sigue el tema claro u oscuro del sistema.
+  - `App.axaml` fija `RequestedThemeVariant="Dark"`: la app ya no sigue el tema claro u oscuro del sistema (en v1.2.0; con los temas, ver 4.3.2, el tema del sistema es una opción).
   - Paleta: fondo `#0F0F0F`, paneles `#000000` y velos blancos translúcidos (`#14FFFFFF`, `#1FFFFFFF`, `#26FFFFFF`).
   - Estilos para `ListBox` y `ListBoxItem` (pasar el cursor y la selección en gris en lugar del color de acento), `FlyoutPresenter`, `MenuFlyoutPresenter`, `ContextMenu` y `ToolTip`.
   - Diccionario `ThemeDictionaries["Dark"]` para botones, cuadros de texto, `ComboBox`, filas de lista y menús.
@@ -188,6 +189,19 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 - **Tecla mantenida:** saltos y volumen se limitan a un paso cada 100 ms; `M` no repite hasta soltar la tecla.
 - **Excepciones:** no se interceptan en `TextBox`, `ComboBox`, `ComboBoxItem`, `MenuItem` ni `ContextMenu`. Sliders, listas y botones sí.
 - **Piezas:** `PlaybackShortcuts` (Core: `SeekTarget`, `StepVolume`), `MainViewModel.SeekBy` y `ChangeVolume`, y `OnPreviewKeyDown` / `OnPreviewKeyUp` en `MainWindow.axaml.cs`. 16 pruebas nuevas en Core.
+
+### 4.3.2 Temas de la interfaz (sin publicar)
+
+- **Selector:** botón «Tema» en la barra superior con una lista (Sistema, Oscuro, Claro y los temas de usuario). Mover el cursor o las flechas por la lista **previsualiza** el tema en toda la app sin guardar nada; clic o `Enter` lo confirma y lo guarda en los ajustes (`ThemeId`); `Esc` o cerrar la lista restaura el tema confirmado. Mientras la lista está abierta no actúan los atajos globales de teclado.
+- **Tema por defecto:** Oscuro, con los colores exactos que tenía la interfaz. *Sistema* sigue el tema de Windows y reacciona si cambia con la app abierta.
+- **Recursos del tema (nueve colores):** `background`, `surface`, `overlay`, `primary`, `onPrimary`, `accent` (opcional: si falta, el acento del sistema), `danger`, `success` y `warning`. Los velos translúcidos (hover, selección, bordes) son `overlay` con una escalera fija de opacidades: las mismas del diseño anterior. El texto no es configurable: sigue la variante de Fluent (clara u oscura) de la `base`.
+- **Cómo se aplica:** `ThemeService` fija la variante de Fluent y escribe los nueve `Color` en los recursos de la aplicación; los pinceles de `Themes/ThemeBrushes.axaml` y las claves de Fluent de `Themes/FluentOverrides.axaml` los leen con `DynamicResource`, así que el cambio es inmediato. `App.axaml.cs` aplica el tema guardado antes de mostrar la ventana.
+- **Temas de usuario:** archivos `.json` en `%APPDATA%\MusicPlayer\themes` (formato en el README). `JsonThemeRepository` nunca lanza: cada archivo roto es un error con su motivo, que se muestra en la línea de estado al abrir el selector, y los demás siguen funcionando. Máximo 50 archivos de 64 KB. Un color con formato no válido o desconocido solo da un aviso y hereda el de la base.
+- **Validación (`ThemeFactory`, en Core):** descarta el tema con JSON mal formado, `formatVersion` ausente o distinto de 1, `base` no válida, nombre reservado o contraste menor de 3:1 en: texto contra `background`, texto contra `surface`, `onPrimary` contra `primary`, y `primary` y `accent` contra el velo negro del modo inmersivo.
+- **Tema guardado que ya no existe:** la app arranca en Oscuro y no sobrescribe el ajuste.
+- **Modo inmersivo:** igual que antes (fondo desenfocado, velo negro, texto e iconos blancos). Solo el círculo de Reproducir/Pausa y los iconos activos (Aleatorio, Repetir, Letra) toman los colores del tema.
+- **Diferencia con la especificación:** se pensó redefinir los colores en el `Grid` inmersivo con recursos locales; no sirve, porque un pincel de la aplicación resuelve su `Color` desde la aplicación y no desde el control que lo usa. El inmersivo conserva sus literales (fondo, degradado y marcador de carátula).
+- **Verificado en Windows** (capturas automáticas): arranque en Oscuro idéntico al anterior, vista previa con ratón y con flechas, `Esc`, confirmar y conservar al reiniciar, *Sistema* siguiendo a Windows en vivo, un tema de usuario, tres archivos inválidos descartados, tema guardado inexistente y modo inmersivo. Quedan por probar a mano: Linux y un recorrido completo por todos los paneles con el tema Claro.
 
 ### 4.4 Base anterior: lo que ya contenía v1.0.0
 
@@ -305,7 +319,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | ------------------------------------------------------------------ | ---------- | -------------------- | ------------------------------------------------------ |
 | Ejecución anterior (carátula de álbum incluida)                    | 209        | 33                   | 0 errores, 0 advertencias                              |
 | Pruebas añadidas después (letra incrustada)                        | +7         | +6                   | Confirmadas                                            |
-| Última ejecución confirmada (4 de noviembre de 2026, `-c Release`) | 232        | 39                   | Todas superadas. Compila con 0 errores y 1 advertencia |
+| Última ejecución confirmada (4 de noviembre de 2026, `-c Release`) | 284        | 57                   | Todas superadas. Compila con 0 errores y 1 advertencia |
 
 La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
@@ -318,7 +332,7 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 
 **CI:** compila y pasa las pruebas en Linux. Eso demuestra el build y la lógica, no que BASS cargue ni que la interfaz funcione allí.
 
-**Pruebas manuales confirmadas:** FLAC y M4A, letras `.lrc` y los atajos de teclado (salto, volumen y silencio).
+**Pruebas manuales confirmadas:** FLAC y M4A, letras `.lrc` y los atajos de teclado (salto, volumen y silencio). Los temas se verificaron con capturas automáticas (ver 4.3.2).
 
 **Captura del 4 de noviembre de 2026 (Windows):** la app arranca con el tema oscuro, la barra de íconos (aleatorio, anterior, reproducir, siguiente, repetir) y el botón **Convertir lo que veo…**. La pista cargada muestra su duración en la barra de reproducción (4:55), un valor que viene de `IAudioPlayer.Duration`, así que BASS abrió el archivo. Aunque la captura no demuestra que suene. El autor confirmó manualmente que la reproducción y la reproducción sin silencios funcionan.
 
@@ -365,6 +379,18 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 - La lista de controles que se quedan con las teclas es por tipo (`OwnsKeyboard`). Si se añade uno nuevo (`RadioButton`, `ToggleSwitch`), hay que sumarlo.
 - Los atajos de salto, volumen y silencio se probaron a mano en Windows y funcionan.
 - Windows puede negar el foco a una ventana nueva lanzada desde la terminal.
+
+**Temas**
+
+- El color del texto no es configurable: sigue la variante base del tema (clara u oscura).
+- El modo inmersivo es siempre oscuro; solo el botón Reproducir/Pausa y los iconos activos siguen el tema, por lo que `primary` y `accent` deben verse sobre el velo negro (contraste mínimo 3:1).
+- Los hover y pulsado de los botones de icono usan un gris fijo.
+- Con los temas Claro y de usuario puede haber controles que no se hayan revisado a fondo (el tema Claro no se usa a diario).
+- Los sliders toman el acento del tema también en hover y pulsado (antes Fluent usaba tonos distintos).
+- El aviso de un tema que no se pudo cargar puede quedar tapado por el mensaje de «Cargando…» al arrancar; se repite al abrir el selector.
+- Las flechas de la lista de temas las atiende la ventana (el foco se queda en el botón «Tema»), no la lista.
+- El botón «Carpeta de temas» no es enfocable con el teclado (así `Enter` confirma siempre el tema resaltado).
+- No hay recarga automática: los cambios en un archivo de tema se ven al volver a abrir el selector.
 
 **Plataforma**
 

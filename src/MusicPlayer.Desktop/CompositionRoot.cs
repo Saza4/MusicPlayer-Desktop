@@ -71,6 +71,11 @@ public static class CompositionRoot
         services.AddSingleton<AlbumCoverViewModel>();
         services.AddSingleton<EmbedLyricsViewModel>();
 
+        // Temas: los de usuario son archivos .json en la carpeta themes; ThemeService los aplica a la interfaz.
+        services.AddSingleton<IThemeRepository>(_ => new JsonThemeRepository(AppPaths.Themes));
+        services.AddSingleton<ThemeService>();
+        services.AddSingleton<ThemeViewModel>();
+
         // Interfaz
         services.AddSingleton<IFolderPickerService, AvaloniaFolderPickerService>();
         services.AddSingleton<PlaylistViewModel>();

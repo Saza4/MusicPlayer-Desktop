@@ -4,7 +4,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:MusicPlayer.Desktop"
     RequestedThemeVariant="Dark">
-    <!--  Tema oscuro fijo: la paleta (fondo #0F0F0F, paneles #000000) no depende del tema del sistema.  -->
+    <!--
+        Variante inicial: Oscuro. ThemeService la cambia al arrancar según el tema guardado (Claro, Oscuro,
+        Sistema o un tema de usuario). Los colores salen de Themes/ThemeBrushes.axaml: no escribas literales aquí.
+    -->
 
     <Application.DataTemplates>
         <local:ViewLocator />
@@ -15,91 +18,75 @@
 
         <!--  Skin: contenedores y paneles flotantes  -->
         <Style Selector="ListBox">
-            <Setter Property="Background" Value="#000000" />
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="4" />
         </Style>
-        <!--  Fila seleccionada / canción en reproducción: gris claro translúcido en lugar del azul de acento  -->
+        <!--  Fila seleccionada / canción en reproducción: velo translúcido en lugar del azul de acento  -->
         <Style Selector="ListBox ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#14FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeOverlayHoverBrush}" />
         </Style>
         <Style Selector="ListBox ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#1FFFFFFF" />
-            <Setter Property="Foreground" Value="#FFFFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeOverlaySelectedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
         </Style>
         <Style Selector="ListBox ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#26FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeOverlaySelectedHoverBrush}" />
         </Style>
         <Style Selector="ListBox ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#1FFFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeOverlaySelectedBrush}" />
         </Style>
         <Style Selector="FlyoutPresenter">
-            <Setter Property="Background" Value="#000000" />
-            <Setter Property="BorderBrush" Value="#26FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderStrongBrush}" />
         </Style>
         <Style Selector="MenuFlyoutPresenter">
-            <Setter Property="Background" Value="#000000" />
-            <Setter Property="BorderBrush" Value="#26FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderStrongBrush}" />
         </Style>
         <Style Selector="ContextMenu">
-            <Setter Property="Background" Value="#000000" />
-            <Setter Property="BorderBrush" Value="#26FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderStrongBrush}" />
         </Style>
         <Style Selector="ToolTip">
-            <Setter Property="Background" Value="#000000" />
-            <Setter Property="BorderBrush" Value="#26FFFFFF" />
-            <Setter Property="Foreground" Value="#FFFFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderStrongBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
         </Style>
     </Application.Styles>
 
-    <!--  Skin: paleta (fondo #0F0F0F, paneles #000000, texto #FFFFFF)  -->
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://MusicPlayer.Desktop/Themes/ThemeBrushes.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!--
+                Los nueve colores del tema. Estos valores son los del tema Oscuro y solo cubren el instante antes de
+                que ThemeService aplique el tema elegido; después se reemplazan en tiempo de ejecución.
+                ThemeAccent es el acento del sistema (lo fija ThemeService; este valor es solo de respaldo).
+            -->
+            <Color x:Key="ThemeBackground">#0F0F0F</Color>
+            <Color x:Key="ThemeSurface">#000000</Color>
+            <Color x:Key="ThemeOverlay">#FFFFFF</Color>
+            <Color x:Key="ThemePrimary">#FFFFFF</Color>
+            <Color x:Key="ThemeOnPrimary">#101010</Color>
+            <Color x:Key="ThemeAccent">#0078D4</Color>
+            <Color x:Key="ThemeDanger">#E57373</Color>
+            <Color x:Key="ThemeSuccess">#4CAF50</Color>
+            <Color x:Key="ThemeWarning">#FFB74D</Color>
+
+            <!--  Mismas claves de Fluent en las dos variantes: el tema decide los colores, no la variante  -->
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Dark">
-                    <!--  Fondos base  -->
-                    <SolidColorBrush x:Key="SystemRegionBrush" Color="#0F0F0F" />
-                    <SolidColorBrush x:Key="SolidBackgroundFillColorBaseBrush" Color="#0F0F0F" />
-                    <SolidColorBrush x:Key="SolidBackgroundFillColorSecondaryBrush" Color="#000000" />
-                    <SolidColorBrush x:Key="SolidBackgroundFillColorTertiaryBrush" Color="#000000" />
-                    <SolidColorBrush x:Key="LayerFillColorDefaultBrush" Color="#000000" />
-                    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#000000" />
-
-                    <!--  Botones: velo blanco translúcido, se integran sobre negro y sobre #000000  -->
-                    <SolidColorBrush x:Key="ButtonBackground" Color="#14FFFFFF" />
-                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#26FFFFFF" />
-                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1AFFFFFF" />
-                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#1FFFFFFF" />
-                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#33FFFFFF" />
-                    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#1FFFFFFF" />
-
-                    <!--  Cuadro de búsqueda y listas desplegables  -->
-                    <SolidColorBrush x:Key="TextControlBackground" Color="#14FFFFFF" />
-                    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#1AFFFFFF" />
-                    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#0F0F0F" />
-                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="#1FFFFFFF" />
-                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#33FFFFFF" />
-                    <SolidColorBrush x:Key="ComboBoxBackground" Color="#14FFFFFF" />
-                    <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#26FFFFFF" />
-                    <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#1AFFFFFF" />
-                    <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#000000" />
-                    <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#26FFFFFF" />
-
-                    <!--  Filas de listas y colecciones: hover y selección en gris claro translúcido  -->
-                    <SolidColorBrush x:Key="ListBoxItemBackgroundPointerOver" Color="#14FFFFFF" />
-                    <SolidColorBrush x:Key="ListBoxItemBackgroundPressed" Color="#1AFFFFFF" />
-                    <SolidColorBrush x:Key="ListBoxItemBackgroundSelected" Color="#1FFFFFFF" />
-                    <SolidColorBrush x:Key="ListBoxItemBackgroundSelectedPointerOver" Color="#26FFFFFF" />
-                    <SolidColorBrush x:Key="ListBoxItemBackgroundSelectedPressed" Color="#1FFFFFFF" />
-                    <SolidColorBrush x:Key="ListBoxItemForegroundSelected" Color="#FFFFFFFF" />
-                    <SolidColorBrush x:Key="ListBoxItemForegroundSelectedPointerOver" Color="#FFFFFFFF" />
-                    <SolidColorBrush x:Key="ListBoxItemForegroundSelectedPressed" Color="#FFFFFFFF" />
-
-                    <!--  Menús  -->
-                    <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#000000" />
-                    <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#26FFFFFF" />
-                    <SolidColorBrush x:Key="ContextMenuBackground" Color="#000000" />
-                    <SolidColorBrush x:Key="ContextMenuBorderBrush" Color="#26FFFFFF" />
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceInclude Source="avares://MusicPlayer.Desktop/Themes/FluentOverrides.axaml" />
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceInclude Source="avares://MusicPlayer.Desktop/Themes/FluentOverrides.axaml" />
+                    </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
