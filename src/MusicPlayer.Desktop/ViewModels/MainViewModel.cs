@@ -34,6 +34,10 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isShuffleOn;
 
+    // Isla flotante de «ahora suena»: ajuste del usuario. Solo existe en Windows.
+    [ObservableProperty] private bool _showIsland = true;
+    public bool IsIslandSupported { get; } = OperatingSystem.IsWindows();
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RepeatText))]
     private RepeatMode _repeat;
@@ -256,6 +260,7 @@ public partial class MainViewModel : ViewModelBase
                 Volume = Math.Clamp(saved.Volume, 0.0, 1.0);
                 IsShuffleOn = saved.Shuffle;
                 Repeat = saved.Repeat;
+                ShowIsland = saved.ShowIsland;
                 Lyrics.Restore(saved);
             }
             finally
@@ -771,6 +776,15 @@ public partial class MainViewModel : ViewModelBase
         UpdateGapless();
         if (!_restoring)
             _settings.Update(s => s with { Shuffle = value });
+    }
+
+    [RelayCommand]
+    private void ToggleIsland() => ShowIsland = !ShowIsland;
+
+    partial void OnShowIslandChanged(bool value)
+    {
+        if (!_restoring)
+            _settings.Update(s => s with { ShowIsland = value });
     }
 
     partial void OnRepeatChanged(RepeatMode value)

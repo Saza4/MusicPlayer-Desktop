@@ -52,6 +52,17 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.False(loaded.ShowTranslation);
         Assert.Null(loaded.LastTrackId);
         Assert.Equal("dark", loaded.ThemeId); // un settings.json anterior a los temas sigue en Oscuro
+        Assert.True(loaded.ShowIsland);       // y uno anterior a la isla la recibe activada
+    }
+
+    [Fact]
+    public async Task SaveThenLoad_KeepsTheIslandTurnedOff()
+    {
+        await new JsonSettingsRepository(FilePath).SaveAsync(AppSettings.Default with { ShowIsland = false });
+
+        var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
+
+        Assert.False(loaded.ShowIsland);
     }
 
     [Fact]
