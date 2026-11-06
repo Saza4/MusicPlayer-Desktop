@@ -8,7 +8,9 @@ public sealed record AppSettings(
     bool EmphasizePronunciation = false,
     Guid? LastTrackId = null,
     bool Shuffle = false,
-    RepeatMode Repeat = RepeatMode.Off)
+    RepeatMode Repeat = RepeatMode.Off,
+    string ThemeId = "dark",
+    bool ShowIsland = true) // al final: los settings.json anteriores la reciben activada
 {
     public static AppSettings Default { get; } = new();
 }

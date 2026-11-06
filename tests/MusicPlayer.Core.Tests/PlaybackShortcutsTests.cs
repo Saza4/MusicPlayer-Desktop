@@ -6,6 +6,31 @@ public class PlaybackShortcutsTests
 {
     private static readonly TimeSpan Duration = TimeSpan.FromMinutes(3);
 
+    // ---- Barra de progreso de la isla: clic en una fracción ----
+
+    [Theory]
+    [InlineData(0.0, 0)]
+    [InlineData(0.5, 90)]
+    [InlineData(0.25, 45)]
+    [InlineData(1.0, 180)]
+    public void TargetAtFraction_MapsTheFractionToTheTrack(double fraction, int expectedSeconds) =>
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), PlaybackShortcuts.TargetAtFraction(fraction, Duration));
+
+    [Theory]
+    [InlineData(-0.2, 0)]   // clic un poco a la izquierda de la barra
+    [InlineData(1.3, 180)]  // o a la derecha
+    public void TargetAtFraction_ClampsOutsideTheBar(double fraction, int expectedSeconds) =>
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), PlaybackShortcuts.TargetAtFraction(fraction, Duration));
+
+    [Fact]
+    public void TargetAtFraction_WithoutDuration_IsNull() =>
+        Assert.Null(PlaybackShortcuts.TargetAtFraction(0.5, TimeSpan.Zero));
+
+    [Fact]
+    public void TargetAtFraction_NaN_IsNull() =>
+        // Barra de ancho 0 (aún sin medir): 0 / 0.
+        Assert.Null(PlaybackShortcuts.TargetAtFraction(double.NaN, Duration));
+
     [Fact]
     public void SeekTarget_Forward_AddsFiveSeconds()
     {

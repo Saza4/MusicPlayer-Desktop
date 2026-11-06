@@ -1,0 +1,92 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Pinceles semánticos de la interfaz. Cada uno sale de un color del tema (ThemeXxx, definidos en App.axaml
+        y reemplazados por ThemeService al cambiar de tema). No escribas literales de color en el XAML: usa estos.
+
+        Los velos translúcidos son el color "overlay" del tema con una opacidad fija. La opacidad es el alfa que
+        tenían los literales originales (n/255), así que en el tema Oscuro el aspecto es idéntico al de siempre.
+    -->
+
+    <!--  Superficies  -->
+    <SolidColorBrush x:Key="ThemeBackgroundBrush" Color="{DynamicResource ThemeBackground}" />
+    <SolidColorBrush x:Key="ThemeSurfaceBrush" Color="{DynamicResource ThemeSurface}" />
+
+    <!--  Botón principal (Reproducir/Pausa)  -->
+    <SolidColorBrush x:Key="ThemePrimaryBrush" Color="{DynamicResource ThemePrimary}" />
+    <SolidColorBrush
+        x:Key="ThemePrimaryPressedBrush"
+        Opacity="0.878"
+        Color="{DynamicResource ThemePrimary}" />
+    <SolidColorBrush x:Key="ThemeOnPrimaryBrush" Color="{DynamicResource ThemeOnPrimary}" />
+
+    <!--  Acento y estados  -->
+    <SolidColorBrush x:Key="ThemeAccentBrush" Color="{DynamicResource ThemeAccent}" />
+    <SolidColorBrush x:Key="ThemeDangerBrush" Color="{DynamicResource ThemeDanger}" />
+    <SolidColorBrush
+        x:Key="ThemeDangerBarBrush"
+        Opacity="0.2"
+        Color="{DynamicResource ThemeDanger}" />
+    <SolidColorBrush
+        x:Key="ThemeSuccessBarBrush"
+        Opacity="0.2"
+        Color="{DynamicResource ThemeSuccess}" />
+    <SolidColorBrush
+        x:Key="ThemeWarningBarBrush"
+        Opacity="0.2"
+        Color="{DynamicResource ThemeWarning}" />
+
+    <!--  Escalera del velo: 0x14, 0x1A, 0x1F, 0x22, 0x26 y 0x33 sobre 255  -->
+    <SolidColorBrush
+        x:Key="ThemeOverlayHoverBrush"
+        Opacity="0.0784313725"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ThemeOverlayPressedBrush"
+        Opacity="0.1019607843"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ThemeOverlaySelectedBrush"
+        Opacity="0.1215686275"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ThemeOverlayBorderBrush"
+        Opacity="0.1215686275"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ThemeOverlayCoverBrush"
+        Opacity="0.1333333333"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ThemeOverlaySelectedHoverBrush"
+        Opacity="0.1490196078"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ThemeOverlayBorderStrongBrush"
+        Opacity="0.1490196078"
+        Color="{DynamicResource ThemeOverlay}" />
+    <SolidColorBrush
+        x:Key="ThemeOverlayBorderHoverBrush"
+        Opacity="0.2"
+        Color="{DynamicResource ThemeOverlay}" />
+
+    <!--
+        Isla flotante («ahora suena»): negro y blanco FIJOS, igual que el modo inmersivo, en cualquier tema.
+        Son la única excepción con literales de este archivo: la isla imita un recorte de la pantalla.
+        El botón Reproducir/Pausa y los iconos activos de la isla sí usan ThemePrimaryBrush y ThemeAccentBrush
+        (ThemeFactory ya exige contraste 3:1 de esos dos colores sobre negro).
+    -->
+    <SolidColorBrush x:Key="ThemeIslandBackgroundBrush" Color="#000000" />
+    <SolidColorBrush x:Key="ThemeIslandTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeIslandSecondaryTextBrush"
+        Opacity="0.6"
+        Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeIslandTrackBrush"
+        Opacity="0.2"
+        Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeIslandPlaceholderBrush"
+        Opacity="0.1333333333"
+        Color="#FFFFFF" />
+</ResourceDictionary>

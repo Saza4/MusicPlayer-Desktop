@@ -34,6 +34,14 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isShuffleOn;
 
+    // Isla flotante de «ahora suena»: ajuste del usuario. Solo existe en Windows.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IslandToggleText))]
+    private bool _showIsland = true;
+    public bool IsIslandSupported { get; } = OperatingSystem.IsWindows();
+    // Texto del botón de la barra: dice lo que hará el clic (como MuteText).
+    public string IslandToggleText => ShowIsland ? "Ocultar isla flotante" : "Mostrar isla flotante";
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RepeatText))]
     private RepeatMode _repeat;
@@ -159,6 +167,7 @@ public partial class MainViewModel : ViewModelBase
     public ConvertViewModel Conversion { get; }
     public AlbumCoverViewModel AlbumCover { get; }
     public EmbedLyricsViewModel EmbedLyrics { get; }
+    public ThemeViewModel Themes { get; }
 
     private IReadOnlyList<TrackItemViewModel> _allTracks = Array.Empty<TrackItemViewModel>();
     private readonly PlayQueue<TrackItemViewModel> _queue = new();
@@ -183,6 +192,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private double _durationSeconds = 1; // Slider.Maximum debe ser > 0
     [ObservableProperty] private string _positionText = "0:00";
     [ObservableProperty] private string _durationText = "0:00";
+    [ObservableProperty] private string _remainingText = ""; // «−1:31»; vacío sin pista
+
+    private void UpdateRemainingText() =>
+        RemainingText = TimeText.Remaining(TimeSpan.FromSeconds(PositionSeconds), _player.Duration);
 
     public string PlayPauseText => IsPlaying ? "Pausa" : "Reproducir";
 
@@ -191,7 +204,8 @@ public partial class MainViewModel : ViewModelBase
                          CoverArtLoader covers, PlaylistViewModel playlists,
                          SettingsService settings, TagEditorViewModel tagEditor,
                          TagAutoFixViewModel autoFix, ConvertViewModel conversion,
-                         AlbumCoverViewModel albumCover, EmbedLyricsViewModel embedLyrics)
+                         AlbumCoverViewModel albumCover, EmbedLyricsViewModel embedLyrics,
+                         ThemeViewModel themes)
     {
         _covers = covers;
         _settings = settings;
@@ -202,6 +216,7 @@ public partial class MainViewModel : ViewModelBase
         Conversion = conversion;
         AlbumCover = albumCover;
         EmbedLyrics = embedLyrics;
+        Themes = themes;
         _player = player;
         _library = library;
         _folderPicker = folderPicker;
@@ -236,6 +251,7 @@ public partial class MainViewModel : ViewModelBase
         AlbumCover.Saving += OnTagsSaving;
         EmbedLyrics.Notified += message => Status = message;
         EmbedLyrics.Saving += OnTagsSaving;
+        Themes.Notified += message => Status = message;
     }
 
     // ---- Biblioteca ----
@@ -252,6 +268,7 @@ public partial class MainViewModel : ViewModelBase
                 Volume = Math.Clamp(saved.Volume, 0.0, 1.0);
                 IsShuffleOn = saved.Shuffle;
                 Repeat = saved.Repeat;
+                ShowIsland = saved.ShowIsland;
                 Lyrics.Restore(saved);
             }
             finally
@@ -492,6 +509,7 @@ public partial class MainViewModel : ViewModelBase
 
         PositionText = "0:00";
         DurationText = "0:00";
+        RemainingText = "";
         CurrentTrack = null;
         NowPlaying = "Nada en reproducción";
         NowPlayingCover = null;
@@ -555,6 +573,7 @@ public partial class MainViewModel : ViewModelBase
         finally { _isUpdatingFromTimer = false; }
 
         DurationText = TimeFormatter.Format(_player.Duration);
+        UpdateRemainingText(); // si la posición ya era 0, OnPositionSecondsChanged no se dispara
         CurrentTrack = item;
         SyncSelectionWith(item);
         _ = Lyrics.LoadAsync(item.Track);
@@ -769,6 +788,15 @@ public partial class MainViewModel : ViewModelBase
             _settings.Update(s => s with { Shuffle = value });
     }
 
+    [RelayCommand]
+    private void ToggleIsland() => ShowIsland = !ShowIsland;
+
+    partial void OnShowIslandChanged(bool value)
+    {
+        if (!_restoring)
+            _settings.Update(s => s with { ShowIsland = value });
+    }
+
     partial void OnRepeatChanged(RepeatMode value)
     {
         _queue.Repeat = value;
@@ -794,6 +822,7 @@ public partial class MainViewModel : ViewModelBase
         Lyrics.UpdatePosition(TimeSpan.FromSeconds(value));
 
         PositionText = TimeFormatter.Format(TimeSpan.FromSeconds(value));
+        UpdateRemainingText();
 
         // Si el cambio vino del usuario (arrastrando el Slider), saltar a ese punto.
         if (!_isUpdatingFromTimer)
@@ -815,6 +844,18 @@ public partial class MainViewModel : ViewModelBase
         var position = TimeSpan.FromSeconds(PositionSeconds);
         if (PlaybackShortcuts.SeekTarget(position, _player.Duration, direction) is { } target)
             PositionSeconds = target.TotalSeconds; // fuera del temporizador: OnPositionSecondsChanged hace el Seek
+    }
+
+    /// <summary>
+    /// Clic en la barra de progreso de la isla (0 = inicio, 1 = final). Asigna PositionSeconds una sola vez y
+    /// fuera del temporizador, como SeekBy: OnPositionSecondsChanged hace un único Seek. La barra de la isla
+    /// solo lee PositionSeconds (OneWay), así que refrescarla nunca vuelve a llamar a Seek.
+    /// </summary>
+    public void SeekToFraction(double fraction)
+    {
+        if (CurrentTrack is null) return;
+        if (PlaybackShortcuts.TargetAtFraction(fraction, _player.Duration) is { } target)
+            PositionSeconds = target.TotalSeconds;
     }
 
     public void ChangeVolume(int direction) =>

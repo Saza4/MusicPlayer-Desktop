@@ -51,6 +51,28 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.Equal(0.3, loaded.Volume);
         Assert.False(loaded.ShowTranslation);
         Assert.Null(loaded.LastTrackId);
+        Assert.Equal("dark", loaded.ThemeId); // un settings.json anterior a los temas sigue en Oscuro
+        Assert.True(loaded.ShowIsland);       // y uno anterior a la isla la recibe activada
+    }
+
+    [Fact]
+    public async Task SaveThenLoad_KeepsTheIslandTurnedOff()
+    {
+        await new JsonSettingsRepository(FilePath).SaveAsync(AppSettings.Default with { ShowIsland = false });
+
+        var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
+
+        Assert.False(loaded.ShowIsland);
+    }
+
+    [Fact]
+    public async Task SaveThenLoad_KeepsTheTheme()
+    {
+        await new JsonSettingsRepository(FilePath).SaveAsync(AppSettings.Default with { ThemeId = "medianoche" });
+
+        var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
+
+        Assert.Equal("medianoche", loaded.ThemeId);
     }
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);

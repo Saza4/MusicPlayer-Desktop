@@ -1,7 +1,7 @@
 # MusicPlayer-Desktop — Documento maestro y reporte de novedades
 
 > Reproductor de música local, ligero y multiplataforma. **C# · .NET 8 · Avalonia UI 11**.
-> Estado a **4 de noviembre de 2026** · última release publicada: **v1.2.0**.
+> Estado a **5 de noviembre de 2026** · última release publicada: **v1.2.0**.
 
 Este documento reúne en un solo lugar: la visión y la especificación del proyecto, el reporte de todo lo implementado durante el desarrollo, el historial de versiones tal como se publicó en GitHub Releases, las decisiones de diseño, las limitaciones conocidas y la hoja de ruta. Al final, como anexos, se conserva la especificación original y el prompt maestro.
 
@@ -71,10 +71,10 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 
 | Proyecto                     | Responsabilidad                           | Piezas principales                                                                                                                                                                                                                                                                                                                         |
 | ---------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MusicPlayer.Core`           | Modelos, contratos y lógica pura          | `Track`, `TrackTags`, `LibrarySnapshot`, `PlayQueue<T>`, `LibraryScanner`, `LibraryService`, `PlaylistManager`, `TrackFilter`, `TrackSorter`, `LibraryGrouper`, `LrcLyricParser`, `LyricsMerger`, `LruCache`, `CachedCoverArtProvider`, `TagEditor`, `CoverEditor`, `AlbumScope`, `LyricsEditor`, `ConversionPlanner`, `ConversionService` |
+| `MusicPlayer.Core`           | Modelos, contratos y lógica pura          | `Track`, `TrackTags`, `LibrarySnapshot`, `PlayQueue<T>`, `LibraryScanner`, `LibraryService`, `PlaylistManager`, `TrackFilter`, `TrackSorter`, `LibraryGrouper`, `LrcLyricParser`, `LyricsMerger`, `LruCache`, `CachedCoverArtProvider`, `TagEditor`, `CoverEditor`, `AlbumScope`, `LyricsEditor`, `ConversionPlanner`, `ConversionService`, `ThemeFactory`, `ThemeCatalog`, `BuiltInThemes`, `ColorContrast`, `PlaybackShortcuts`, `TimeText`, `IslandVisibility`, `IslandPlacement`, `IslandHover`, `ModalTracker` |
 | `MusicPlayer.Audio`          | Motor de sonido                           | `BassAudioPlayer` (implementa `IAudioPlayer` con BASS y BASSmix)                                                                                                                                                                                                                                                                           |
-| `MusicPlayer.Infrastructure` | Acceso a archivos y herramientas externas | `TagLibTrackMetadataReader`, `TagLibTrackTagWriter`, `TagLibCoverArtWriter`, `TagLibLyricsWriter`, `SafeFileEdit`, `EmbeddedCoverArtProvider`, `FolderCoverArtProvider`, `EmbeddedLyricsProvider`, `LrcFileLyricsProvider`, `CompanionLyricsProvider`, `FfmpegAudioConverter`, repositorios JSON, `AtomicJson`, `AppPaths`                 |
-| `MusicPlayer.Desktop`        | Interfaz y composición                    | `MainWindow`, `MainViewModel`, `LyricsViewModel`, `PlaylistViewModel`, `TagEditorViewModel`, `TagAutoFixViewModel`, `ConvertViewModel`, `AlbumCoverViewModel`, `EmbedLyricsViewModel`, `CoverArtLoader`, selectores de archivos y carpetas, `CompositionRoot`                                                                              |
+| `MusicPlayer.Infrastructure` | Acceso a archivos y herramientas externas | `TagLibTrackMetadataReader`, `TagLibTrackTagWriter`, `TagLibCoverArtWriter`, `TagLibLyricsWriter`, `SafeFileEdit`, `EmbeddedCoverArtProvider`, `FolderCoverArtProvider`, `EmbeddedLyricsProvider`, `LrcFileLyricsProvider`, `CompanionLyricsProvider`, `FfmpegAudioConverter`, `JsonThemeRepository`, repositorios JSON, `AtomicJson`, `AppPaths` |
+| `MusicPlayer.Desktop`        | Interfaz y composición                    | `MainWindow`, `MainViewModel`, `LyricsViewModel`, `PlaylistViewModel`, `TagEditorViewModel`, `TagAutoFixViewModel`, `ConvertViewModel`, `AlbumCoverViewModel`, `EmbedLyricsViewModel`, `ThemeViewModel`, `ThemeService`, `CoverArtLoader`, `IslandWindow`, `IslandController`, `IslandMetrics`, `NonActivatingWindow`, `WindowNative`, selectores de archivos y carpetas, `CompositionRoot`                                                                              |
 | `tests/`                     | Pruebas                                   | `MusicPlayer.Core.Tests`, `MusicPlayer.Infrastructure.Tests`                                                                                                                                                                                                                                                                               |
 
 **Decisiones transversales:**
@@ -103,6 +103,8 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | 8   | Barra espaciadora global y foco inicial                   | Desktop                       | Entregado (commit `f95fb1b`); no figura en las notas                                | v1.2.0                 |
 | 9   | Pausa mejorada                                            | Desktop                       | Sin cambio propio en el código: corresponde a la barra espaciadora (#8) (deducción) | v1.2.0                 |
 | 11  | Atajos `←` `→`, `Ctrl+↑` `Ctrl+↓` y `M`                   | Core, Desktop                 | Hecho (probado a mano en Windows); compila y pasa pruebas                           | Sin publicar           |
+| 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | Sin publicar |
+| 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | Sin publicar (rama `feature/isla`) |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
 
 ### 4.2 Novedades de la serie v1.1.0
@@ -174,7 +176,7 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 
 - **Pausa mejorada:** entre v1.1.0 y v1.2.0 no cambia nada en `MusicPlayer.Audio` ni en `TogglePlayPause` (`MainViewModel`). El único cambio de reproducir y pausar de la release es el manejador de la barra espaciadora (commit `f95fb1b`). _Deducción:_ la nota «Pausa mejorada» describe ese cambio; «transición suave y sin interrupciones» va más allá de lo que hace el código.
 - **Estilos globales** (commit `b382184`):
-  - `App.axaml` fija `RequestedThemeVariant="Dark"`: la app ya no sigue el tema claro u oscuro del sistema.
+  - `App.axaml` fija `RequestedThemeVariant="Dark"`: la app ya no sigue el tema claro u oscuro del sistema (en v1.2.0; con los temas, ver 4.3.2, el tema del sistema es una opción).
   - Paleta: fondo `#0F0F0F`, paneles `#000000` y velos blancos translúcidos (`#14FFFFFF`, `#1FFFFFFF`, `#26FFFFFF`).
   - Estilos para `ListBox` y `ListBoxItem` (pasar el cursor y la selección en gris en lugar del color de acento), `FlyoutPresenter`, `MenuFlyoutPresenter`, `ContextMenu` y `ToolTip`.
   - Diccionario `ThemeDictionaries["Dark"]` para botones, cuadros de texto, `ComboBox`, filas de lista y menús.
@@ -188,6 +190,32 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 - **Tecla mantenida:** saltos y volumen se limitan a un paso cada 100 ms; `M` no repite hasta soltar la tecla.
 - **Excepciones:** no se interceptan en `TextBox`, `ComboBox`, `ComboBoxItem`, `MenuItem` ni `ContextMenu`. Sliders, listas y botones sí.
 - **Piezas:** `PlaybackShortcuts` (Core: `SeekTarget`, `StepVolume`), `MainViewModel.SeekBy` y `ChangeVolume`, y `OnPreviewKeyDown` / `OnPreviewKeyUp` en `MainWindow.axaml.cs`. 16 pruebas nuevas en Core.
+
+### 4.3.2 Temas de la interfaz (sin publicar)
+
+- **Selector:** botón «Tema» en la barra superior con una lista (Sistema, Oscuro, Claro y los temas de usuario). Mover el cursor o las flechas por la lista **previsualiza** el tema en toda la app sin guardar nada; clic o `Enter` lo confirma y lo guarda en los ajustes (`ThemeId`); `Esc` o cerrar la lista restaura el tema confirmado. Mientras la lista está abierta no actúan los atajos globales de teclado.
+- **Tema por defecto:** Oscuro, con los colores exactos que tenía la interfaz. *Sistema* sigue el tema de Windows y reacciona si cambia con la app abierta.
+- **Recursos del tema (nueve colores):** `background`, `surface`, `overlay`, `primary`, `onPrimary`, `accent` (opcional: si falta, el acento del sistema), `danger`, `success` y `warning`. Los velos translúcidos (hover, selección, bordes) son `overlay` con una escalera fija de opacidades: las mismas del diseño anterior. El texto no es configurable: sigue la variante de Fluent (clara u oscura) de la `base`.
+- **Cómo se aplica:** `ThemeService` fija la variante de Fluent y escribe los nueve `Color` en los recursos de la aplicación; los pinceles de `Themes/ThemeBrushes.axaml` y las claves de Fluent de `Themes/FluentOverrides.axaml` los leen con `DynamicResource`, así que el cambio es inmediato. `App.axaml.cs` aplica el tema guardado antes de mostrar la ventana.
+- **Temas de usuario:** archivos `.json` en `%APPDATA%\MusicPlayer\themes` (formato en el README). `JsonThemeRepository` nunca lanza: cada archivo roto es un error con su motivo, que se muestra en la línea de estado al abrir el selector, y los demás siguen funcionando. Máximo 50 archivos de 64 KB. Un color con formato no válido o desconocido solo da un aviso y hereda el de la base.
+- **Validación (`ThemeFactory`, en Core):** descarta el tema con JSON mal formado, `formatVersion` ausente o distinto de 1, `base` no válida, nombre reservado o contraste menor de 3:1 en: texto contra `background`, texto contra `surface`, `onPrimary` contra `primary`, y `primary` y `accent` contra el velo negro del modo inmersivo.
+- **Tema guardado que ya no existe:** la app arranca en Oscuro y no sobrescribe el ajuste.
+- **Modo inmersivo:** igual que antes (fondo desenfocado, velo negro, texto e iconos blancos). Solo el círculo de Reproducir/Pausa y los iconos activos (Aleatorio, Repetir, Letra) toman los colores del tema.
+- **Diferencia con la especificación:** se pensó redefinir los colores en el `Grid` inmersivo con recursos locales; no sirve, porque un pincel de la aplicación resuelve su `Color` desde la aplicación y no desde el control que lo usa. El inmersivo conserva sus literales (fondo, degradado y marcador de carátula).
+- **Verificado en Windows** (capturas automáticas): arranque en Oscuro idéntico al anterior, vista previa con ratón y con flechas, `Esc`, confirmar y conservar al reiniciar, *Sistema* siguiendo a Windows en vivo, un tema de usuario, tres archivos inválidos descartados, tema guardado inexistente y modo inmersivo. Quedan por probar a mano: Linux y un recorrido completo por todos los paneles con el tema Claro.
+
+### 4.3.3 Isla flotante de «ahora suena» (sin publicar)
+
+Especificación, decisiones y resultados medidos de cada hito: `docs/specs/dynamic-island.md`.
+
+- **Qué es:** una ventana aparte (`IslandWindow`), sin bordes, transparente y siempre encima, con una pastilla negra arriba al centro de la pantalla principal (a 8 px del área de trabajo). Se ve solo con una pista cargada, el ajuste «Mostrar isla» activado, fuera del modo inmersivo, con la ventana principal no activa (minimizada o detrás de otra) y sin un selector de archivos abierto (`IslandVisibility`). Los cambios esperan 150 ms a estabilizarse y se muestran con un fundido, así que un Alt+Tab rápido no la hace parpadear.
+- **Colapsada** (180×36): miniatura y onda. **Expandida al pasar el cursor** (340×144, 400 ms con `SplineEasing`; colapsa 200 ms después de salir): carátula, título y artista con «…», onda, progreso con el tiempo transcurrido y el restante (`−1:31`) y los controles aleatorio, anterior, reproducir/pausa (más grande) y siguiente, con los mismos estilos que la barra principal. Un clic en la barra salta a ese punto (`SeekToFraction`, un solo `Seek` por clic). Un clic en la carátula o el título trae la ventana principal al frente (la restaura a su estado anterior, maximizada incluida). Todas las medidas y tiempos están en `IslandMetrics`.
+- **No molesta:** no se activa al pulsarla (`WS_EX_NOACTIVATE`), así que quien escribe en otra app no pierde el foco. Fuera de la pastilla los clics pasan a lo que hay debajo: la ventana no cambia de tamaño y lo que cambia es su región de clics (`SetWindowRgn`), que en reposo es la pastilla más 2 DIPs.
+- **Colores:** fondo negro y texto blanco fijos (`ThemeIsland*`) con cualquier tema; play/pausa, aleatorio activo y onda toman el color del tema.
+- **Ajuste:** botón en la barra de reproducción («Mostrar/Ocultar isla flotante»), guardado en `settings.json` (`ShowIsland`, activado por defecto; un JSON antiguo sin la clave lo deja activado). Solo en Windows: en Linux el botón no aparece y la isla no se crea.
+- **Coste:** la onda se anima a 15 fps solo con la isla visible y la pista sonando. Con la isla visible y sonando, la CPU es la misma que sin animación (medido; la animación de Avalonia la triplicaba).
+- **Selectores:** `ModalTracker` cuenta los selectores nativos abiertos (carpeta, imagen y letra) para que la isla no aparezca encima mientras desactivan la ventana principal.
+- **Verificación:** sondas automáticas en Windows para posición, foco, clics a través, saltos durante la animación (0 en ~2 500 muestras), comandos, seek, CPU, monitores, temas, modo inmersivo y carátula ausente. A mano: hover y bordes con la Lupa, foco con el Bloc de notas, primer plano al pulsar el título y escala de la pantalla principal. Modo de depuración: en Debug, `MUSICPLAYER_ISLAND_FORCE=1` la muestra con la ventana principal activa.
 
 ### 4.4 Base anterior: lo que ya contenía v1.0.0
 
@@ -217,6 +245,7 @@ Funciones construidas antes y consolidadas en la primera versión:
 | Letra incrustada  | `ILyricsWriter`, `LyricsEditor`                                                                                                 | `TagLibLyricsWriter`                   | `EmbedLyricsViewModel`, `ILyricsPickerService`, menú contextual               |
 | Espacio y foco    | —                                                                                                                               | —                                      | `MainWindow.axaml.cs` (`OnOpened`, `OnPreviewKeyDown`), `SongList` en el XAML |
 | Estilos globales  | —                                                                                                                               | —                                      | `App.axaml` (tema, estilos y recursos), `MainWindow.axaml` (fondos y bordes)  |
+| Isla flotante     | `IslandVisibility`, `IslandPlacement`, `IslandHover`, `ModalTracker`, `TimeText.Remaining`, `PlaybackShortcuts.TargetAtFraction`, `AppSettings.ShowIsland` | `JsonSettingsRepository` (clave `ShowIsland`) | `IslandWindow`, `IslandController`, `IslandMetrics`, `WindowNative`, `NonActivatingWindow`, `Themes/PlayerButtonStyles.axaml`, botón en `MainWindow.axaml` |
 
 ## 5. Historial de versiones (GitHub Releases)
 
@@ -305,20 +334,23 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | ------------------------------------------------------------------ | ---------- | -------------------- | ------------------------------------------------------ |
 | Ejecución anterior (carátula de álbum incluida)                    | 209        | 33                   | 0 errores, 0 advertencias                              |
 | Pruebas añadidas después (letra incrustada)                        | +7         | +6                   | Confirmadas                                            |
-| Última ejecución confirmada (4 de noviembre de 2026, `-c Release`) | 232        | 39                   | Todas superadas. Compila con 0 errores y 1 advertencia |
+| Ejecución del 4 de noviembre de 2026 (`-c Release`)               | 284        | 57                   | Todas superadas. Compila con 0 errores y 1 advertencia |
+| Pruebas añadidas por la isla flotante                              | +61        | +1                   | `IslandHover` 21, `IslandPlacement` 10, `IslandVisibility` 7, `ModalTracker` 6, `TimeText` 9, `TargetAtFraction` 8; `ShowIsland` en los ajustes |
+| Última ejecución confirmada (5 de noviembre de 2026, `-c Release`) | 345        | 58                   | Todas superadas. Compila con 0 errores y 1 advertencia |
 
-La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
+La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las propiedades de la isla la desplazaron): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
 **Cobertura de lo más reciente:**
 
 - **Carátula y conversión:** `CoverImage`, `CoverEditor`, `ConversionPlanner`, `ConversionService`, `LruCache.Remove`, invalidación de la caché de carátulas, `LibraryService.AddFilesAsync`, `TagLibCoverArtWriter` (con un PNG de 1×1) y los argumentos de ffmpeg. La conversión real no tiene prueba automática, porque en CI no hay ffmpeg.
 - **Carátula de álbum:** tres pruebas de `CoverEditor.SetManyAsync` (todas las pistas, un fallo que no detiene el resto, imagen inválida) y cuatro de `AlbumScope` (mismo álbum, mismo nombre con otro artista, recopilatorio, álbum desconocido).
 - **Letra incrustada:** siete en Core (texto, acentos y otros alfabetos, BOM, no UTF-8, vacío, demasiado grande, archivo inexistente) y seis en Infrastructure (incrustar, Unicode, sustituir, conservar etiquetas, no alterar los bytes de audio, sin temporales). Las seis usan solo archivos MP3: FLAC y M4A no tienen prueba automática.
-- **No cubierto por pruebas automáticas:** el código de vista (menús, selectores, foco y barra espaciadora). Se prueba a mano.
+- **Isla flotante:** en Core, las reglas de visibilidad, la colocación en píxeles físicos a 100, 125 y 150 % y con orígenes negativos, la máquina de estados del hover (incluidos volver a entrar mientras se colapsa y las salidas espurias), el contador de selectores, el tiempo restante y el seek por fracción. La ventana se verificó con sondas automáticas en Windows (ver la spec).
+- **No cubierto por pruebas automáticas:** el código de vista (menús, selectores, foco, barra espaciadora y la ventana de la isla). Se prueba a mano o con sondas.
 
 **CI:** compila y pasa las pruebas en Linux. Eso demuestra el build y la lógica, no que BASS cargue ni que la interfaz funcione allí.
 
-**Pruebas manuales confirmadas:** FLAC y M4A, letras `.lrc` y los atajos de teclado (salto, volumen y silencio).
+**Pruebas manuales confirmadas:** FLAC y M4A, letras `.lrc` y los atajos de teclado (salto, volumen y silencio). Los temas se verificaron con capturas automáticas (ver 4.3.2).
 
 **Captura del 4 de noviembre de 2026 (Windows):** la app arranca con el tema oscuro, la barra de íconos (aleatorio, anterior, reproducir, siguiente, repetir) y el botón **Convertir lo que veo…**. La pista cargada muestra su duración en la barra de reproducción (4:55), un valor que viene de `IAudioPlayer.Duration`, así que BASS abrió el archivo. Aunque la captura no demuestra que suene. El autor confirmó manualmente que la reproducción y la reproducción sin silencios funcionan.
 
@@ -332,6 +364,11 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 | CS0535: `AvaloniaImagePickerService` no implementaba `PickImageAsync()`                                           | La interfaz `IImagePickerService` no se había actualizado con la firma nueva `PickImageAsync(string title = …)`. Se sincronizó |
 | Teclado sin foco al abrir y barra espaciadora sin efecto                                                          | Foco inicial en `SongList`, `Activate()` y manejador _tunnel_ de la barra (sección 4.3)                                        |
 | Archivos de audio bloqueados al escribir en Windows                                                               | El reproductor suelta el archivo antes de escribir (`OnTagsSaving`)                                                            |
+| Isla: una ventana transparente captura los clics en todo su rectángulo (M0)                                       | La zona de clics se limita con la región de la ventana (`SetWindowRgn`)                                                        |
+| Isla: al redimensionar la ventana para expandir, la pastilla saltaba un fotograma (M5, medido)                    | La ventana no cambia de tamaño ni de sitio; cambia la región de clics                                                          |
+| Isla: bordes a escalones en la pastilla colapsada (M5, visto con la Lupa)                                         | La región se amplía 2 DIPs: el corte sin suavizar cae en la zona transparente                                                  |
+| Isla: la sombra no se animaba y aparecía de golpe (M5)                                                            | Capa de sombra aparte con fundido de opacidad (la transición de `BoxShadow` no interpola en Avalonia 11.2)                     |
+| Isla: la onda con animación de Avalonia triplicaba la CPU, y desde código lanzaba `No animator registered` (M7)    | Temporizador propio a 15 fps, solo con la isla visible y la pista sonando                                                      |
 
 ## 9. Limitaciones conocidas
 
@@ -365,6 +402,26 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 - La lista de controles que se quedan con las teclas es por tipo (`OwnsKeyboard`). Si se añade uno nuevo (`RadioButton`, `ToggleSwitch`), hay que sumarlo.
 - Los atajos de salto, volumen y silencio se probaron a mano en Windows y funcionan.
 - Windows puede negar el foco a una ventana nueva lanzada desde la terminal.
+
+**Temas**
+
+- El color del texto no es configurable: sigue la variante base del tema (clara u oscura).
+- El modo inmersivo es siempre oscuro; solo el botón Reproducir/Pausa y los iconos activos siguen el tema, por lo que `primary` y `accent` deben verse sobre el velo negro (contraste mínimo 3:1).
+- Los hover y pulsado de los botones de icono usan un gris fijo.
+- Con los temas Claro y de usuario puede haber controles que no se hayan revisado a fondo (el tema Claro no se usa a diario).
+- Los sliders toman el acento del tema también en hover y pulsado (antes Fluent usaba tonos distintos).
+- El aviso de un tema que no se pudo cargar puede quedar tapado por el mensaje de «Cargando…» al arrancar; se repite al abrir el selector.
+- Las flechas de la lista de temas las atiende la ventana (el foco se queda en el botón «Tema»), no la lista.
+- El botón «Carpeta de temas» no es enfocable con el teclado (así `Enter` confirma siempre el tema resaltado).
+- No hay recarga automática: los cambios en un archivo de tema se ven al volver a abrir el selector.
+
+**Isla flotante**
+
+- Solo en Windows: en Linux no se muestra (habría que reimplementar el foco y la región de clics para X11 y Wayland).
+- Siempre en la pantalla principal, aunque la ventana del reproductor esté en otra.
+- En reposo, un anillo invisible de 2 DIPs alrededor de la pastilla no deja pasar clics (es el precio de los bordes suavizados).
+- No se maneja con el teclado: no se activa al pulsarla, para no quitar el foco a otras apps. La carátula y el título no son botones para los lectores de pantalla; los controles y la barra sí tienen nombre accesible.
+- La onda es decorativa: no refleja el audio.
 
 **Plataforma**
 

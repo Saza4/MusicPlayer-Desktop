@@ -1,0 +1,129 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Botones de reproducción compartidos por MainWindow y la isla flotante: .icon, .skip, .play y .pp.
+        Se incluyen desde App.axaml para que cualquier ventana los vea.
+    -->
+
+    <!--  Barra multimedia: iconos planos sin caja (fondo solo al pasar el cursor)  -->
+    <Style Selector=":is(Button).icon">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector=":is(Button).icon /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="100" />
+    </Style>
+    <Style Selector=":is(Button).icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#22808080" />
+    </Style>
+    <Style Selector=":is(Button).icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#33808080" />
+    </Style>
+    <Style Selector=":is(Button).icon:checked /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector=":is(Button).icon:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#22808080" />
+    </Style>
+    <Style Selector=":is(Button).icon:checked:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#33808080" />
+    </Style>
+    <Style Selector=":is(Button).icon PathIcon">
+        <Setter Property="Width" Value="18" />
+        <Setter Property="Height" Value="18" />
+        <Setter Property="Opacity" Value="0.7" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector=":is(Button).icon.skip PathIcon">
+        <Setter Property="Width" Value="22" />
+        <Setter Property="Height" Value="22" />
+    </Style>
+    <Style Selector=":is(Button).icon:pointerover PathIcon">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <!--  Estado activo (Aleatorio, Repetir, Letra abierta): color de acento  -->
+    <Style Selector=":is(Button).icon.active PathIcon">
+        <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}" />
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector=":is(Button).icon.active TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}" />
+    </Style>
+    <Style Selector=":is(Button).icon:disabled PathIcon">
+        <Setter Property="Opacity" Value="0.3" />
+    </Style>
+
+    <!--  Botón principal Reproducir/Pausa: círculo sólido, más grande  -->
+    <Style Selector="Button.play">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="RenderTransform" Value="none" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.play /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="100" />
+    </Style>
+    <Style Selector="Button.play:pointerover">
+        <Setter Property="RenderTransform" Value="scale(1.06)" />
+    </Style>
+    <Style Selector="Button.play:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.play:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.96)" />
+    </Style>
+    <Style Selector="Button.play:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryPressedBrush}" />
+    </Style>
+    <Style Selector="Button.play:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+    <Style Selector="Button.play:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ThemePrimaryBrush}" />
+    </Style>
+    <!--  Toggle Reproducir/Pausa: los dos iconos se funden con una pequeña escala  -->
+    <Style Selector="Panel.pp PathIcon">
+        <Setter Property="Width" Value="22" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="Foreground" Value="{DynamicResource ThemeOnPrimaryBrush}" />
+        <Setter Property="RenderTransform" Value="none" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Panel.pp PathIcon.glyph-pause">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="RenderTransform" Value="scale(0.5)" />
+    </Style>
+    <Style Selector="Panel.pp.playing PathIcon.glyph-pause">
+        <Setter Property="Opacity" Value="1" />
+        <Setter Property="RenderTransform" Value="none" />
+    </Style>
+    <Style Selector="Panel.pp.playing PathIcon.glyph-play">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="RenderTransform" Value="scale(0.5)" />
+    </Style>
+</Styles>

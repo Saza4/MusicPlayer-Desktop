@@ -9,7 +9,7 @@
     MinWidth="640"
     MinHeight="400"
     x:DataType="vm:MainViewModel"
-    Background="#0F0F0F"
+    Background="{DynamicResource ThemeBackgroundBrush}"
     Icon="/Assets/app.ico">
 
     <Window.Resources>
@@ -67,128 +67,6 @@
         <Style Selector="ListBox.lyrics StackPanel.active TextBlock.lead">
             <Setter Property="FontWeight" Value="Bold" />
         </Style>
-
-        <!--  Barra multimedia: iconos planos sin caja (fondo solo al pasar el cursor)  -->
-        <Style Selector=":is(Button).icon">
-            <Setter Property="Width" Value="36" />
-            <Setter Property="Height" Value="36" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-        <Style Selector=":is(Button).icon /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="100" />
-        </Style>
-        <Style Selector=":is(Button).icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#22808080" />
-        </Style>
-        <Style Selector=":is(Button).icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#33808080" />
-        </Style>
-        <Style Selector=":is(Button).icon:checked /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector=":is(Button).icon:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#22808080" />
-        </Style>
-        <Style Selector=":is(Button).icon:checked:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#33808080" />
-        </Style>
-        <Style Selector=":is(Button).icon PathIcon">
-            <Setter Property="Width" Value="18" />
-            <Setter Property="Height" Value="18" />
-            <Setter Property="Opacity" Value="0.7" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector=":is(Button).icon.skip PathIcon">
-            <Setter Property="Width" Value="22" />
-            <Setter Property="Height" Value="22" />
-        </Style>
-        <Style Selector=":is(Button).icon:pointerover PathIcon">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-        <!--  Estado activo (Aleatorio, Repetir, Letra abierta): color de acento  -->
-        <Style Selector=":is(Button).icon.active PathIcon">
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-        <Style Selector=":is(Button).icon.active TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
-        </Style>
-        <Style Selector=":is(Button).icon:disabled PathIcon">
-            <Setter Property="Opacity" Value="0.3" />
-        </Style>
-
-        <!--  Botón principal Reproducir/Pausa: círculo sólido, más grande  -->
-        <Style Selector="Button.play">
-            <Setter Property="Width" Value="44" />
-            <Setter Property="Height" Value="44" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="RenderTransform" Value="none" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.play /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#FFFFFFFF" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="100" />
-        </Style>
-        <Style Selector="Button.play:pointerover">
-            <Setter Property="RenderTransform" Value="scale(1.06)" />
-        </Style>
-        <Style Selector="Button.play:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#FFFFFFFF" />
-        </Style>
-        <Style Selector="Button.play:pressed">
-            <Setter Property="RenderTransform" Value="scale(0.96)" />
-        </Style>
-        <Style Selector="Button.play:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#FFE0E0E0" />
-        </Style>
-        <Style Selector="Button.play:disabled">
-            <Setter Property="Opacity" Value="0.5" />
-        </Style>
-        <Style Selector="Button.play:disabled /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#FFFFFFFF" />
-        </Style>
-        <!--  Toggle Reproducir/Pausa: los dos iconos se funden con una pequeña escala  -->
-        <Style Selector="Panel.pp PathIcon">
-            <Setter Property="Width" Value="22" />
-            <Setter Property="Height" Value="22" />
-            <Setter Property="Foreground" Value="#FF101010" />
-            <Setter Property="RenderTransform" Value="none" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Panel.pp PathIcon.glyph-pause">
-            <Setter Property="Opacity" Value="0" />
-            <Setter Property="RenderTransform" Value="scale(0.5)" />
-        </Style>
-        <Style Selector="Panel.pp.playing PathIcon.glyph-pause">
-            <Setter Property="Opacity" Value="1" />
-            <Setter Property="RenderTransform" Value="none" />
-        </Style>
-        <Style Selector="Panel.pp.playing PathIcon.glyph-play">
-            <Setter Property="Opacity" Value="0" />
-            <Setter Property="RenderTransform" Value="scale(0.5)" />
-        </Style>
     </Window.Styles>
 
     <Grid>
@@ -197,8 +75,8 @@
             <!--  Barra superior  -->
             <Border
                 Padding="16,12"
-                Background="#000000"
-                BorderBrush="#1FFFFFFF"
+                Background="{DynamicResource ThemeSurfaceBrush}"
+                BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
                 BorderThickness="0,0,0,1"
                 DockPanel.Dock="Top">
                 <DockPanel>
@@ -217,8 +95,45 @@
                         Command="{Binding OpenConvertCommand}"
                         Content="Convertir lo que veo…"
                         DockPanel.Dock="Left" />
+                    <!--  Tema: la lista previsualiza al pasar el cursor o con las flechas; clic o Enter confirma  -->
+                    <Button
+                        x:Name="ThemeButton"
+                        Margin="8,0,0,0"
+                        AutomationProperties.Name="Tema"
+                        Content="Tema"
+                        DockPanel.Dock="Right"
+                        ToolTip.Tip="Cambiar el tema">
+                        <Button.Flyout>
+                            <Flyout
+                                Closed="OnThemeFlyoutClosed"
+                                Opened="OnThemeFlyoutOpened"
+                                Placement="BottomEdgeAlignedRight">
+                                <StackPanel Width="220" Spacing="8">
+                                    <ListBox
+                                        x:Name="ThemeList"
+                                        ItemsSource="{Binding Themes.Items}"
+                                        PointerExited="OnThemeListPointerExited"
+                                        PointerMoved="OnThemeListPointerMoved"
+                                        SelectedItem="{Binding Themes.SelectedChoice}"
+                                        Tapped="OnThemeListTapped">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ThemeChoice">
+                                                <TextBlock Text="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                    <Button
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Click="OnOpenThemesFolder"
+                                        Content="Carpeta de temas"
+                                        Focusable="False" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                     <TextBox
-                        Width="280"
+                        Width="240"
                         DockPanel.Dock="Right"
                         Text="{Binding SearchText}"
                         Watermark="Buscar por título, artista o álbum" />
@@ -226,14 +141,16 @@
                         Margin="16,0"
                         VerticalAlignment="Center"
                         Opacity="0.7"
-                        Text="{Binding Status}" />
+                        Text="{Binding Status}"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTip.Tip="{Binding Status}" />
                 </DockPanel>
             </Border>
 
             <!--  Convertir formato  -->
             <Border
                 Padding="16,12"
-                Background="#000000"
+                Background="{DynamicResource ThemeSurfaceBrush}"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding Conversion.IsOpen}">
                 <StackPanel Spacing="8">
@@ -243,7 +160,7 @@
                         TextWrapping="Wrap" />
 
                     <TextBlock
-                        Foreground="#FFE57373"
+                        Foreground="{DynamicResource ThemeDangerBrush}"
                         IsVisible="{Binding !Conversion.HasConverter}"
                         Text="No se encontró ffmpeg. Instálalo (en Windows: winget install Gyan.FFmpeg), reinicia la app y vuelve a intentarlo."
                         TextWrapping="Wrap" />
@@ -289,7 +206,7 @@
             <!--  Vista previa de sugerencias  -->
             <Border
                 Padding="16,12"
-                Background="#000000"
+                Background="{DynamicResource ThemeSurfaceBrush}"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding AutoFix.IsOpen}">
                 <StackPanel Spacing="8">
@@ -337,7 +254,7 @@
             <!--  Deshacer el último lote  -->
             <Border
                 Padding="16,10"
-                Background="#334CAF50"
+                Background="{DynamicResource ThemeSuccessBarBrush}"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding AutoFix.HasUndo}">
                 <DockPanel>
@@ -359,7 +276,7 @@
             <!--  Barra de confirmación de eliminación  -->
             <Border
                 Padding="16,10"
-                Background="#33E57373"
+                Background="{DynamicResource ThemeDangerBarBrush}"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding IsConfirmingDelete}">
                 <DockPanel>
@@ -381,7 +298,7 @@
             <!--  Barra de aviso  -->
             <Border
                 Padding="16,10"
-                Background="#33FFB74D"
+                Background="{DynamicResource ThemeWarningBarBrush}"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding HasMissing}">
                 <DockPanel>
@@ -416,7 +333,7 @@
 
             <Border
                 Padding="16,12"
-                Background="#000000"
+                Background="{DynamicResource ThemeSurfaceBrush}"
                 DockPanel.Dock="Top"
                 IsVisible="{Binding TagEditor.IsOpen}">
                 <StackPanel Spacing="8">
@@ -474,7 +391,7 @@
                         <Border
                             Width="96"
                             Height="96"
-                            Background="#22FFFFFF"
+                            Background="{DynamicResource ThemeOverlayCoverBrush}"
                             ClipToBounds="True"
                             CornerRadius="6">
                             <Panel>
@@ -528,7 +445,7 @@
                         </StackPanel>
                     </StackPanel>
                     <TextBlock
-                        Foreground="#FFE57373"
+                        Foreground="{DynamicResource ThemeDangerBrush}"
                         IsVisible="{Binding TagEditor.HasError}"
                         Text="{Binding TagEditor.Error}"
                         TextWrapping="Wrap" />
@@ -547,8 +464,8 @@
             <!--  Controles de reproducción: [carátula + título] [controles + progreso] [letra, pantalla completa, volumen]  -->
             <Border
                 Padding="16,12"
-                Background="#000000"
-                BorderBrush="#1FFFFFFF"
+                Background="{DynamicResource ThemeSurfaceBrush}"
+                BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
                 BorderThickness="0,1,0,0"
                 DockPanel.Dock="Bottom">
                 <Grid ColumnDefinitions="*,2*,*">
@@ -610,7 +527,7 @@
                                         Height="4"
                                         Margin="0,0,0,3"
                                         VerticalAlignment="Bottom"
-                                        Fill="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        Fill="{DynamicResource ThemeAccentBrush}"
                                         IsVisible="{Binding IsShuffleOn}" />
                                 </Panel>
                             </ToggleButton>
@@ -661,7 +578,7 @@
                                         Height="4"
                                         Margin="0,0,0,3"
                                         VerticalAlignment="Bottom"
-                                        Fill="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        Fill="{DynamicResource ThemeAccentBrush}"
                                         IsVisible="{Binding RepeatText, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter='Repetir: no'}" />
                                 </Panel>
                             </Button>
@@ -684,7 +601,7 @@
                         </Grid>
                     </StackPanel>
 
-                    <!--  Derecha: Letra, Pantalla completa y Volumen  -->
+                    <!--  Derecha: Letra, Pantalla completa, Isla flotante y Volumen  -->
                     <StackPanel
                         Grid.Column="2"
                         HorizontalAlignment="Right"
@@ -706,6 +623,19 @@
                             Command="{Binding OpenImmersiveCommand}"
                             ToolTip.Tip="Pantalla completa">
                             <PathIcon Data="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                        </Button>
+                        <!--
+                            Isla flotante (solo Windows). Button con comando y no ToggleButton, para no pelear con el
+                            atajo global de Espacio. Acento cuando está activada; el texto dice lo que hará el clic.
+                        -->
+                        <Button
+                            AutomationProperties.Name="{Binding IslandToggleText}"
+                            Classes="icon"
+                            Classes.active="{Binding ShowIsland}"
+                            Command="{Binding ToggleIslandCommand}"
+                            IsVisible="{Binding IsIslandSupported}"
+                            ToolTip.Tip="{Binding IslandToggleText}">
+                            <PathIcon Data="M2 4h20v16H2V4zm2 2v12h16V6H4zm4 1h8a1.5 1.5 0 0 1 0 3H8a1.5 1.5 0 0 1 0-3z" />
                         </Button>
                         <Button
                             Margin="8,0,0,0"
@@ -735,7 +665,7 @@
                     <Border
                         Margin="0,8,0,0"
                         Padding="8"
-                        Background="#000000"
+                        Background="{DynamicResource ThemeSurfaceBrush}"
                         CornerRadius="8"
                         DockPanel.Dock="Bottom"
                         IsVisible="{Binding Playlists.IsEditing}">
@@ -752,7 +682,7 @@
                                 Text="{Binding Playlists.NameDraft}"
                                 Watermark="Nombre" />
                             <TextBlock
-                                Foreground="#FFE57373"
+                                Foreground="{DynamicResource ThemeDangerBrush}"
                                 IsVisible="{Binding Playlists.HasEditError}"
                                 Text="{Binding Playlists.EditError}"
                                 TextWrapping="Wrap" />
@@ -852,7 +782,7 @@
                                             Width="40"
                                             Height="40"
                                             Margin="0,0,12,0"
-                                            Background="#22FFFFFF"
+                                            Background="{DynamicResource ThemeOverlayCoverBrush}"
                                             ClipToBounds="True"
                                             CornerRadius="4">
                                             <Image Source="{Binding Cover}" Stretch="UniformToFill" />
@@ -890,7 +820,7 @@
                                             Width="56"
                                             Height="56"
                                             Margin="0,0,12,0"
-                                            Background="#22FFFFFF"
+                                            Background="{DynamicResource ThemeOverlayCoverBrush}"
                                             ClipToBounds="True"
                                             CornerRadius="4">
                                             <Image Source="{Binding Cover}" Stretch="UniformToFill" />
@@ -924,7 +854,7 @@
                                             Width="56"
                                             Height="56"
                                             Margin="0,0,12,0"
-                                            Background="#22FFFFFF"
+                                            Background="{DynamicResource ThemeOverlayCoverBrush}"
                                             ClipToBounds="True"
                                             CornerRadius="4">
                                             <Image Source="{Binding Cover}" Stretch="UniformToFill" />
@@ -951,8 +881,8 @@
                     Width="380"
                     Margin="0,8,8,8"
                     Padding="8"
-                    Background="#000000"
-                    BorderBrush="#1FFFFFFF"
+                    Background="{DynamicResource ThemeSurfaceBrush}"
+                    BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
                     IsVisible="{Binding Lyrics.ShowPanel}">
@@ -1106,7 +1036,7 @@
                                         Height="4"
                                         Margin="0,0,0,3"
                                         VerticalAlignment="Bottom"
-                                        Fill="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        Fill="{DynamicResource ThemeAccentBrush}"
                                         IsVisible="{Binding IsShuffleOn}" />
                                 </Panel>
                             </ToggleButton>
@@ -1157,7 +1087,7 @@
                                         Height="4"
                                         Margin="0,0,0,3"
                                         VerticalAlignment="Bottom"
-                                        Fill="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        Fill="{DynamicResource ThemeAccentBrush}"
                                         IsVisible="{Binding RepeatText, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter='Repetir: no'}" />
                                 </Panel>
                             </Button>

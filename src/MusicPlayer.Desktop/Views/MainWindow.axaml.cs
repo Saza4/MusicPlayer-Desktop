@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using MusicPlayer.Infrastructure;
 using MusicPlayer.Desktop.ViewModels;
 
 namespace MusicPlayer.Desktop.Views;
@@ -49,7 +54,17 @@ public partial class MainWindow : Window
     // ↑ ↓ sin modificador no se tocan: mueven la selección de las listas.
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        if (DataContext is not MainViewModel vm || OwnsKeyboard(e.Source))
+        if (DataContext is not MainViewModel vm) return;
+
+        // Con el selector de tema abierto, las teclas son suyas (flechas, Enter, Esc): ningún atajo global.
+        // El foco se queda en el botón que abrió el Flyout, así que es la ventana quien las recibe.
+        if (vm.Themes.IsOpen)
+        {
+            HandleThemeKey(vm, e);
+            return;
+        }
+
+        if (OwnsKeyboard(e.Source))
             return;
 
         switch (e.Key, e.KeyModifiers)
@@ -105,6 +120,92 @@ public partial class MainWindow : Window
     // Controles que usan estas teclas para lo suyo: escribir, abrir una lista desplegable, navegar un menú.
     private static bool OwnsKeyboard(object? source) =>
         source is TextBox or ComboBox or ComboBoxItem or MenuItem or Avalonia.Controls.ContextMenu;
+
+    // ---- Selector de tema (vista previa en vivo) ----
+
+    private static ThemeChoice? ChoiceAt(object? source) =>
+        (source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true)?.DataContext as ThemeChoice;
+
+    // El foco va a la lista cuando ya tiene sus elementos, para que las flechas previsualicen desde el primer momento.
+    private async void OnThemeFlyoutOpened(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+
+        await vm.Themes.OpenAsync();
+        ThemeListOf(sender)?.Focus();
+    }
+
+    // La lista vive dentro del Flyout, que no forma parte del árbol de la ventana hasta abrirse: se busca desde él.
+    private static ListBox? ThemeListOf(object? flyout) =>
+        ((flyout as Flyout)?.Content as Panel)?.Children.OfType<ListBox>().FirstOrDefault();
+
+    // Se cerró sin confirmar (Esc o clic fuera): se vuelve al tema elegido. El foco regresa a la lista de canciones.
+    private void OnThemeFlyoutClosed(object? sender, EventArgs e)
+    {
+        if (DataContext is MainViewModel vm) vm.Themes.Close();
+        Dispatcher.UIThread.Post(() => this.FindControl<ListBox>("SongList")?.Focus());
+    }
+
+    private void OnThemeListPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is MainViewModel vm && ChoiceAt(e.Source) is { } choice)
+            vm.Themes.Preview(choice.Id);
+    }
+
+    // El cursor salió de la lista: se previsualiza lo resaltado con el teclado (o el tema confirmado si no hay nada).
+    private void OnThemeListPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+
+        if (vm.Themes.SelectedChoice is { } selected) vm.Themes.Preview(selected.Id);
+        else vm.Themes.Cancel();
+    }
+
+    private void OnThemeListTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm && ChoiceAt(e.Source) is { } choice)
+            ConfirmTheme(vm, choice);
+    }
+
+    private void HandleThemeKey(MainViewModel vm, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Down:
+                vm.Themes.MoveSelection(+1);
+                break;
+            case Key.Up:
+                vm.Themes.MoveSelection(-1);
+                break;
+            case Key.Enter when vm.Themes.SelectedChoice is { } choice:
+                ConfirmTheme(vm, choice);
+                break;
+            default:
+                return; // Esc cierra el Flyout por sí solo
+        }
+
+        e.Handled = true;
+    }
+
+    private void ConfirmTheme(MainViewModel vm, ThemeChoice choice)
+    {
+        vm.Themes.Commit(choice.Id);
+        this.FindControl<Button>("ThemeButton")?.Flyout?.Hide();
+    }
+
+    private async void OnOpenThemesFolder(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.Themes);
+            await Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(AppPaths.Themes));
+        }
+        catch (Exception)
+        {
+            if (DataContext is MainViewModel vm)
+                vm.Status = $"Carpeta de temas: {AppPaths.Themes}";
+        }
+    }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
