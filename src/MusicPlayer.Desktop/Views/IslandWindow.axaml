@@ -72,9 +72,9 @@
 
                             <!--  Onda: estática por ahora (M7 la anima mientras suena)  -->
                             <StackPanel
-                                x:Name="Wave"
                                 Grid.Column="2"
                                 VerticalAlignment="Center"
+                                Classes="wave"
                                 Orientation="Horizontal"
                                 Spacing="2">
                                 <Border Classes="bar" Height="8" />
@@ -85,13 +85,150 @@
                             </StackPanel>
                         </Grid>
 
-                        <!--  Expandida: el contenido llega en M6. Tamaño fijo para que no se recoloque durante la animación  -->
-                        <Panel
+                        <!--
+                            Expandida. Tamaño fijo (el de la pastilla expandida) para que no se recoloque durante la
+                            animación; solo recibe clics mientras está expandida. Medidas en IslandMetrics (código).
+                        -->
+                        <Grid
                             x:Name="Expanded"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Top"
                             IsHitTestVisible="False"
-                            Opacity="0" />
+                            Opacity="0"
+                            RowDefinitions="Auto,Auto,Auto">
+
+                            <!--  Cabecera: carátula, título y artista (ancho fijo, «…» si no caben) y onda  -->
+                            <Grid x:Name="Header" ColumnDefinitions="Auto,*,Auto">
+                                <Panel x:Name="ExpandedCover">
+                                    <Border
+                                        x:Name="ExpandedPlaceholder"
+                                        Background="{DynamicResource ThemeIslandPlaceholderBrush}"
+                                        IsVisible="{Binding NowPlayingCover, Converter={x:Static ObjectConverters.IsNull}}">
+                                        <PathIcon
+                                            Width="20"
+                                            Height="20"
+                                            Data="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                                            Foreground="{DynamicResource ThemeIslandSecondaryTextBrush}" />
+                                    </Border>
+                                    <Border x:Name="ExpandedArt" ClipToBounds="True">
+                                        <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill" />
+                                    </Border>
+                                </Panel>
+
+                                <StackPanel
+                                    x:Name="Texts"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="2">
+                                    <TextBlock
+                                        x:Name="TitleText"
+                                        FontWeight="Bold"
+                                        Foreground="{DynamicResource ThemeIslandTextBrush}"
+                                        Text="{Binding CurrentTrack.Title}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        x:Name="ArtistText"
+                                        Foreground="{DynamicResource ThemeIslandSecondaryTextBrush}"
+                                        Text="{Binding CurrentTrack.Artist}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Classes="wave"
+                                    Orientation="Horizontal"
+                                    Spacing="2">
+                                    <Border Classes="bar" Height="8" />
+                                    <Border Classes="bar" Height="14" />
+                                    <Border Classes="bar" Height="10" />
+                                    <Border Classes="bar" Height="16" />
+                                    <Border Classes="bar" Height="6" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!--  Progreso: transcurrido, barra (clic = seek) y restante con signo menos  -->
+                            <Grid
+                                x:Name="Progress"
+                                Grid.Row="1"
+                                ColumnDefinitions="Auto,*,Auto">
+                                <TextBlock
+                                    x:Name="PositionTime"
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource ThemeIslandSecondaryTextBrush}"
+                                    Text="{Binding PositionText}" />
+                                <!--  Zona de clic más alta que la barra. Solo lee la posición (OneWay): no escribe al refrescarse  -->
+                                <Border
+                                    x:Name="SeekArea"
+                                    Grid.Column="1"
+                                    Background="Transparent"
+                                    Cursor="Hand"
+                                    PointerPressed="OnSeekPressed">
+                                    <ProgressBar
+                                        x:Name="ProgressBar"
+                                        AutomationProperties.Name="Progreso"
+                                        MinWidth="0"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource ThemeIslandTrackBrush}"
+                                        Foreground="{DynamicResource ThemeIslandTextBrush}"
+                                        IsHitTestVisible="False"
+                                        Maximum="{Binding DurationSeconds}"
+                                        Minimum="0"
+                                        Value="{Binding PositionSeconds, Mode=OneWay}" />
+                                </Border>
+                                <TextBlock
+                                    x:Name="RemainingTime"
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Foreground="{DynamicResource ThemeIslandSecondaryTextBrush}"
+                                    Text="{Binding RemainingText}"
+                                    TextAlignment="Right" />
+                            </Grid>
+
+                            <!--  Controles: los mismos estilos (.icon, .skip, .play, .pp) que la barra principal  -->
+                            <StackPanel
+                                x:Name="Controls"
+                                Grid.Row="2"
+                                HorizontalAlignment="Center"
+                                Orientation="Horizontal">
+                                <ToggleButton
+                                    x:Name="ShuffleButton"
+                                    AutomationProperties.Name="Aleatorio"
+                                    Classes="icon"
+                                    Classes.active="{Binding IsShuffleOn}"
+                                    IsChecked="{Binding IsShuffleOn}"
+                                    ToolTip.Tip="Aleatorio">
+                                    <PathIcon Data="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+                                </ToggleButton>
+                                <Button
+                                    x:Name="PreviousButton"
+                                    AutomationProperties.Name="Anterior"
+                                    Classes="icon skip"
+                                    Command="{Binding PreviousCommand}"
+                                    ToolTip.Tip="Anterior">
+                                    <PathIcon Data="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                                </Button>
+                                <Button
+                                    x:Name="PlayButton"
+                                    AutomationProperties.Name="{Binding PlayPauseText}"
+                                    Classes="play"
+                                    Command="{Binding TogglePlayPauseCommand}"
+                                    ToolTip.Tip="{Binding PlayPauseText}">
+                                    <Panel Classes="pp" Classes.playing="{Binding IsPlaying}">
+                                        <PathIcon Classes="glyph-play" Data="M8 5v14l11-7z" />
+                                        <PathIcon Classes="glyph-pause" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                    </Panel>
+                                </Button>
+                                <Button
+                                    x:Name="NextButton"
+                                    AutomationProperties.Name="Siguiente"
+                                    Classes="icon skip"
+                                    Command="{Binding NextCommand}"
+                                    ToolTip.Tip="Siguiente">
+                                    <PathIcon Data="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
                     </Panel>
                 </Border>
             </Border>
@@ -100,7 +237,7 @@
     </Panel>
 
     <Window.Styles>
-        <Style Selector="StackPanel#Wave > Border.bar">
+        <Style Selector="StackPanel.wave > Border.bar">
             <Setter Property="Width" Value="3" />
             <Setter Property="CornerRadius" Value="1.5" />
             <Setter Property="VerticalAlignment" Value="Center" />

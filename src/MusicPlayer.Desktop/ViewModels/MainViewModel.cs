@@ -842,6 +842,18 @@ public partial class MainViewModel : ViewModelBase
             PositionSeconds = target.TotalSeconds; // fuera del temporizador: OnPositionSecondsChanged hace el Seek
     }
 
+    /// <summary>
+    /// Clic en la barra de progreso de la isla (0 = inicio, 1 = final). Asigna PositionSeconds una sola vez y
+    /// fuera del temporizador, como SeekBy: OnPositionSecondsChanged hace un único Seek. La barra de la isla
+    /// solo lee PositionSeconds (OneWay), así que refrescarla nunca vuelve a llamar a Seek.
+    /// </summary>
+    public void SeekToFraction(double fraction)
+    {
+        if (CurrentTrack is null) return;
+        if (PlaybackShortcuts.TargetAtFraction(fraction, _player.Duration) is { } target)
+            PositionSeconds = target.TotalSeconds;
+    }
+
     public void ChangeVolume(int direction) =>
         Volume = PlaybackShortcuts.StepVolume(Volume, direction);
 

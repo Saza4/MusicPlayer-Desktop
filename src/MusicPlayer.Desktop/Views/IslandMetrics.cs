@@ -29,6 +29,24 @@ public static class IslandMetrics
     public const double ExpandedHeight = 144;
     public const double ExpandedCornerRadius = 24;
 
+    // Contenido expandido. Filas: cabecera + hueco + progreso + hueco + controles = alto - 2·relleno
+    // (48 + 8 + 16 + 4 + 36 = 112 = 144 - 2·16).
+    public const double ExpandedPadding = 16;
+    public const double ExpandedCoverSize = 48;
+    public const double ExpandedCoverCornerRadius = 10;
+    public const double HeaderSpacing = 12;          // entre carátula, textos y onda
+    public const double HeaderToProgress = 8;
+    public const double ProgressHeight = 16;         // zona de clic de la barra (la barra visible es más fina)
+    public const double ProgressBarHeight = 4;
+    public const double ProgressTimeWidth = 38;      // ancho fijo de los tiempos: la barra no cambia de ancho
+    public const double ProgressToControls = 4;
+    public const double ControlSize = 32;            // aleatorio, anterior, siguiente
+    public const double PlaySize = 36;               // reproducir/pausa, mayor
+    public const double ControlSpacing = 14;
+    public const double TitleFontSize = 14;
+    public const double ArtistFontSize = 12;
+    public const double TimeFontSize = 11;
+
     // Sombra: solo con la pastilla expandida. La ventana deja este margen a los lados y debajo.
     public const double ExpandedShadowMargin = 16;
     // Negro translúcido, fijo como el fondo de la isla (la sombra no sigue el tema). Desenfoque 12 + 4 hacia

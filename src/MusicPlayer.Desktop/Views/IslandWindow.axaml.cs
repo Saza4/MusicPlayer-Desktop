@@ -3,9 +3,11 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 using MusicPlayer.Core.Services;
 using MusicPlayer.Desktop.Services;
+using MusicPlayer.Desktop.ViewModels;
 
 namespace MusicPlayer.Desktop.Views;
 
@@ -76,6 +78,8 @@ public partial class IslandWindow : Window
         CollapsedPlaceholder.CornerRadius = coverRadius;
         CollapsedArt.CornerRadius = coverRadius;
 
+        ApplyExpandedMetrics();
+
         Width = IslandMetrics.WindowSize.Width;
         Height = IslandMetrics.WindowSize.Height;
 
@@ -93,6 +97,59 @@ public partial class IslandWindow : Window
         {
             new DoubleTransition { Property = OpacityProperty, Duration = IslandMetrics.FadeDuration }
         };
+    }
+
+    private void ApplyExpandedMetrics()
+    {
+        Expanded.Margin = new Thickness(IslandMetrics.ExpandedPadding);
+        Expanded.Width -= 2 * IslandMetrics.ExpandedPadding;
+        Expanded.Height -= 2 * IslandMetrics.ExpandedPadding;
+
+        // Cabecera
+        Header.Height = IslandMetrics.ExpandedCoverSize;
+        foreach (var part in new Control[] { ExpandedCover, ExpandedPlaceholder, ExpandedArt })
+        {
+            part.Width = IslandMetrics.ExpandedCoverSize;
+            part.Height = IslandMetrics.ExpandedCoverSize;
+        }
+        var coverRadius = new CornerRadius(IslandMetrics.ExpandedCoverCornerRadius);
+        ExpandedPlaceholder.CornerRadius = coverRadius;
+        ExpandedArt.CornerRadius = coverRadius;
+        Texts.Margin = new Thickness(IslandMetrics.HeaderSpacing, 0);
+        TitleText.FontSize = IslandMetrics.TitleFontSize;
+        ArtistText.FontSize = IslandMetrics.ArtistFontSize;
+
+        // Progreso
+        Progress.Margin = new Thickness(0, IslandMetrics.HeaderToProgress, 0, 0);
+        Progress.Height = IslandMetrics.ProgressHeight;
+        foreach (var time in new[] { PositionTime, RemainingTime })
+        {
+            time.Width = IslandMetrics.ProgressTimeWidth;
+            time.FontSize = IslandMetrics.TimeFontSize;
+        }
+        ProgressBar.Height = ProgressBar.MinHeight = IslandMetrics.ProgressBarHeight;
+        ProgressBar.CornerRadius = new CornerRadius(IslandMetrics.ProgressBarHeight / 2);
+
+        // Controles
+        Controls.Margin = new Thickness(0, IslandMetrics.ProgressToControls, 0, 0);
+        Controls.Spacing = IslandMetrics.ControlSpacing;
+        Controls.Height = IslandMetrics.PlaySize;
+        foreach (var button in new Control[] { ShuffleButton, PreviousButton, NextButton })
+            button.Width = button.Height = IslandMetrics.ControlSize;
+        PlayButton.Width = PlayButton.Height = IslandMetrics.PlaySize;
+    }
+
+    /// <summary>
+    /// Clic en la barra de progreso: un solo seek a esa fracción. La barra se enlaza solo para leer
+    /// (OneWay), así que el refresco del temporizador nunca provoca otro seek.
+    /// </summary>
+    private void OnSeekPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(SeekArea).Properties.IsLeftButtonPressed) return;
+        var width = ProgressBar.Bounds.Width;
+        if (width <= 0) return;
+        (DataContext as MainViewModel)?.SeekToFraction(e.GetPosition(ProgressBar).X / width);
+        e.Handled = true;
     }
 
     protected override void OnOpened(EventArgs e)
@@ -133,6 +190,7 @@ public partial class IslandWindow : Window
         Pill.CornerRadius = new CornerRadius(IslandMetrics.ExpandedCornerRadius);
         PillClip.CornerRadius = Pill.CornerRadius;
         PillShadow.Opacity = 1;
+        Expanded.IsHitTestVisible = true;
         Collapsed.Opacity = 0;
         Expanded.Opacity = 1;
     }
@@ -174,6 +232,7 @@ public partial class IslandWindow : Window
         Pill.CornerRadius = new CornerRadius(IslandMetrics.CollapsedCornerRadius);
         PillClip.CornerRadius = Pill.CornerRadius;
         PillShadow.Opacity = 0;
+        Expanded.IsHitTestVisible = false; // los controles no reciben clics mientras se colapsa
     }
 
     private void Retime(TimeSpan duration, Avalonia.Animation.Easings.Easing easing)

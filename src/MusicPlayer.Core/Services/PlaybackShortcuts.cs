@@ -28,6 +28,17 @@ public static class PlaybackShortcuts
     }
 
     /// <summary>
+    /// Punto de la pista que corresponde a una fracción de la barra de progreso (0 = inicio, 1 = final),
+    /// o <c>null</c> si no hay duración o la fracción no es un número. Fuera de [0, 1] se ajusta al borde.
+    /// </summary>
+    public static TimeSpan? TargetAtFraction(double fraction, TimeSpan duration)
+    {
+        if (double.IsNaN(fraction) || duration <= TimeSpan.Zero)
+            return null;
+        return TimeSpan.FromTicks((long)(duration.Ticks * Math.Clamp(fraction, 0, 1)));
+    }
+
+    /// <summary>
     /// Volumen (0.0–1.0) tras subir (<paramref name="direction"/> &gt; 0) o bajar (&lt; 0) un paso.
     /// Trabaja en porcentajes enteros para no acumular error de coma flotante y, si el valor
     /// no es múltiplo del paso, avanza hasta el múltiplo más cercano en esa dirección.

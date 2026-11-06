@@ -1,6 +1,6 @@
 # Especificación: Dynamic Island («ahora suena» flotante)
 
-Estado: **aprobada**. M0-M5 hechos (ver «Resultado del spike (M0)», «Resultado de M4» y «Resultado de M5», con la prueba a mano del autor).
+Estado: **aprobada**. M0-M6 hechos (ver «Resultado del spike (M0)» y «Resultado de M4», «de M5» y «de M6»), con sus puertas a mano.
 
 ## Contexto
 
@@ -204,11 +204,32 @@ Sonda automática en Windows 11 al 100 %, con el modo de depuración, volumen 0 
 
 Tras la corrección se repitió la sonda de saltos: 0 saltos en 4 ciclos (~1 300 muestras), región de clics correcta en reposo, expandida y tras colapsar, y foco en «Sonda».
 
+## Resultado de M6
+
+Contenido expandido (340×144 DIPs, relleno 16): cabecera con carátula de 48 px, título en negrita y artista en gris (`CharacterEllipsis`, columna de ancho fijo) y onda; fila de progreso con transcurrido, barra y restante con signo menos (tiempos de ancho fijo para que la barra no cambie); y controles aleatorio, anterior, reproducir/pausa (36 px, mayor) y siguiente (32 px), con los estilos compartidos `.icon`, `.skip`, `.play` y `.pp`. Todas las medidas en `IslandMetrics`. Los controles solo reciben clics con la pastilla expandida.
+
+- **Seek:** `MainViewModel.SeekToFraction` y la regla pura `PlaybackShortcuts.TargetAtFraction` (Core, 8 pruebas: fracciones, clic fuera de la barra, sin duración, barra sin medir). La barra (`ProgressBar`) solo lee `PositionSeconds` (`OneWay`) y un clic asigna `PositionSeconds` una sola vez, fuera del temporizador: un clic, un `Seek`.
+- **Accesibilidad:** los cuatro botones tienen `ToolTip` y `AutomationProperties.Name` (el de play/pausa cambia entre «Reproducir» y «Pausa»), y la barra se expone como `ProgressBar` «Progreso» con su valor.
+
+Sonda automática (modo de depuración, clics enviados a la isla con `WM_LBUTTONDOWN`/`UP`, botones localizados por UIA, ajustes restaurados al terminar):
+
+| Control | Resultado |
+|---|---|
+| Reproducir/pausa | «Pausa» → «Reproducir» → «Pausa» |
+| Aleatorio | Encendido → apagado (y vuelta) |
+| Siguiente / anterior | Cambian de pista; título, artista y tiempos se actualizan |
+| Clic en la barra al 50 / 25 / 90 % (pista de 4:55) | 2:27 / 1:14 / 4:26, con el restante a juego |
+| Ancho del título | 213 px con títulos cortos y largos |
+| UIA | `ProgressBar` «Progreso», valor 0,2 de 295,2 |
+| Foco | El primer plano sigue en «Sonda» |
+
+**Puerta de M6 (a mano, el autor): pasa.** Los clics de la sonda no pasan por la activación de Windows, así que el foco se probó con el ratón real: con el Bloc de notas enfocado, pulsar los botones y la barra de la isla deja el foco en el Bloc de notas y lo escrito sigue entrando ahí.
+
 ## Archivos
 
 Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Services/NonActivatingWindow.cs`, `Services/WindowNative.cs` (región de clics y cursor real), `Themes/PlayerButtonStyles.axaml`.
 Modificados (Desktop): `App.axaml(.cs)`, `CompositionRoot.cs`, `MainViewModel.cs`, `MainWindow.axaml` (estilos movidos y botón «Mostrar isla»), `Themes/ThemeBrushes.axaml`, los tres servicios de selector.
-Excepciones a «solo Desktop», necesarias por la convención del repositorio: Core (`AppSettings.ShowIsland`, `IslandVisibility`, `TimeText.Remaining`, `ModalTracker`, `IslandPlacement`, `IslandHover`), y sus pruebas en `tests/MusicPlayer.Core.Tests` y `tests/MusicPlayer.Infrastructure.Tests` (`JsonSettingsRepositoryTests`). Al terminar se actualizan `README.md` y `docs/reporte-reproductor.md`.
+Excepciones a «solo Desktop», necesarias por la convención del repositorio: Core (`AppSettings.ShowIsland`, `IslandVisibility`, `TimeText.Remaining`, `ModalTracker`, `IslandPlacement`, `IslandHover`, `PlaybackShortcuts.TargetAtFraction`), y sus pruebas en `tests/MusicPlayer.Core.Tests` y `tests/MusicPlayer.Infrastructure.Tests` (`JsonSettingsRepositoryTests`). Al terminar se actualizan `README.md` y `docs/reporte-reproductor.md`.
 
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
 
@@ -220,7 +241,7 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 | M3 | Pinceles `ThemeIsland*` y estilos movidos a `PlayerButtonStyles.axaml` (**hecho**) | 15 capturas idénticas píxel a píxel antes y después (Oscuro, Claro, Medianoche × reposo, hover en `.icon`, reproduciendo, aleatorio + repetir, inmersivo). Arnés con `RenderTargetBitmap`, hover simulado con `:pointerover` y pruebas de impacto desactivadas para que el cursor real no interfiera; dos pasadas sin cambios dieron 0 px de ruido |
 | M4 | `IslandWindow` colapsada, posición, `ModalTracker` (con `isModalOpen` en `IslandVisibility`) e `IslandController` (mostrar/ocultar con pista y `MainWindow` no activa, retardo de 150 ms y fundido, cierre con la app, Linux sin efecto). Push de `feature/isla` para comprobar el CI en Ubuntu | Manual: aparece al minimizar o pasar a otra app, desaparece al volver a `MainWindow` o limpiar la pista, **no aparece con un selector abierto**, la app cierra. CI en verde en Windows y Ubuntu. `GetWindowRect` coincide con DIPs × escala. **Puerta:** al aparecer la isla, el Bloc de notas sigue recibiendo lo que se escribe |
 | M5 | Expansión con hover (**hecho**: ventana fija con región de clics, ver «Resultado de M5»), animación, constantes en un solo archivo y modo de depuración | Sonda: 0 saltos y región de clics = pastilla (+2 DIPs) en reposo. Pruebas de `IslandHover`. **A mano (autor, hecho):** expansión sin saltos; bordes con la Lupa y sombra corregidos tras la prueba |
-| M6 | Contenido expandido: textos, progreso con seek (`SeekToFraction`, sin bucle), controles, accesibilidad | Botones ejecutan los comandos reales; ellipsis sin cambiar el ancho; un clic en la barra produce un solo `Seek`. **Puerta:** pulsar un botón de la isla con el Bloc de notas enfocado conserva su foco |
+| M6 | Contenido expandido: textos, progreso con seek (`SeekToFraction`, sin bucle), controles, accesibilidad (**hecho**, ver «Resultado de M6»; puerta de foco superada a mano) | Botones ejecutan los comandos reales; ellipsis sin cambiar el ancho; un clic en la barra produce un solo `Seek`. **Puerta:** pulsar un botón de la isla con el Bloc de notas enfocado conserva su foco |
 | M7 | Onda animada solo al sonar; medición de CPU | Pausa = estática; ventana oculta sin consumo notable |
 | M8 | Clic en carátula/título trae `MainWindow`; botón «Mostrar isla» en la barra | Restaura desde minimizada; el ajuste persiste. **Puerta:** `Activate()` lleva `MainWindow` al primer plano; si Windows lo impide, plan B (`SetForegroundWindow`) y aviso |
 | M9 | Casos límite: monitores/DPI, temas en vivo, inmersivo, carátula ausente | Checklist completo |
@@ -228,7 +249,7 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 
 ## Verificación
 
-- Automática: `dotnet build -c Release` (solo la CS8602 conocida) y `dotnet test -c Release` (341 + nuevas; 395 tras M5).
+- Automática: `dotnet build -c Release` (solo la CS8602 conocida) y `dotnet test -c Release` (341 + nuevas; 395 tras M5, 403 tras M6).
 - Manual en Windows (checklist, criterio 12):
   1. Sin pista, no hay isla. Con pista y `MainWindow` activa, tampoco. Al minimizar o pasar a otra app, aparece arriba al centro con margen de 8 px, con fundido; al volver a `MainWindow`, desaparece. Un Alt+Tab rápido de ida y vuelta no la hace parpadear.
   2. «Agregar carpeta», «Carátula del álbum…», imagen del editor de etiquetas e «Incrustar letra (.lrc)…»: con el selector abierto la isla no aparece, tampoco al aceptar o cancelar. «Carpeta de temas» (Explorador) sí la muestra.
