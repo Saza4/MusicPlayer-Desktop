@@ -1,6 +1,6 @@
 # Especificación: Dynamic Island («ahora suena» flotante)
 
-Estado: **aprobada**. M0-M9 hechos (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M9»). Puertas de M4, M6 y M8 superadas a mano; de M9, la escala de la pantalla principal también a mano.
+Estado: **terminada** (5 de noviembre de 2026). M0-M10 hechos en la rama `feature/isla` (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M9»). Puertas de M4, M6 y M8 y la escala de M9 superadas a mano por el autor. Pendiente: publicar (fusionar en `main`).
 
 ## Contexto
 
@@ -288,7 +288,7 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 
 | # | Hito | Verificación |
 |---|------|--------------|
-| M0 | **Spike** (hecho): ventana mínima; se elige la B híbrida | Tabla de resultados en la spec |
+| M0 | **Spike** (hecho): ventana mínima; se elige la B híbrida (en M5 se pasó a la C) | Tabla de resultados en la spec |
 | M1 | Ajuste `ShowIsland` (Core + VM) e `IslandVisibility.ShouldShow(hasTrack, showIsland, isImmersive, isMainWindowActive)` | Pruebas: JSON parcial → `true`, ida y vuelta con `false`, tabla de reglas de visibilidad |
 | M2 | `TimeText.Remaining` y `RemainingText` | Pruebas (0, <1 s, minutos, horas, duración desconocida) |
 | M3 | Pinceles `ThemeIsland*` y estilos movidos a `PlayerButtonStyles.axaml` (**hecho**) | 15 capturas idénticas píxel a píxel antes y después (Oscuro, Claro, Medianoche × reposo, hover en `.icon`, reproduciendo, aleatorio + repetir, inmersivo). Arnés con `RenderTargetBitmap`, hover simulado con `:pointerover` y pruebas de impacto desactivadas para que el cursor real no interfiera; dos pasadas sin cambios dieron 0 px de ruido |
@@ -298,11 +298,11 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 | M7 | Onda animada solo al sonar; medición de CPU (**hecho**, ver «Resultado de M7») | Pausa = estática; ventana oculta sin consumo notable. Sonda: la onda se mueve solo al sonar; CPU visible y sonando igual que en M6. A mano (autor): la onda a 15 fps se ve bien |
 | M8 | Clic en carátula/título trae `MainWindow`; botón «Mostrar isla» en la barra (**hecho**, ver «Resultado de M8»; puerta superada a mano) | Restaura desde minimizada; el ajuste persiste. **Puerta:** `Activate()` lleva `MainWindow` al primer plano; si Windows lo impide, plan B (`SetForegroundWindow`) y aviso |
 | M9 | Casos límite: monitores/DPI, temas en vivo, inmersivo, carátula ausente (**hecho**, ver «Resultado de M9»; escala de la pantalla principal superada a mano) | Checklist completo |
-| M10 | Docs (`README`, reporte, spec final) | `dotnet build` sin warnings nuevos; todas las pruebas en verde |
+| M10 | Docs (`README`, reporte, spec final y convenciones en `CLAUDE.md`: `ModalTracker.Begin()` y Win32 tras `OperatingSystem.IsWindows()`) (**hecho**) | `dotnet build -c Release` solo con la CS8602 conocida; 403 pruebas en verde (345 Core + 58 Infrastructure) |
 
 ## Verificación
 
-- Automática: `dotnet build -c Release` (solo la CS8602 conocida) y `dotnet test -c Release` (341 + nuevas; 395 tras M5, 403 tras M6).
+- Automática: `dotnet build -c Release` (solo la CS8602 conocida) y `dotnet test -c Release` (341 + nuevas; 395 tras M5, 403 tras M6 y al terminar).
 - Manual en Windows (checklist, criterio 12):
   1. Sin pista, no hay isla. Con pista y `MainWindow` activa, tampoco. Al minimizar o pasar a otra app, aparece arriba al centro con margen de 8 px, con fundido; al volver a `MainWindow`, desaparece. Un Alt+Tab rápido de ida y vuelta no la hace parpadear.
   2. «Agregar carpeta», «Carátula del álbum…», imagen del editor de etiquetas e «Incrustar letra (.lrc)…»: con el selector abierto la isla no aparece, tampoco al aceptar o cancelar. «Carpeta de temas» (Explorador) sí la muestra.

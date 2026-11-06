@@ -23,6 +23,7 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 - **Cola dinámica:** "Reproducir siguiente" y "Agregar a la cola" desde el clic derecho.
 - **Atajos de teclado** en toda la ventana, salvo al escribir o navegar menús y listas desplegables: barra espaciadora reproduce y pausa, `←` `→` saltan 5 s, `Ctrl+↑` `Ctrl+↓` cambian el volumen un 5 % y `M` silencia. Al abrir la app, el foco queda en la lista de canciones.
 - **Barra multimedia con íconos vectoriales** y la lista sincronizada con la pista que suena.
+- **Isla flotante (Windows):** con la ventana minimizada o detrás de otra, una pastilla negra arriba al centro de la pantalla muestra lo que suena (miniatura y onda animada). Al pasar el cursor se expande con carátula, título, artista, progreso con el tiempo restante y los controles aleatorio, anterior, reproducir/pausa y siguiente. Un clic en la barra salta a ese punto, y un clic en la carátula o el título trae el reproductor al frente. No roba el foco a la app en la que escribes y deja pasar los clics fuera de la pastilla. Se activa y desactiva desde la barra de reproducción.
 
 **Biblioteca**
 
@@ -119,8 +120,9 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 341 pruebas (284 en Core y 57 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
-código de vista (menús, selectores, foco y teclado), que se prueban a mano.
+Hay 403 pruebas (345 en Core y 58 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+código de vista (menús, selectores, foco, teclado y la ventana de la isla), que se prueban a mano.
+De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
 
 ## Limitaciones conocidas
 
@@ -128,6 +130,7 @@ código de vista (menús, selectores, foco y teclado), que se prueban a mano.
 - **Conversión:** convertir a WAV pierde en la práctica las etiquetas y la carátula. Convertir de un formato con pérdida a FLAC o WAV no mejora la calidad.
 - **Carátulas:** no se redimensionan, así que una portada pesada infla el archivo.
 - **Temas:** el texto sigue la variante base (clara u oscura) y no se puede personalizar. El modo inmersivo es siempre oscuro: solo el botón Reproducir/Pausa y los iconos activos siguen el tema.
+- **Isla flotante:** solo en Windows (en Linux no se muestra). Siempre en la pantalla principal. No se maneja con el teclado: se pensó para el ratón sin quitar el foco a otras apps.
 - **Linux:** el audio y la interfaz no se han probado.
 
 El detalle completo está en [`docs/reporte-reproductor.md`](docs/reporte-reproductor.md).
