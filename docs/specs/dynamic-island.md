@@ -1,6 +1,6 @@
 # Especificación: Dynamic Island («ahora suena» flotante)
 
-Estado: **aprobada**. M0-M8 hechos (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M8»). Puertas de M4, M6 y M8 superadas a mano.
+Estado: **aprobada**. M0-M9 hechos (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M9»). Puertas de M4, M6 y M8 superadas a mano; de M9, la escala de la pantalla principal también a mano.
 
 ## Contexto
 
@@ -257,6 +257,27 @@ Sonda automática (sin modo de depuración, ajustes restaurados):
 
 **Puerta de M8 (a mano, el autor): pasa.** La sonda no podía probarla: sus clics no dan derecho al primer plano y Windows ya contaba como primer plano la ventana minimizada. Con el ratón real y otra app delante, el clic en la carátula o el título trae el reproductor al frente con el foco del teclado (la barra espaciadora pausa), también desde minimizado y maximizado.
 
+## Resultado de M9
+
+Sonda automática en Windows 11 con dos monitores: principal de 1920×1080 a 100 % y secundario a la izquierda (x = −1920) a 125 %. Se usó el modo de depuración y volumen 0. `settings.json` y `library.json` se copiaron antes y se restauraron idénticos (mismo hash). Para la carátula ausente se generó con `ffmpeg` una copia temporal de 30 s sin etiquetas ni carátula, que se borró al terminar; ninguna pista de la biblioteca real carece de carátula.
+
+| Caso | Resultado |
+|---|---|
+| Carátula ausente | Marcador con la nota en la pastilla colapsada (24 px) y en la expandida (48 px); título y artista normales |
+| Modo inmersivo | Al entrar, la isla se oculta; al salir («Cerrar»), vuelve |
+| Ventana principal en el monitor secundario (125 %) | La isla sigue en el principal, `L=774 T=8 372×160`, colapsada y expandida |
+| Temas en vivo (vista previa del selector: Papel, Negro puro, Menta clara, Medianoche, Bosque, Atardecer, Claro, Oscuro y Sistema) | El fondo de la pastilla es `#000000` con los nueve, y el texto sigue blanco también con los temas claros. El círculo de play/pausa toma el `primary` de cada tema (`#3B5BDB` Papel, `#1B7F4B` Menta clara, `#7AA2F7` Medianoche, `#66BB6A` Bosque, `#FF8A65` Atardecer, `#1A73E8` Claro, `#FFFFFF` Oscuro); la onda y el aleatorio activo, el acento |
+| Ocultar y volver a mostrar varias veces | Misma posición y tamaño |
+
+Cambio de código en M9: las suscripciones a `Screens.Changed` y `ScalingChanged` pasan de `OnOpened` al constructor de `IslandWindow`. La isla se muestra y se oculta muchas veces, y suscribirse al abrirse podía acumular manejadores.
+
+Encontrado en la sonda (no es un fallo de la app): un `library.json` con `null` en campos numéricos (`TrackNumber`, `DiscNumber`) se rechaza al cargar y queda como `.corrupt`. La persistencia segura funcionó como se espera. El `.corrupt` lo creó la sonda y se borró.
+
+**A mano (el autor): pasa.** No se podía automatizar sin cambiar la configuración de pantalla del sistema:
+- Pantalla principal a 125 % o 150 %: la isla, arriba al centro y a 8 px del borde, con la pastilla nítida y los bordes suavizados. Las cuentas de DIPs a píxeles tienen pruebas en Core (`IslandPlacementTests`).
+- Cambiar la resolución o el escalado con la isla visible: se recoloca sola (`Screens.Changed` / `ScalingChanged`).
+- Cambiar cuál es la pantalla principal: la isla pasa a la nueva.
+
 ## Archivos
 
 Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Services/NonActivatingWindow.cs`, `Services/WindowNative.cs` (región de clics y cursor real), `Themes/PlayerButtonStyles.axaml`.
@@ -276,7 +297,7 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 | M6 | Contenido expandido: textos, progreso con seek (`SeekToFraction`, sin bucle), controles, accesibilidad (**hecho**, ver «Resultado de M6»; puerta de foco superada a mano) | Botones ejecutan los comandos reales; ellipsis sin cambiar el ancho; un clic en la barra produce un solo `Seek`. **Puerta:** pulsar un botón de la isla con el Bloc de notas enfocado conserva su foco |
 | M7 | Onda animada solo al sonar; medición de CPU (**hecho**, ver «Resultado de M7») | Pausa = estática; ventana oculta sin consumo notable. Sonda: la onda se mueve solo al sonar; CPU visible y sonando igual que en M6. A mano (autor): la onda a 15 fps se ve bien |
 | M8 | Clic en carátula/título trae `MainWindow`; botón «Mostrar isla» en la barra (**hecho**, ver «Resultado de M8»; puerta superada a mano) | Restaura desde minimizada; el ajuste persiste. **Puerta:** `Activate()` lleva `MainWindow` al primer plano; si Windows lo impide, plan B (`SetForegroundWindow`) y aviso |
-| M9 | Casos límite: monitores/DPI, temas en vivo, inmersivo, carátula ausente | Checklist completo |
+| M9 | Casos límite: monitores/DPI, temas en vivo, inmersivo, carátula ausente (**hecho**, ver «Resultado de M9»; escala de la pantalla principal superada a mano) | Checklist completo |
 | M10 | Docs (`README`, reporte, spec final) | `dotnet build` sin warnings nuevos; todas las pruebas en verde |
 
 ## Verificación

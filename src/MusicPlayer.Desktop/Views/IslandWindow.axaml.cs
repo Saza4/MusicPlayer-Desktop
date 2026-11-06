@@ -64,6 +64,10 @@ public partial class IslandWindow : Window
         _waveTimer = new DispatcherTimer(IslandMetrics.WaveFrameInterval, DispatcherPriority.Render, OnWaveFrame);
         _waveTimer.Stop();
         DataContextChanged += (_, _) => WatchViewModel();
+        // Una sola vez, aquí y no en OnOpened: la isla se muestra y se oculta muchas veces. Monitores que se
+        // conectan o cambian de resolución, o un cambio de escala, recolocan la isla en la pantalla principal.
+        Screens.Changed += (_, _) => PlaceOnPrimaryScreen();
+        ScalingChanged += (_, _) => PlaceOnPrimaryScreen();
         Pill.PointerEntered += (_, _) => Run(_hover.PointerEntered());
         Pill.PointerExited += (_, _) => Run(_hover.PointerExited());
     }
@@ -182,8 +186,6 @@ public partial class IslandWindow : Window
     {
         base.OnOpened(e);
         NonActivatingWindow.Apply(this);
-        Screens.Changed += (_, _) => PlaceOnPrimaryScreen();
-        ScalingChanged += (_, _) => PlaceOnPrimaryScreen();
         PlaceOnPrimaryScreen();
     }
 
