@@ -1,6 +1,6 @@
 # Especificación: Dynamic Island («ahora suena» flotante)
 
-Estado: **terminada** (5 de noviembre de 2026). M0-M10 hechos en la rama `feature/isla` (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M9»). Puertas de M4, M6 y M8 y la escala de M9 superadas a mano por el autor. Pendiente: publicar (fusionar en `main`).
+Estado: **terminada** (5 de noviembre de 2026). M0-M10 hechos en la rama `feature/isla` (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M9»), fusionada en `main` con el PR #1. Puertas de M4, M6 y M8 y la escala de M9 superadas a mano por el autor. Publicada en la release v1.3.0 (ver `docs/specs/release-v1.3.0.md`).
 
 ## Contexto
 
