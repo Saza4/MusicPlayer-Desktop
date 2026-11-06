@@ -70,8 +70,9 @@
                                 </Border>
                             </Panel>
 
-                            <!--  Onda: estática por ahora (M7 la anima mientras suena)  -->
+                            <!--  Onda: se anima en el código (UpdateWave) solo con la isla visible y la pista sonando  -->
                             <StackPanel
+                                x:Name="CollapsedWave"
                                 Grid.Column="2"
                                 VerticalAlignment="Center"
                                 Classes="wave"
@@ -134,6 +135,7 @@
                                 </StackPanel>
 
                                 <StackPanel
+                                    x:Name="ExpandedWave"
                                     Grid.Column="2"
                                     VerticalAlignment="Center"
                                     Classes="wave"

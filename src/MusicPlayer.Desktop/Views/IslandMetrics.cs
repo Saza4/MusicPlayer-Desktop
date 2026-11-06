@@ -65,6 +65,16 @@ public static class IslandMetrics
     public static readonly Easing ExpandEasing = new SplineEasing(0.32, 0.72, 0, 1);
     public static readonly Easing CollapseEasing = new SplineEasing(0.32, 0.72, 0, 1);
 
+    // Onda: cada barra va y vuelve entre WaveMinScale y su altura, con su propio periodo (ida y vuelta) para que
+    // no suban todas a la vez. Solo se anima con la isla visible y la pista sonando, a WaveFrameInterval.
+    public const double WaveMinScale = 0.35;
+    public static readonly TimeSpan WaveFrameInterval = TimeSpan.FromMilliseconds(1000.0 / 15);
+    public static readonly TimeSpan[] WaveBarPeriods =
+    [
+        TimeSpan.FromMilliseconds(840), TimeSpan.FromMilliseconds(1120), TimeSpan.FromMilliseconds(760),
+        TimeSpan.FromMilliseconds(1000), TimeSpan.FromMilliseconds(920),
+    ];
+
     // Mostrar y ocultar la isla entera
     public static readonly TimeSpan VisibilityDelay = TimeSpan.FromMilliseconds(150); // contra el parpadeo
     public static readonly TimeSpan FadeDuration = TimeSpan.FromMilliseconds(180);

@@ -1,7 +1,9 @@
 using System;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Animation;
+using Avalonia.Media;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -32,6 +34,12 @@ public partial class IslandWindow : Window
     private bool _hitAreaExpanded; // si la zona de clics cubre la ventana entera o solo la pastilla colapsada
     private int _fadeVersion; // invalida un ocultado pendiente si la isla vuelve a mostrarse
 
+    // Onda: temporizador propio a pocos fotogramas por segundo. Una animación de Avalonia pedía un fotograma
+    // en cada refresco de pantalla y la CPU pasaba del 8 % al 27 % (medido en M7).
+    private readonly DispatcherTimer _waveTimer;
+    private readonly System.Diagnostics.Stopwatch _waveClock = new();
+    private MainViewModel? _viewModel;
+
     public IslandWindow()
     {
         InitializeComponent();
@@ -50,6 +58,9 @@ public partial class IslandWindow : Window
         _collapseEnd.Stop();
 
         ApplyMetrics();
+        _waveTimer = new DispatcherTimer(IslandMetrics.WaveFrameInterval, DispatcherPriority.Render, OnWaveFrame);
+        _waveTimer.Stop();
+        DataContextChanged += (_, _) => WatchViewModel();
         Pill.PointerEntered += (_, _) => Run(_hover.PointerEntered());
         Pill.PointerExited += (_, _) => Run(_hover.PointerExited());
     }
@@ -79,6 +90,11 @@ public partial class IslandWindow : Window
         CollapsedArt.CornerRadius = coverRadius;
 
         ApplyExpandedMetrics();
+
+        // Cada barra de la onda con su propio ScaleTransform (lo que anima UpdateWave), centrado en vertical.
+        foreach (var wave in new[] { CollapsedWave, ExpandedWave })
+            foreach (var bar in wave.Children)
+                bar.RenderTransform = new ScaleTransform();
 
         Width = IslandMetrics.WindowSize.Width;
         Height = IslandMetrics.WindowSize.Height;
@@ -304,6 +320,75 @@ public partial class IslandWindow : Window
         if (Position != target)
             Position = target;
         ApplyHitArea(screen.Scaling);
+    }
+
+    // ---- Onda ----
+
+    /// <summary>
+    /// Un fotograma de la onda: cada barra oscila entre <see cref="IslandMetrics.WaveMinScale"/> y su altura con
+    /// una senoide de su propio periodo, para que no suban todas a la vez.
+    /// </summary>
+    private void OnWaveFrame(object? sender, EventArgs e)
+    {
+        var t = _waveClock.Elapsed.TotalMilliseconds;
+        var periods = IslandMetrics.WaveBarPeriods;
+        foreach (var wave in new[] { CollapsedWave, ExpandedWave })
+            for (var i = 0; i < wave.Children.Count; i++)
+            {
+                var period = periods[i % periods.Length].TotalMilliseconds;
+                var level = 0.5 + 0.5 * Math.Cos(2 * Math.PI * t / period); // 1 → 0 → 1
+                ((ScaleTransform)wave.Children[i].RenderTransform!).ScaleY =
+                    IslandMetrics.WaveMinScale + (1 - IslandMetrics.WaveMinScale) * level;
+            }
+    }
+
+    private void WatchViewModel()
+    {
+        if (_viewModel is not null) _viewModel.PropertyChanged -= OnViewModelChanged;
+        _viewModel = DataContext as MainViewModel;
+        if (_viewModel is not null) _viewModel.PropertyChanged += OnViewModelChanged;
+        UpdateWave();
+    }
+
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsPlaying)) UpdateWave();
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == IsVisibleProperty) UpdateWave();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (_viewModel is not null) _viewModel.PropertyChanged -= OnViewModelChanged;
+        _waveTimer.Stop();
+        base.OnClosed(e);
+    }
+
+    /// <summary>
+    /// La onda solo trabaja con la isla visible y la pista sonando: en pausa queda estática y, con la isla
+    /// oculta, no hay ninguna animación en marcha (no se pide ningún fotograma).
+    /// </summary>
+    private void UpdateWave()
+    {
+        var animate = IsVisible && _viewModel?.IsPlaying == true;
+        if (animate == _waveTimer.IsEnabled) return;
+
+        if (animate)
+        {
+            _waveClock.Restart();
+            _waveTimer.Start();
+            return;
+        }
+
+        _waveTimer.Stop();
+        _waveClock.Reset();
+        foreach (var wave in new[] { CollapsedWave, ExpandedWave })
+            foreach (var bar in wave.Children)
+                ((ScaleTransform)bar.RenderTransform!).ScaleY = 1; // estática, con sus alturas fijas
     }
 
     // ---- Mostrar y ocultar ----

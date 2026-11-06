@@ -1,6 +1,6 @@
 # Especificación: Dynamic Island («ahora suena» flotante)
 
-Estado: **aprobada**. M0-M6 hechos (ver «Resultado del spike (M0)» y «Resultado de M4», «de M5» y «de M6»), con sus puertas a mano.
+Estado: **aprobada**. M0-M7 hechos (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M7»). M4-M6 con sus puertas superadas a mano.
 
 ## Contexto
 
@@ -109,7 +109,7 @@ $env:MUSICPLAYER_ISLAND_FORCE = '1'; dotnet run --project src/MusicPlayer.Deskto
 
 - Colapsada: miniatura de 24 px (`NowPlayingCover`; sin carátula, marcador neutro con icono de nota) y onda a la derecha.
 - Expandida: carátula, `Title` (blanco, negrita) y `Artist` (gris) con `TextTrimming="CharacterEllipsis"` y ancho fijo, onda, barra de progreso con `PositionText` a la izquierda y `RemainingText` (`−1:31`) a la derecha, y la fila de controles. Los botones llevan `ToolTip` y `AutomationProperties.Name`.
-- Onda: barras (`Border`) con animación por clase `.playing` (animación de `ScaleY` desfasada), quitada al pausar (queda estática). No hay temporizador propio; se medirá en el spike.
+- Onda: cinco barras (`Border`) con su propio `ScaleTransform`. **Decidido en M7 con medidas:** un `DispatcherTimer` propio a 15 fps (`IslandMetrics.WaveFrameInterval`) calcula la altura de cada barra con una senoide de periodo distinto (`WaveBarPeriods`, entre `WaveMinScale` y la altura completa). Solo corre con la isla visible y la pista sonando; al pausar, ocultar o cerrar se para y las barras vuelven a su altura fija (onda estática). La animación de Avalonia, que era el plan inicial, se descartó: pide un fotograma en cada refresco de pantalla (ver «Resultado de M7»).
 - Clic en carátula/título: `MainWindow.WindowState = Normal` si estaba minimizada, `Show()` y `Activate()`. Los controles marcan el evento como manejado para no disparar esto.
 - Pincel de play/pausa y de iconos activos: `ThemePrimaryBrush` / `ThemeAccentBrush` (ya garantizan 3:1 sobre negro por `ThemeFactory`).
 
@@ -225,6 +225,22 @@ Sonda automática (modo de depuración, clics enviados a la isla con `WM_LBUTTON
 
 **Puerta de M6 (a mano, el autor): pasa.** Los clics de la sonda no pasan por la activación de Windows, así que el foco se probó con el ratón real: con el Bloc de notas enfocado, pulsar los botones y la barra de la isla deja el foco en el Bloc de notas y lo escrito sigue entrando ahí.
 
+## Resultado de M7
+
+Sonda de CPU (compilación Debug, Windows 11, volumen 0, ajustes restaurados): CPU del proceso en 10 s, en % de un núcleo, tras 3 s de estabilización. Para saber si la onda se mueve se comparan dos capturas de la onda colapsada separadas 120 ms (píxeles distintos).
+
+| Versión | Isla oculta, sonando | Isla visible, sonando | Visible, en pausa | La onda se mueve |
+|---|---|---|---|---|
+| M6 (onda estática, base) | 5,5 % | 8,0 % | 4,2 % | No (0 px) |
+| Animación de Avalonia (`ScaleY`, descartada) | 6,4 % | **27,0 %** | 4,1 % | Sí (74 px) / pausa 0 px |
+| Temporizador propio a 30 fps | — | 10,6 % | — | Sí (78 px) |
+| **Temporizador propio a 15 fps (elegido), dos pasadas** | 7,2 / 5,8 % | 6,4 / 7,2 % | 2,5 / 3,9 % | Sí (68-82 px) / pausa 0 px |
+
+- Con 15 fps la isla visible no consume más que en M6: la diferencia queda dentro de la variación entre medidas (±1,5 puntos). Con la isla oculta el temporizador está parado.
+- La animación de Avalonia pide un fotograma en cada refresco de pantalla (60 Hz o más) y triplicaba la CPU.
+- Desde código, una animación de `RenderTransform` con `TransformOperations` lanza `No animator registered for the property RenderTransform` dentro de `Show()` y la isla no aparece. Se detectó en M7 y quedó resuelto al no usar animaciones de Avalonia para la onda.
+- Si la onda se ve entrecortada, `WaveFrameInterval` es el ajuste: 30 fps cuesta unos 2,5 puntos más de CPU con la isla visible.
+
 ## Archivos
 
 Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Services/NonActivatingWindow.cs`, `Services/WindowNative.cs` (región de clics y cursor real), `Themes/PlayerButtonStyles.axaml`.
@@ -242,7 +258,7 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 | M4 | `IslandWindow` colapsada, posición, `ModalTracker` (con `isModalOpen` en `IslandVisibility`) e `IslandController` (mostrar/ocultar con pista y `MainWindow` no activa, retardo de 150 ms y fundido, cierre con la app, Linux sin efecto). Push de `feature/isla` para comprobar el CI en Ubuntu | Manual: aparece al minimizar o pasar a otra app, desaparece al volver a `MainWindow` o limpiar la pista, **no aparece con un selector abierto**, la app cierra. CI en verde en Windows y Ubuntu. `GetWindowRect` coincide con DIPs × escala. **Puerta:** al aparecer la isla, el Bloc de notas sigue recibiendo lo que se escribe |
 | M5 | Expansión con hover (**hecho**: ventana fija con región de clics, ver «Resultado de M5»), animación, constantes en un solo archivo y modo de depuración | Sonda: 0 saltos y región de clics = pastilla (+2 DIPs) en reposo. Pruebas de `IslandHover`. **A mano (autor, hecho):** expansión sin saltos; bordes con la Lupa y sombra corregidos tras la prueba |
 | M6 | Contenido expandido: textos, progreso con seek (`SeekToFraction`, sin bucle), controles, accesibilidad (**hecho**, ver «Resultado de M6»; puerta de foco superada a mano) | Botones ejecutan los comandos reales; ellipsis sin cambiar el ancho; un clic en la barra produce un solo `Seek`. **Puerta:** pulsar un botón de la isla con el Bloc de notas enfocado conserva su foco |
-| M7 | Onda animada solo al sonar; medición de CPU | Pausa = estática; ventana oculta sin consumo notable |
+| M7 | Onda animada solo al sonar; medición de CPU (**hecho**, ver «Resultado de M7») | Pausa = estática; ventana oculta sin consumo notable. Sonda: la onda se mueve solo al sonar; CPU visible y sonando igual que en M6. A mano (autor): la onda a 15 fps se ve bien |
 | M8 | Clic en carátula/título trae `MainWindow`; botón «Mostrar isla» en la barra | Restaura desde minimizada; el ajuste persiste. **Puerta:** `Activate()` lleva `MainWindow` al primer plano; si Windows lo impide, plan B (`SetForegroundWindow`) y aviso |
 | M9 | Casos límite: monitores/DPI, temas en vivo, inmersivo, carátula ausente | Checklist completo |
 | M10 | Docs (`README`, reporte, spec final) | `dotnet build` sin warnings nuevos; todas las pruebas en verde |
