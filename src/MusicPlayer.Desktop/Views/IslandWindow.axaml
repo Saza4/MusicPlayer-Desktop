@@ -14,55 +14,88 @@
     TransparencyLevelHint="Transparent"
     WindowStartupLocation="Manual">
     <!--
-        Isla flotante de «ahora suena». Las medidas salen de IslandMetrics (se asignan en el código).
+        Isla flotante de «ahora suena». Las medidas, tiempos y curvas salen de IslandMetrics (se asignan en el código).
         Fondo negro y texto blanco fijos (ThemeIsland*); el acento sigue el tema.
-        La ventana mide la pastilla más el margen de sombra: fuera de la pastilla no hay fondo.
+        La ventana mide siempre la pastilla expandida + margen de sombra y no se mueve; la pastilla va arriba al centro.
+        Lo que cambia es la zona que recibe clics (WindowNative.SetHitRegion): en reposo, la pastilla + IslandMetrics.CollapsedHitMargin.
+        Fuera de la pastilla no hay fondo, así que el hover depende solo de ella.
     -->
     <!--  Opacidad 0 hasta que se muestra; el fundido (IslandMetrics.FadeDuration) se asigna en el código  -->
     <Panel x:Name="Root" Opacity="0">
 
         <ThemeVariantScope RequestedThemeVariant="Dark">
+          <Panel>
+            <!--
+                Sombra: capa aparte, del mismo tamaño que la pastilla (enlazado en el código), que aparece con un
+                fundido de opacidad. Una transición de BoxShadow no interpola en Avalonia 11: la sombra saltaba al final.
+            -->
+            <Border
+                x:Name="PillShadow"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Background="{DynamicResource ThemeIslandBackgroundBrush}"
+                IsHitTestVisible="False"
+                Opacity="0" />
+
+            <!--  Fondo de la pastilla; el recorte de las esquinas va en el Border interior  -->
             <Border
                 x:Name="Pill"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
                 Background="{DynamicResource ThemeIslandBackgroundBrush}"
                 TextElement.Foreground="{DynamicResource ThemeIslandTextBrush}">
+                <Border x:Name="PillClip" ClipToBounds="True">
+                    <Panel>
 
-                <!--  Colapsada: miniatura a la izquierda, onda a la derecha  -->
-                <Grid x:Name="Collapsed" ColumnDefinitions="Auto,*,Auto">
-                    <Panel x:Name="CollapsedCover" VerticalAlignment="Center">
-                        <!--  Sin carátula: marcador neutro con una nota  -->
-                        <Border
-                            x:Name="CollapsedPlaceholder"
-                            Background="{DynamicResource ThemeIslandPlaceholderBrush}"
-                            IsVisible="{Binding NowPlayingCover, Converter={x:Static ObjectConverters.IsNull}}">
-                            <PathIcon
-                                Width="12"
-                                Height="12"
-                                Data="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
-                                Foreground="{DynamicResource ThemeIslandSecondaryTextBrush}" />
-                        </Border>
-                        <Border x:Name="CollapsedArt" ClipToBounds="True">
-                            <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill" />
-                        </Border>
+                        <!--  Colapsada: miniatura a la izquierda, onda a la derecha. Tamaño fijo arriba al centro  -->
+                        <Grid
+                            x:Name="Collapsed"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            ColumnDefinitions="Auto,*,Auto">
+                            <Panel x:Name="CollapsedCover" VerticalAlignment="Center">
+                                <!--  Sin carátula: marcador neutro con una nota  -->
+                                <Border
+                                    x:Name="CollapsedPlaceholder"
+                                    Background="{DynamicResource ThemeIslandPlaceholderBrush}"
+                                    IsVisible="{Binding NowPlayingCover, Converter={x:Static ObjectConverters.IsNull}}">
+                                    <PathIcon
+                                        Width="12"
+                                        Height="12"
+                                        Data="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                                        Foreground="{DynamicResource ThemeIslandSecondaryTextBrush}" />
+                                </Border>
+                                <Border x:Name="CollapsedArt" ClipToBounds="True">
+                                    <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill" />
+                                </Border>
+                            </Panel>
+
+                            <!--  Onda: estática por ahora (M7 la anima mientras suena)  -->
+                            <StackPanel
+                                x:Name="Wave"
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal"
+                                Spacing="2">
+                                <Border Classes="bar" Height="8" />
+                                <Border Classes="bar" Height="14" />
+                                <Border Classes="bar" Height="10" />
+                                <Border Classes="bar" Height="16" />
+                                <Border Classes="bar" Height="6" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!--  Expandida: el contenido llega en M6. Tamaño fijo para que no se recoloque durante la animación  -->
+                        <Panel
+                            x:Name="Expanded"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            IsHitTestVisible="False"
+                            Opacity="0" />
                     </Panel>
-
-                    <!--  Onda: estática por ahora (M7 la anima mientras suena)  -->
-                    <StackPanel
-                        x:Name="Wave"
-                        Grid.Column="2"
-                        VerticalAlignment="Center"
-                        Orientation="Horizontal"
-                        Spacing="2">
-                        <Border Classes="bar" Height="8" />
-                        <Border Classes="bar" Height="14" />
-                        <Border Classes="bar" Height="10" />
-                        <Border Classes="bar" Height="16" />
-                        <Border Classes="bar" Height="6" />
-                    </StackPanel>
-                </Grid>
+                </Border>
             </Border>
+          </Panel>
         </ThemeVariantScope>
     </Panel>
 

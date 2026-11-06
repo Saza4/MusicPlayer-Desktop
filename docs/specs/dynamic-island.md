@@ -1,6 +1,6 @@
 # Especificación: Dynamic Island («ahora suena» flotante)
 
-Estado: **aprobada**. M0 (spike) completado, ver «Resultado del spike (M0)».
+Estado: **aprobada**. M0-M5 hechos (ver «Resultado del spike (M0)», «Resultado de M4» y «Resultado de M5», con la prueba a mano del autor).
 
 ## Contexto
 
@@ -15,15 +15,23 @@ Fuentes: `docs/reporte-reproductor.md`, `README.md`, `docs/diseño.md` (principi
 3. Seek: reutiliza el mecanismo anti-reentrada de la barra principal (`_isUpdatingFromTimer`).
 4. Ventana B híbrida: redimensionar con la pastilla bajo el cursor no debe causar saltos; el hover depende de la pastilla, no de la ventana; se verifican píxeles físicos frente a DIPs.
 
+## Ajustes aprobados para M5
+
+1. La pastilla colapsada no tiene sombra, así que en reposo el margen de sombra es 0: solo la pastilla bloquea clics, y el margen aparece al expandir. (Tras la prueba a mano, la pastilla más 2 DIPs, para que el borde salga suavizado; ver «Ventana fija con región de clics».)
+2. Modo solo de depuración que fuerza la isla visible aunque `MainWindow` esté activa, para probar el hover a mano y tomar capturas. No existe en Release.
+3. Caso límite: volver a entrar con el cursor mientras la isla se encoge tras colapsar. Debe cancelar el encogimiento sin saltos ni parpadeo.
+4. El hover real lo prueba el autor a mano.
+5. Los avisos del CI (Ubuntu 26, Node 20 obsoleto) van en un commit aparte, fuera de `feature/isla`.
+
 ## Comprensión de los criterios de aceptación
 
 1. `IslandWindow` propia: sin bordes, transparente, `Topmost`, fuera de la barra de tareas, centrada arriba en la pantalla principal con margen de 8 px. Usa el `MainViewModel` singleton como `DataContext`.
 2. Solo se muestra con pista cargada (`CurrentTrack != null`) y con `MainWindow` no activa. En pausa sigue visible, colapsada.
-3. Colapsada: ~36 px de alto, 160-200 px de ancho, miniatura de ~24 px y onda animada solo mientras suena.
+3. Colapsada: ~36 px de alto, 160-200 px de ancho, miniatura de ~24 px y onda animada solo mientras suena. Sin sombra.
 4. Hover: expansión de 350-450 ms con `SplineEasing` a 130-160 × 320-360 px, esquinas de ~24 px y `BoxShadow`; colapso 200 ms después de salir. Todas las medidas en un solo archivo de constantes.
 5. Expandida: carátula, título (blanco, negrita), artista (gris), onda, progreso con tiempo transcurrido y restante con signo menos, y controles aleatorio / anterior / play-pausa (mayor) / siguiente.
 6. Clic en carátula o título trae `MainWindow` al frente (la restaura si está minimizada).
-7. No roba el foco; las zonas transparentes no bloquean clics. El spike decide cómo.
+7. No roba el foco; las zonas transparentes no bloquean clics. En reposo solo la pastilla (más 2 DIPs) recibe clics (región de la ventana, decidido en M5).
 8. Fondo negro fijo con pincel nombrado en `ThemeBrushes.axaml`, texto blanco; play/pausa e iconos activos toman el tema; se reutilizan `PathIcon` y `.icon/.skip/.play`.
 9. Ajuste persistente «Mostrar isla» (activado por defecto) con control en la interfaz principal. Cerrar `MainWindow` cierra isla y app.
 10. Onda y progreso solo trabajan con isla visible y pista sonando; sin blur.
@@ -66,21 +74,36 @@ Fuera de alcance: Spotlight/Siri, expansión automática al cambiar de pista, ar
 - `Services/IslandController.cs` (singleton, registrado en el bloque «Interfaz» de `CompositionRoot.cs`): recibe `MainViewModel`, crea `IslandWindow` de forma perezosa, escucha `PropertyChanged` (`CurrentTrack`, `ShowIsland`, `IsImmersive`) y `MainWindow.Activated`/`Deactivated`/`WindowState`, y llama a `Show()`/`Hide()` según `IslandVisibility` (con el retardo y el fundido de la decisión 1). En Linux no hace nada.
 - `App.axaml.cs`: tras crear `MainWindow`, arranca el controlador; `desktop.ShutdownMode = OnMainWindowClose`; la isla se cierra en `MainWindow.Closed` y en `desktop.Exit`.
 - `Views/IslandMetrics.cs` (o diccionario de recursos): **todas** las constantes (tamaños, radios, duraciones, retardo de colapso, margen superior, sombra).
-- Posición: `Screens.Primary.WorkingArea` (respeta una barra de tareas superior), centrada, margen superior `8 * RenderScaling`, calculada en píxeles físicos. Se recalcula al mostrar, en `Screens.Changed` y al cambiar el escalado.
-- **Unidades:** `Width`/`Height` de la ventana y las medidas de `IslandMetrics` están en DIPs; `Position` y `WorkingArea` en píxeles físicos. La conversión es siempre `físicos = (int)Math.Round(dips * escala)`, con la escala de la pantalla de destino (`Screen.Scaling`), no la de la ventana antes de moverla. El cálculo vive en un solo método. En M4 y M9 se comprueba con `GetWindowRect` a 100 % y a 125/150 %.
+- Posición: `Screens.Primary.WorkingArea` (respeta una barra de tareas superior), centrada, margen superior `8 * RenderScaling`, calculada en píxeles físicos. Se recalcula al mostrar, en `Screens.Changed` y al cambiar el escalado, junto con la región de clics.
+- **Unidades:** `Width`/`Height` de la ventana y las medidas de `IslandMetrics` están en DIPs; `Position` y `WorkingArea` en píxeles físicos. La conversión es siempre `físicos = (int)Math.Round(dips * escala)`, con la escala de la pantalla de destino (`Screen.Scaling`), no la de la ventana antes de moverla. El cálculo vive en un solo método. En M4, M5 y M9 se comprueba con `GetWindowRect` y `WindowFromPoint` a 100 % y a 125/150 %.
 
-### Ventana B híbrida sin saltos
+### Ventana fija con región de clics (de B a C, decidido en M5)
 
-- La pastilla se ancla **arriba al centro** de la ventana, y la ventana se recentra en el mismo paso en que cambia de tamaño (`Position` y tamaño juntos). Así el borde superior y el eje central de la pastilla no se mueven en pantalla: el cursor sigue sobre ella y no hay salto.
+La B híbrida (cambiar tamaño y posición de la ventana al expandir) **se descartó en M5**. Aunque posición y tamaño cambien en una sola llamada (`SetWindowPos`), Avalonia pinta el contenido nuevo un fotograma después. En ese fotograma la pastilla salta 96 px a la izquierda al crecer, o se ve cortada al encoger (medido, ver «Resultado de M5»). Se aplica la alternativa prevista en M0, la **C**:
+
+- La ventana mide siempre lo mismo (pastilla expandida + margen de sombra, `IslandMetrics.WindowSize`) y no se mueve al expandir ni al colapsar. La pastilla va arriba al centro.
+- Lo que cambia es la **región** de la ventana (`SetWindowRgn`, en `Services/WindowNative.cs`): fuera de ella los clics pasan a lo que hay debajo. En reposo es la pastilla colapsada con sus esquinas redondeadas, agrandada `IslandMetrics.CollapsedHitMargin` (2 DIPs) por los lados y por debajo. Expandida, la ventana entera.
+- **Por qué 2 DIPs y no 0:** la región también recorta lo que se pinta, y sin suavizar. Con margen 0 el borde de la pastilla colapsada salía a escalones (lo vio el autor con la Lupa y lo confirmó la sonda: de blanco 255 a negro 2 sin grises). Con 2 DIPs el corte cae en la zona transparente y el borde suavizado de Avalonia queda entero (255 → 215 → 145 → 88 → 45 → 16 → 2). El coste es un anillo invisible de 2 DIPs que no deja pasar clics.
+- **Alternativa descartada: `WM_NCHITTEST` con `HTTRANSPARENT`.** Windows solo pasa el clic a ventanas del mismo hilo; a las de otras apps no les llega, así que no da clics a través.
+- Al expandir, primero crece la región (instantáneo y no se ve) y luego anima la pastilla. Al colapsar, anima la pastilla y, al terminar, se encoge la región.
 - El **hover depende de la pastilla** (`PointerEntered`/`PointerExited` del `Border`), no de la ventana. El margen de sombra no tiene fondo (`Background=null`), así que tampoco cuenta como hover.
-- Un `PointerExited` provocado por el propio redimensionado no colapsa nada: el colapso espera 200 ms y se cancela si el cursor sigue o vuelve dentro de la pastilla.
-- Al encoger la ventana al final del colapso se comprueba antes que el cursor no esté sobre la pastilla; si lo está, se vuelve a expandir en lugar de encoger.
+- Un `PointerExited` espurio no colapsa nada: el colapso espera 200 ms y entonces mira el cursor real (`GetCursorPos`). Si sigue sobre la pastilla, no colapsa.
+- **Volver a entrar mientras se colapsa** (caso límite de M5): la pastilla vuelve a crecer desde su tamaño de ese momento y se cancela el encogimiento de la región. Si el cursor vuelve sin que llegue `PointerEntered`, al terminar la animación se mira el cursor real y se vuelve a expandir en lugar de encoger.
+- Los pasos son una máquina de estados pura en Core (`IslandHover`: colapsada, expandida, espera, colapsando), con pruebas de cada transición y de los dos casos límite. La ventana solo ejecuta las acciones que devuelve.
 
 ### Colapso/expansión
 
-- Un `Border` raíz anclado arriba al centro. `Transitions` de `Width`, `Height` y `CornerRadius` con `SplineEasing` (curva a ajustar con capturas). Contenido colapsado y expandido en dos capas con fundido de opacidad.
+- Un `Border` raíz anclado arriba al centro. `Transitions` de `Width`, `Height` y `CornerRadius` con `SplineEasing`: 400 ms al expandir y 300 ms al colapsar. El contenido colapsado y el expandido van en dos capas de tamaño fijo con fundido de opacidad; la expandida aparece con 150 ms de retraso, cuando ya hay sitio. Un `Border` interior recorta el contenido a las esquinas sin cortar la sombra.
 - `PointerEntered` cancela el temporizador de colapso y expande; `PointerExited` arranca un `DispatcherTimer` de 200 ms que colapsa. Reentrar cancela, así que no hay saltos.
-- Sombra con `BoxShadow` (sin `blur()` de efecto, que es costoso).
+- Sombra con `BoxShadow` (sin `blur()` de efecto, que es costoso), **solo expandida**. Va en una capa aparte (`PillShadow`), detrás de la pastilla, con su tamaño enlazado al de la pastilla, y aparece o desaparece con una transición de **opacidad** al ritmo de la pastilla. Una transición de `BoxShadow` no interpola en Avalonia 11.2: la sombra saltaba de golpe al final (a ~520 ms medido; el autor la vio aparecer al cabo de 1-1,5 s).
+
+### Modo de depuración
+
+Solo en compilación Debug (`#if DEBUG`: el código no existe en Release). Con la variable de entorno `MUSICPLAYER_ISLAND_FORCE=1`, la isla se muestra aunque `MainWindow` esté activa. El resto de la regla (pista cargada, «Mostrar isla», inmersivo, selectores) se respeta. Como la isla no se activa al pulsarla, `MainWindow` sigue activa mientras se prueba el hover.
+
+```powershell
+$env:MUSICPLAYER_ISLAND_FORCE = '1'; dotnet run --project src/MusicPlayer.Desktop
+```
 
 ### Contenido
 
@@ -109,7 +132,7 @@ Mover `.icon`, `.skip`, `.play`, `.pp` de `MainWindow.Window.Styles` a `Themes/P
 ### Foco y clics a través (resultado del spike, con alternativas)
 
 - Base: `ShowActivated=false`. Si no basta, `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` por `GetWindowLongPtr`/`SetWindowLongPtr` (DllImport, sin `unsafe`) tras obtener el HWND con `TryGetPlatformHandle()`, todo tras `OperatingSystem.IsWindows()` para que Ubuntu compile.
-- Transparencia: se prueban en el spike (A) ventana fija del tamaño expandido + margen de sombra, con fondo `null` fuera de la pastilla; (B) ventana redimensionada al tamaño de la pastilla en cada estado, recentrada; (C) región de recorte por interop. Se elige la más simple que no bloquee clics. **Resultado: A descartada, se usa B híbrida (ver «Resultado del spike (M0)»).**
+- Transparencia: se prueban en el spike (A) ventana fija del tamaño expandido + margen de sombra, con fondo `null` fuera de la pastilla; (B) ventana redimensionada al tamaño de la pastilla en cada estado, recentrada; (C) región de recorte por interop. Se elige la más simple que no bloquee clics. **Resultado: A descartada en M0; B híbrida descartada en M5 por saltos de un fotograma; se usa C (ver «Ventana fija con región de clics»).**
 - Riesgo conocido: con `NOACTIVATE`, `Activate()` sobre `MainWindow` puede ser rechazado por Windows (bloqueo de primer plano). El spike lo verifica; plan B: `SetForegroundWindow` tras el clic del usuario.
 
 ## Resultado del spike (M0)
@@ -136,7 +159,7 @@ Probado en Windows 11 con una ventana mínima (360×180, `SystemDecorations=None
 - Al colapsar: anima la pastilla y, al terminar, se encoge la ventana.
 - Solo se bloquean clics bajo el rectángulo de la ventana en ese momento. En reposo es casi la pastilla.
 
-`WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` se aplica siempre (con `OperatingSystem.IsWindows()`), por seguridad. La opción C (región de recorte) queda como alternativa si B muestra parpadeo en M5.
+`WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` se aplica siempre (con `OperatingSystem.IsWindows()`), por seguridad. La opción C (región de recorte) queda como alternativa si B muestra parpadeo en M5. **Lo mostró: desde M5 se usa C.**
 
 ## Resultado de M4
 
@@ -146,22 +169,46 @@ Sonda automática en Windows 11 al 100 % (pantalla 1920×1032 de área de trabaj
 |---|---|
 | `MainWindow` activa con pista | Sin isla |
 | Otra app activa | La isla aparece; **puerta M4: el foco sigue en «Sonda»** |
-| Tamaño | 212×52 px = (180 + 2·16) × (36 + 16) DIPs × 1,0 |
+| Tamaño | 212×52 px = (180 + 2·16) × (36 + 16) DIPs × 1,0. **Cambia en M5:** la ventana mide 372×160 px = (340 + 2·16) × (144 + 16) DIPs y no varía; la zona de clics en reposo es la pastilla más 2 DIPs, 184×38 px (ver «Resultado de M5») |
 | Posición | `L=854`, `T=8`: centrada y a 8 px del área de trabajo |
 | Estilos | `WS_EX_NOACTIVATE`, `WS_EX_TOOLWINDOW` y `WS_EX_TOPMOST` |
 | Volver a `MainWindow` / minimizar / restaurar | Oculta / visible / oculta |
 | Selector de carpetas abierto y cancelado | La isla no aparece en ningún momento (muestreo cada 100 ms) |
 | Cerrar `MainWindow` | El proceso termina |
 
-Pendiente: 125/150 % y varios monitores (M9). El margen de sombra (16 DIPs a los lados y debajo) sí captura clics. Es el coste aceptado de la B híbrida: en reposo son tiras de 16 px junto a la pastilla.
+Pendiente: 125/150 % y varios monitores (M9). En M4 el margen de sombra (16 DIPs a los lados y debajo) capturaba clics en reposo. Desde M5 ya no: en reposo la región de clics es la pastilla.
 
 Ubicación final: `ModalTracker` e `IslandPlacement` (DIPs → píxeles físicos y centrado) están en **Core** con pruebas, porque no dependen de la interfaz.
 
+## Resultado de M5
+
+Sonda automática en Windows 11 al 100 %, con el modo de depuración, volumen 0 y los ajustes del usuario restaurados al terminar. Una ventana blanca propia («Sonda») hizo de fondo y de «otra app». El hover se simuló con `WM_MOUSEMOVE` enviado a la isla, sin mover el ratón. Como el cursor real estaba fuera, Windows envía enseguida `WM_MOUSELEAVE`, así que cada ciclo es entrar, esperar 200 ms y colapsar. Se muestreó la fila central de la pastilla cada ~4 ms (unas 320 muestras por ciclo) para medir sus bordes en pantalla.
+
+| Control | Resultado |
+|---|---|
+| B híbrida (ventana redimensionada con un solo `SetWindowPos`) | **Falla.** Al crecer, 2-3 muestras con la pastilla colapsada pegada al borde izquierdo de la ventana nueva (774-954 en lugar de 870-1050). Al encoger, 2-3 muestras con la pastilla cortada (870-954 o 966-1050). Además, en reposo Windows impone 39 px de alto mínimo (180×39 en lugar de 180×36) |
+| C (ventana fija + región) | **0 saltos** en 8 ciclos (~2 500 muestras): el centro de la pastilla siempre entre x = 959,5 y 960, y la ventana siempre en `L=774 T=8 372×160` |
+| Clics en reposo (`WindowFromPoint`) | Centro de la pastilla y justo dentro de su borde: isla. Junto a la pastilla, debajo, en la esquina redondeada y en el margen de sombra: lo de debajo |
+| Clics expandida | Ventana entera (incluido el margen de sombra): isla |
+| Clics tras colapsar | Vuelven a pasar fuera de la pastilla |
+| Reentrar durante el colapso (a 330, 380, 450 y 520 ms) | La pastilla vuelve a crecer desde su ancho de ese momento, sin saltos |
+| Foco | El primer plano sigue en «Sonda» toda la prueba |
+| Modo de depuración | La cadena `MUSICPLAYER_ISLAND_FORCE` está en el binario Debug y no en el Release |
+
+**Prueba a mano del autor:** la expansión se ve muy bien y no hay que ajustar ninguna constante. Dos fallos, corregidos:
+
+| Fallo | Medida antes | Corrección | Medida después |
+|---|---|---|---|
+| Bordes de la pastilla colapsada a escalones (Lupa) | Fila superior del borde: 255 → 2, sin grises | Región agrandada 2 DIPs (`CollapsedHitMargin`) | 255 → 215 → 145 → 88 → 45 → 16 → 2, igual que sin región |
+| La sombra tarda en aparecer | Aparece de golpe a ~520 ms y sin animarse | Capa `PillShadow` con fundido de opacidad | Crece entre ~130 y ~250 ms y queda completa con la pastilla |
+
+Tras la corrección se repitió la sonda de saltos: 0 saltos en 4 ciclos (~1 300 muestras), región de clics correcta en reposo, expandida y tras colapsar, y foco en «Sonda».
+
 ## Archivos
 
-Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Services/ModalTracker.cs`, `Themes/PlayerButtonStyles.axaml`.
+Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Services/NonActivatingWindow.cs`, `Services/WindowNative.cs` (región de clics y cursor real), `Themes/PlayerButtonStyles.axaml`.
 Modificados (Desktop): `App.axaml(.cs)`, `CompositionRoot.cs`, `MainViewModel.cs`, `MainWindow.axaml` (estilos movidos y botón «Mostrar isla»), `Themes/ThemeBrushes.axaml`, los tres servicios de selector.
-Excepciones a «solo Desktop», necesarias por la convención del repositorio: Core (`AppSettings.ShowIsland`, `IslandVisibility`, `TimeText.Remaining`), y sus pruebas en `tests/MusicPlayer.Core.Tests` y `tests/MusicPlayer.Infrastructure.Tests` (`JsonSettingsRepositoryTests`). Al terminar se actualizan `README.md` y `docs/reporte-reproductor.md`.
+Excepciones a «solo Desktop», necesarias por la convención del repositorio: Core (`AppSettings.ShowIsland`, `IslandVisibility`, `TimeText.Remaining`, `ModalTracker`, `IslandPlacement`, `IslandHover`), y sus pruebas en `tests/MusicPlayer.Core.Tests` y `tests/MusicPlayer.Infrastructure.Tests` (`JsonSettingsRepositoryTests`). Al terminar se actualizan `README.md` y `docs/reporte-reproductor.md`.
 
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
 
@@ -172,7 +219,7 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 | M2 | `TimeText.Remaining` y `RemainingText` | Pruebas (0, <1 s, minutos, horas, duración desconocida) |
 | M3 | Pinceles `ThemeIsland*` y estilos movidos a `PlayerButtonStyles.axaml` (**hecho**) | 15 capturas idénticas píxel a píxel antes y después (Oscuro, Claro, Medianoche × reposo, hover en `.icon`, reproduciendo, aleatorio + repetir, inmersivo). Arnés con `RenderTargetBitmap`, hover simulado con `:pointerover` y pruebas de impacto desactivadas para que el cursor real no interfiera; dos pasadas sin cambios dieron 0 px de ruido |
 | M4 | `IslandWindow` colapsada, posición, `ModalTracker` (con `isModalOpen` en `IslandVisibility`) e `IslandController` (mostrar/ocultar con pista y `MainWindow` no activa, retardo de 150 ms y fundido, cierre con la app, Linux sin efecto). Push de `feature/isla` para comprobar el CI en Ubuntu | Manual: aparece al minimizar o pasar a otra app, desaparece al volver a `MainWindow` o limpiar la pista, **no aparece con un selector abierto**, la app cierra. CI en verde en Windows y Ubuntu. `GetWindowRect` coincide con DIPs × escala. **Puerta:** al aparecer la isla, el Bloc de notas sigue recibiendo lo que se escribe |
-| M5 | Expansión con hover (B híbrida), animación y constantes en un solo archivo | Capturas; entrar/salir repetido sin saltos; redimensionar con el cursor encima no mueve la pastilla ni la colapsa |
+| M5 | Expansión con hover (**hecho**: ventana fija con región de clics, ver «Resultado de M5»), animación, constantes en un solo archivo y modo de depuración | Sonda: 0 saltos y región de clics = pastilla (+2 DIPs) en reposo. Pruebas de `IslandHover`. **A mano (autor, hecho):** expansión sin saltos; bordes con la Lupa y sombra corregidos tras la prueba |
 | M6 | Contenido expandido: textos, progreso con seek (`SeekToFraction`, sin bucle), controles, accesibilidad | Botones ejecutan los comandos reales; ellipsis sin cambiar el ancho; un clic en la barra produce un solo `Seek`. **Puerta:** pulsar un botón de la isla con el Bloc de notas enfocado conserva su foco |
 | M7 | Onda animada solo al sonar; medición de CPU | Pausa = estática; ventana oculta sin consumo notable |
 | M8 | Clic en carátula/título trae `MainWindow`; botón «Mostrar isla» en la barra | Restaura desde minimizada; el ajuste persiste. **Puerta:** `Activate()` lleva `MainWindow` al primer plano; si Windows lo impide, plan B (`SetForegroundWindow`) y aviso |
@@ -181,12 +228,14 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 
 ## Verificación
 
-- Automática: `dotnet build -c Release` (solo la CS8602 conocida) y `dotnet test -c Release` (341 + nuevas).
+- Automática: `dotnet build -c Release` (solo la CS8602 conocida) y `dotnet test -c Release` (341 + nuevas; 395 tras M5).
 - Manual en Windows (checklist, criterio 12):
   1. Sin pista, no hay isla. Con pista y `MainWindow` activa, tampoco. Al minimizar o pasar a otra app, aparece arriba al centro con margen de 8 px, con fundido; al volver a `MainWindow`, desaparece. Un Alt+Tab rápido de ida y vuelta no la hace parpadear.
   2. «Agregar carpeta», «Carátula del álbum…», imagen del editor de etiquetas e «Incrustar letra (.lrc)…»: con el selector abierto la isla no aparece, tampoco al aceptar o cancelar. «Carpeta de temas» (Explorador) sí la muestra.
   2b. Pausa: sigue visible, colapsada y con la onda estática.
   3. Pasar el cursor expande en ~0,4 s; salir colapsa a los ~200 ms; entrar y salir rápido no produce saltos.
+  3b. Salir y volver a entrar mientras la pastilla se encoge: vuelve a crecer desde donde estaba, sin saltos ni parpadeo, y no se queda pequeña con el cursor encima.
+  3c. En reposo, un clic justo al lado de la pastilla (o en su esquina redondeada) llega a la ventana de debajo.
   4. Escribir en otra app y pulsar los botones de la isla: el foco no cambia.
   5. Clic sobre lo que hay bajo las zonas transparentes funciona.
   6. Aleatorio, anterior, play/pausa y siguiente actúan; el clic en la barra hace seek; el tiempo restante baja.

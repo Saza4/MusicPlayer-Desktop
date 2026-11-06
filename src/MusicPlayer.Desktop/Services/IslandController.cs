@@ -23,6 +23,11 @@ public sealed class IslandController : IDisposable
     private Window? _main;
     private IslandWindow? _island;
 
+#if DEBUG
+    private static readonly bool ForceVisible =
+        Environment.GetEnvironmentVariable("MUSICPLAYER_ISLAND_FORCE") == "1";
+#endif
+
     public IslandController(MainViewModel viewModel, ModalTracker modals)
     {
         _viewModel = viewModel;
@@ -72,6 +77,12 @@ public sealed class IslandController : IDisposable
         if (_main is null) return;
 
         var mainActive = _main.IsActive && _main.WindowState != WindowState.Minimized;
+#if DEBUG
+        // Solo en Debug (no se compila en Release): MUSICPLAYER_ISLAND_FORCE=1 muestra la isla aunque la
+        // ventana principal esté activa, para probar el hover a mano y tomar capturas. El resto de la regla
+        // (pista cargada, «Mostrar isla», inmersivo, selectores) sigue igual.
+        if (ForceVisible) mainActive = false;
+#endif
         var show = IslandVisibility.ShouldShow(
             hasTrack: _viewModel.CurrentTrack is not null,
             showIsland: _viewModel.ShowIsland,
