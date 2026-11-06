@@ -85,9 +85,13 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | Windows | Compila, pasa las pruebas y se usa a diario                                          |
 | Linux   | Compila y pasa las pruebas en CI. La prueba de audio y de la interfaz está pendiente |
 
+## Descargar
+
+Las versiones compiladas para **Windows x64** están en [Releases](https://github.com/Saza4/MusicPlayer-Desktop/releases): descomprime el zip y ejecuta `win-x64\MusicPlayer.Desktop.exe`. Solo necesitas el [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0). El zip ya incluye las bibliotecas de BASS (gratuitas solo para uso no comercial), así que no hay que descargarlas aparte. Las notas de cada versión dicen qué cambió y qué se probó. Para Linux, o para compilar tú mismo, sigue las instrucciones de abajo.
+
 ## Requisitos
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) para compilar (para ejecutar el zip basta el runtime)
 - Binarios nativos de BASS (ver abajo)
 - (Opcional) [ffmpeg](https://ffmpeg.org/download.html) para convertir formatos. En Windows: `winget install Gyan.FFmpeg`. Se busca junto al ejecutable y luego en el `PATH`; si lo instalas con la app abierta, reiníciala. No se incluye en este repositorio.
 
@@ -103,7 +107,7 @@ dotnet run --project src/MusicPlayer.Desktop
 ### Binarios de BASS
 
 El motor de audio usa [BASS](https://www.un4seen.com) mediante ManagedBass. Los binarios **no se
-incluyen en este repositorio**. Descarga **BASS**, **BASSFLAC**, **BASS_AAC** y **BASSmix** (64 bits) y colócalos así:
+incluyen en este repositorio** (el zip de las releases de Windows sí los lleva). Para compilar desde el código, descarga **BASS**, **BASSFLAC**, **BASS_AAC** y **BASSmix** (64 bits) y colócalos así:
 
 ```
 src/MusicPlayer.Audio/native/win-x64/    bass.dll  bassflac.dll  bass_aac.dll  bassmix.dll

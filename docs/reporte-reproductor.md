@@ -1,7 +1,7 @@
 # MusicPlayer-Desktop — Documento maestro y reporte de novedades
 
 > Reproductor de música local, ligero y multiplataforma. **C# · .NET 8 · Avalonia UI 11**.
-> Estado a **5 de noviembre de 2026** · última release publicada: **v1.2.0**.
+> Estado a **5 de noviembre de 2026** · última release: **v1.3.0**.
 
 Este documento reúne en un solo lugar: la visión y la especificación del proyecto, el reporte de todo lo implementado durante el desarrollo, el historial de versiones tal como se publicó en GitHub Releases, las decisiones de diseño, las limitaciones conocidas y la hoja de ruta. Al final, como anexos, se conserva la especificación original y el prompt maestro.
 
@@ -102,9 +102,9 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | 7   | Incrustar un `.lrc` en las etiquetas del archivo          | Core, Infrastructure, Desktop | Entregado                                                                           | v1.2.0 (ver sección 6) |
 | 8   | Barra espaciadora global y foco inicial                   | Desktop                       | Entregado (commit `f95fb1b`); no figura en las notas                                | v1.2.0                 |
 | 9   | Pausa mejorada                                            | Desktop                       | Sin cambio propio en el código: corresponde a la barra espaciadora (#8) (deducción) | v1.2.0                 |
-| 11  | Atajos `←` `→`, `Ctrl+↑` `Ctrl+↓` y `M`                   | Core, Desktop                 | Hecho (probado a mano en Windows); compila y pasa pruebas                           | Sin publicar           |
-| 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | Sin publicar |
-| 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | Sin publicar (rama `feature/isla`) |
+| 11  | Atajos `←` `→`, `Ctrl+↑` `Ctrl+↓` y `M`                   | Core, Desktop                 | Hecho (probado a mano en Windows); compila y pasa pruebas                           | v1.3.0                 |
+| 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | v1.3.0 |
+| 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | v1.3.0 |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
 
 ### 4.2 Novedades de la serie v1.1.0
@@ -183,7 +183,7 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
   - En `MainWindow.axaml`, la ventana usa fondo `#0F0F0F` y la barra superior, los paneles de convertir, autocompletar y editar etiquetas, la barra de reproducción, la edición de playlists y el panel de letra pasan a `#000000` con bordes `#1FFFFFFF`.
   - **Captura del 4 de noviembre de 2026 (Windows):** se ven el fondo oscuro, los paneles negros y la fila seleccionada en gris. Las barras de progreso y de volumen conservan el azul de acento de Fluent, porque los estilos no cubren `Slider`.
 
-### 4.3.1 Atajos de salto, volumen y silencio (sin publicar)
+### 4.3.1 Atajos de salto, volumen y silencio (v1.3.0)
 
 - **Teclas:** `←` y `→` saltan 5 s; `Ctrl+↑` y `Ctrl+↓` cambian el volumen un 5 %; `M` silencia y restaura (`ToggleMuteCommand`). `↑` `↓` sin modificador siguen moviendo las listas: por eso el volumen lleva `Ctrl`.
 - **Límites:** `←` llega como mínimo a 0:00; `→` a menos de 5 s del final no hace nada (no cambia de pista). El volumen va de 0 a 100 % en porcentajes enteros, sin deriva de coma flotante.
@@ -191,7 +191,7 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 - **Excepciones:** no se interceptan en `TextBox`, `ComboBox`, `ComboBoxItem`, `MenuItem` ni `ContextMenu`. Sliders, listas y botones sí.
 - **Piezas:** `PlaybackShortcuts` (Core: `SeekTarget`, `StepVolume`), `MainViewModel.SeekBy` y `ChangeVolume`, y `OnPreviewKeyDown` / `OnPreviewKeyUp` en `MainWindow.axaml.cs`. 16 pruebas nuevas en Core.
 
-### 4.3.2 Temas de la interfaz (sin publicar)
+### 4.3.2 Temas de la interfaz (v1.3.0)
 
 - **Selector:** botón «Tema» en la barra superior con una lista (Sistema, Oscuro, Claro y los temas de usuario). Mover el cursor o las flechas por la lista **previsualiza** el tema en toda la app sin guardar nada; clic o `Enter` lo confirma y lo guarda en los ajustes (`ThemeId`); `Esc` o cerrar la lista restaura el tema confirmado. Mientras la lista está abierta no actúan los atajos globales de teclado.
 - **Tema por defecto:** Oscuro, con los colores exactos que tenía la interfaz. *Sistema* sigue el tema de Windows y reacciona si cambia con la app abierta.
@@ -204,7 +204,7 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 - **Diferencia con la especificación:** se pensó redefinir los colores en el `Grid` inmersivo con recursos locales; no sirve, porque un pincel de la aplicación resuelve su `Color` desde la aplicación y no desde el control que lo usa. El inmersivo conserva sus literales (fondo, degradado y marcador de carátula).
 - **Verificado en Windows** (capturas automáticas): arranque en Oscuro idéntico al anterior, vista previa con ratón y con flechas, `Esc`, confirmar y conservar al reiniciar, *Sistema* siguiendo a Windows en vivo, un tema de usuario, tres archivos inválidos descartados, tema guardado inexistente y modo inmersivo. Quedan por probar a mano: Linux y un recorrido completo por todos los paneles con el tema Claro.
 
-### 4.3.3 Isla flotante de «ahora suena» (sin publicar)
+### 4.3.3 Isla flotante de «ahora suena» (v1.3.0)
 
 Especificación, decisiones y resultados medidos de cada hito: `docs/specs/dynamic-island.md`.
 
@@ -319,6 +319,64 @@ Esta actualización trae mejoras en la inmersión musical con soporte para letra
 - **Estilos globales renovados:** se actualizaron de manera integral los estilos globales en el archivo `App` y el diseño de la interfaz de usuario en `MainWindow`.
 - **Estética moderna:** ofrece una estética visual mucho más moderna, limpia y coherente, optimizando la jerarquía visual de los controles, la lista de canciones y la experiencia general de navegación en el escritorio.
 
+### MusicPlayer-Desktop v1.3.0
+
+_Fuente del texto: `docs/notas-de-version/v1.3.0.md`. Se escribió con las observaciones de la sección 6 en cuenta._
+
+Tres novedades: una **isla flotante** con lo que suena (solo Windows), **temas** de la interfaz y **atajos de teclado** para saltar, cambiar el volumen y silenciar.
+
+#### Isla flotante (solo Windows)
+
+- Con el reproductor minimizado o detrás de otra ventana y una canción cargada, una pastilla negra arriba al centro de la pantalla principal muestra la miniatura y una onda que se mueve mientras suena. En pausa sigue visible, con la onda quieta.
+- Al pasar el cursor se expande: carátula, título, artista, la barra de progreso con el tiempo transcurrido y el restante (`−1:31`) y los botones aleatorio, anterior, reproducir/pausa y siguiente.
+- Un clic en la barra salta a ese punto. Un clic en la carátula o el título trae el reproductor al frente, también si estaba minimizado o maximizado.
+- No quita el foco a la app en la que estás escribiendo, deja pasar los clics fuera de la pastilla y no aparece con un selector de archivos abierto ni en modo inmersivo.
+- Se activa y se desactiva con el botón de la barra de reproducción, junto a «Pantalla completa» («Ocultar isla flotante» / «Mostrar isla flotante»). El ajuste se guarda.
+- Siempre aparece en la pantalla principal y se recoloca sola si cambias la resolución o la escala. Su fondo es siempre negro, con cualquier tema; el color del tema se ve en el botón de reproducir, el aleatorio activo y la onda.
+
+#### Temas
+
+- Botón **«Tema»** en la barra superior, con tres temas de serie: **Sistema** (sigue el tema de Windows, también si cambia con la app abierta), **Oscuro** y **Claro**.
+- Al pasar el cursor por la lista o moverte con las flechas, toda la app **previsualiza** el tema sin guardarlo. Clic o `Enter` lo confirma y lo guarda; `Esc` vuelve al anterior.
+- **Temas propios:** archivos `.json` en `%APPDATA%\MusicPlayer\themes` (el botón «Carpeta de temas» del selector abre la carpeta). Solo son datos, sin código; el formato está en el [README](https://github.com/Saza4/MusicPlayer-Desktop#temas-de-usuario). Un tema con colores que no se leen bien se rechaza, y el motivo aparece en la línea de estado al abrir el selector.
+- El tema por defecto sigue siendo **Oscuro**, con los mismos colores de antes.
+
+#### Atajos de teclado
+
+| Tecla | Acción |
+|---|---|
+| `←` / `→` | Retroceder / avanzar 5 s |
+| `Ctrl+↑` / `Ctrl+↓` | Subir / bajar el volumen un 5 % |
+| `M` | Silenciar y restaurar el volumen anterior |
+
+No actúan al escribir en un cuadro de texto ni dentro de menús y listas desplegables. `↑` y `↓` sin `Ctrl` siguen moviendo las listas.
+
+#### Al actualizar
+
+- Tus ajustes, tu biblioteca y tus playlists siguen funcionando sin cambios.
+- La isla flotante viene **activada por defecto** en Windows, también si ya usabas la versión anterior. Si no la quieres, apágala con su botón.
+- La carpeta de temas es opcional: si no existe o está vacía, no pasa nada.
+
+#### Requisitos
+
+- Windows x64 y el [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+- El zip incluye las bibliotecas de BASS (`bass.dll`, `bass_aac.dll`, `bassflac.dll` y `bassmix.dll`). BASS es de [Un4seen Developments](https://www.un4seen.com) y es gratuito solo para uso no comercial.
+- `ffmpeg` es opcional y no se incluye: solo hace falta para convertir formatos.
+
+#### Qué se probó y qué no
+
+- **403 pruebas automáticas** (345 en la lógica y 58 en repositorios y escritores). Cubren las reglas de la isla (cuándo se ve, dónde se coloca en cada escala, el hover y el seek), los temas y los atajos. La ventana de la isla y la interfaz no tienen pruebas automáticas: se verificaron con sondas en Windows y a mano.
+- **Isla, a mano:** foco con el Bloc de notas, traer el reproductor al frente, escala de la pantalla principal y dos monitores.
+- **Atajos:** probados a mano en Windows.
+- **Temas:** verificados con capturas automáticas. **El recorrido completo de todos los paneles con el tema Claro y con temas propios no se ha hecho**, así que puede haber algún control sin ajustar.
+- **Linux no se ha probado**, y la isla flotante no existe allí.
+
+#### Descarga
+
+**`MusicPlayer-v1.3.0-win-x64.zip`**: descomprime y ejecuta `win-x64\MusicPlayer.Desktop.exe`.
+
+SHA-256: `FE5640786A3E63AC2B70F806FF4CBB6229AC5E7DEF7D10DBEB7EC8D4AD8ABE6C`
+
 ## 6. Observaciones sobre las notas de release
 
 Puntos para pulir el texto publicado, sin cambiar el código.
@@ -327,6 +385,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 2. **La barra espaciadora y el foco inicial** no aparecen en ninguna nota, aunque forman parte de v1.2.0 (el tag incluye el commit `f95fb1b`). Conviene añadirlos, por ejemplo bajo «Pausa mejorada»: «La barra espaciadora reproduce y pausa desde el primer momento, y el foco inicial queda en la lista de canciones».
 3. **«Pausa mejorada»** no tiene un cambio propio en el código: lo único nuevo en reproducir y pausar es la barra espaciadora (_deducción_: la nota describe ese commit). «Transición suave, inmediata y sin interrupciones» promete más de lo que cambió. **Los estilos globales** sí tienen código (commit `b382184`, sección 4.3). La nota no menciona que la app pasa a tema oscuro fijo.
 4. **v1.1.0** no menciona el botón **Convertir lo que veo…**, que convierte toda la lista visible, ni que los archivos convertidos se agregan a la biblioteca.
+5. **v1.3.0** se escribió para no repetir lo anterior: describe solo lo que el código hace (teclas y botones con su nombre real), avisa de que la isla viene **activada por defecto** también para quien actualiza, tiene un apartado «Al actualizar» y separa lo probado automáticamente, lo probado a mano y lo que no se probó (Linux y el recorrido completo con el tema Claro y con temas propios). Los temas que se ven en las capturas de desarrollo (Papel, Medianoche, etc.) son archivos del autor en `%APPDATA%\MusicPlayer\themes`, no temas de serie, y las notas solo anuncian Sistema, Oscuro y Claro.
 
 ## 7. Pruebas y calidad
 
