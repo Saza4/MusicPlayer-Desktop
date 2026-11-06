@@ -102,6 +102,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | 7   | Incrustar un `.lrc` en las etiquetas del archivo          | Core, Infrastructure, Desktop | Entregado                                                                           | v1.2.0 (ver sección 6) |
 | 8   | Barra espaciadora global y foco inicial                   | Desktop                       | Entregado (commit `f95fb1b`); no figura en las notas                                | v1.2.0                 |
 | 9   | Pausa mejorada                                            | Desktop                       | Sin cambio propio en el código: corresponde a la barra espaciadora (#8) (deducción) | v1.2.0                 |
+| 11  | Atajos `←` `→`, `Ctrl+↑` `Ctrl+↓` y `M`                   | Core, Desktop                 | Hecho (probado a mano en Windows); compila y pasa pruebas                           | Sin publicar           |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
 
 ### 4.2 Novedades de la serie v1.1.0
@@ -179,6 +180,14 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
   - Diccionario `ThemeDictionaries["Dark"]` para botones, cuadros de texto, `ComboBox`, filas de lista y menús.
   - En `MainWindow.axaml`, la ventana usa fondo `#0F0F0F` y la barra superior, los paneles de convertir, autocompletar y editar etiquetas, la barra de reproducción, la edición de playlists y el panel de letra pasan a `#000000` con bordes `#1FFFFFFF`.
   - **Captura del 4 de noviembre de 2026 (Windows):** se ven el fondo oscuro, los paneles negros y la fila seleccionada en gris. Las barras de progreso y de volumen conservan el azul de acento de Fluent, porque los estilos no cubren `Slider`.
+
+### 4.3.1 Atajos de salto, volumen y silencio (sin publicar)
+
+- **Teclas:** `←` y `→` saltan 5 s; `Ctrl+↑` y `Ctrl+↓` cambian el volumen un 5 %; `M` silencia y restaura (`ToggleMuteCommand`). `↑` `↓` sin modificador siguen moviendo las listas: por eso el volumen lleva `Ctrl`.
+- **Límites:** `←` llega como mínimo a 0:00; `→` a menos de 5 s del final no hace nada (no cambia de pista). El volumen va de 0 a 100 % en porcentajes enteros, sin deriva de coma flotante.
+- **Tecla mantenida:** saltos y volumen se limitan a un paso cada 100 ms; `M` no repite hasta soltar la tecla.
+- **Excepciones:** no se interceptan en `TextBox`, `ComboBox`, `ComboBoxItem`, `MenuItem` ni `ContextMenu`. Sliders, listas y botones sí.
+- **Piezas:** `PlaybackShortcuts` (Core: `SeekTarget`, `StepVolume`), `MainViewModel.SeekBy` y `ChangeVolume`, y `OnPreviewKeyDown` / `OnPreviewKeyUp` en `MainWindow.axaml.cs`. 16 pruebas nuevas en Core.
 
 ### 4.4 Base anterior: lo que ya contenía v1.0.0
 
@@ -296,7 +305,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | ------------------------------------------------------------------ | ---------- | -------------------- | ------------------------------------------------------ |
 | Ejecución anterior (carátula de álbum incluida)                    | 209        | 33                   | 0 errores, 0 advertencias                              |
 | Pruebas añadidas después (letra incrustada)                        | +7         | +6                   | Confirmadas                                            |
-| Última ejecución confirmada (4 de noviembre de 2026, `-c Release`) | 216        | 39                   | Todas superadas. Compila con 0 errores y 1 advertencia |
+| Última ejecución confirmada (4 de noviembre de 2026, `-c Release`) | 232        | 39                   | Todas superadas. Compila con 0 errores y 1 advertencia |
 
 La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
@@ -309,7 +318,7 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 
 **CI:** compila y pasa las pruebas en Linux. Eso demuestra el build y la lógica, no que BASS cargue ni que la interfaz funcione allí.
 
-**Pruebas manuales confirmadas:** FLAC y M4A, y letras `.lrc`.
+**Pruebas manuales confirmadas:** FLAC y M4A, letras `.lrc` y los atajos de teclado (salto, volumen y silencio).
 
 **Captura del 4 de noviembre de 2026 (Windows):** la app arranca con el tema oscuro, la barra de íconos (aleatorio, anterior, reproducir, siguiente, repetir) y el botón **Convertir lo que veo…**. La pista cargada muestra su duración en la barra de reproducción (4:55), un valor que viene de `IAudioPlayer.Duration`, así que BASS abrió el archivo. Aunque la captura no demuestra que suene. El autor confirmó manualmente que la reproducción y la reproducción sin silencios funcionan.
 
@@ -353,7 +362,8 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 
 - Mantener pulsada la barra repite el cambio de estado.
 - La barra ya no activa un botón enfocado: Enter sí lo hace.
-- La lista de controles que usan la barra es por tipo. Si se añade uno nuevo (`RadioButton`, `ToggleSwitch`), hay que sumarlo a `UsesSpace`.
+- La lista de controles que se quedan con las teclas es por tipo (`OwnsKeyboard`). Si se añade uno nuevo (`RadioButton`, `ToggleSwitch`), hay que sumarlo.
+- Los atajos de salto, volumen y silencio se probaron a mano en Windows y funcionan.
 - Windows puede negar el foco a una ventana nueva lanzada desde la terminal.
 
 **Plataforma**
@@ -365,9 +375,8 @@ La advertencia es CS8602 en `MainViewModel.cs:222`: el lambda del temporizador d
 
 **Propuestas pendientes**
 
-1. **Más atajos de teclado:** flechas izquierda y derecha para saltar unos segundos, arriba y abajo para el volumen, `M` para silenciar.
-2. **Integración con el sistema:** SMTC en Windows y MPRIS en Linux.
-3. **Probar en Linux:** omitido por ahora.
+1. **Integración con el sistema:** SMTC en Windows y MPRIS en Linux.
+2. **Probar en Linux:** omitido por ahora.
 
 ## 11. Metodología de trabajo
 

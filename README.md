@@ -21,7 +21,7 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 - **Silencio con memoria:** el botón de volumen silencia y restaura el nivel anterior.
 - **Aleatorio** (Fisher-Yates sobre una lista de índices) y **repetir** (no / todas / una).
 - **Cola dinámica:** "Reproducir siguiente" y "Agregar a la cola" desde el clic derecho.
-- **Atajo de teclado:** la barra espaciadora reproduce y pausa en toda la ventana, salvo al escribir o marcar opciones. Al abrir la app, el foco queda en la lista de canciones.
+- **Atajos de teclado** en toda la ventana, salvo al escribir o navegar menús y listas desplegables: barra espaciadora reproduce y pausa, `←` `→` saltan 5 s, `Ctrl+↑` `Ctrl+↓` cambian el volumen un 5 % y `M` silencia. Al abrir la app, el foco queda en la lista de canciones.
 - **Barra multimedia con íconos vectoriales** y la lista sincronizada con la pista que suena.
 
 **Biblioteca**
@@ -114,7 +114,7 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 255 pruebas (216 en Core y 39 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 271 pruebas (232 en Core y 39 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco y teclado), que se prueban a mano.
 
 ## Limitaciones conocidas
@@ -134,7 +134,6 @@ o `~/.config/MusicPlayer` (Linux).
 ## Hoja de ruta
 
 - Integración con el sistema: SMTC en Windows y MPRIS en Linux
-- Más atajos de teclado: saltar unos segundos, volumen y silencio
 - Probar el audio y la interfaz en Linux
 
 ## Licencias
