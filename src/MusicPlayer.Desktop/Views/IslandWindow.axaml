@@ -100,7 +100,12 @@
 
                             <!--  Cabecera: carátula, título y artista (ancho fijo, «…» si no caben) y onda  -->
                             <Grid x:Name="Header" ColumnDefinitions="Auto,*,Auto">
-                                <Panel x:Name="ExpandedCover">
+                                <!--  Carátula y textos: un clic trae la ventana principal al frente  -->
+                                <Panel
+                                    x:Name="ExpandedCover"
+                                    Cursor="Hand"
+                                    PointerPressed="OnOpenMainPressed"
+                                    ToolTip.Tip="Abrir el reproductor">
                                     <Border
                                         x:Name="ExpandedPlaceholder"
                                         Background="{DynamicResource ThemeIslandPlaceholderBrush}"
@@ -120,7 +125,11 @@
                                     x:Name="Texts"
                                     Grid.Column="1"
                                     VerticalAlignment="Center"
-                                    Spacing="2">
+                                    Background="Transparent"
+                                    Cursor="Hand"
+                                    PointerPressed="OnOpenMainPressed"
+                                    Spacing="2"
+                                    ToolTip.Tip="Abrir el reproductor">
                                     <TextBlock
                                         x:Name="TitleText"
                                         FontWeight="Bold"

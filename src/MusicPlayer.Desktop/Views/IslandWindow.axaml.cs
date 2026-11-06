@@ -40,6 +40,9 @@ public partial class IslandWindow : Window
     private readonly System.Diagnostics.Stopwatch _waveClock = new();
     private MainViewModel? _viewModel;
 
+    /// <summary>Clic en la carátula o el título: el controlador trae la ventana principal al frente.</summary>
+    public event EventHandler? OpenMainRequested;
+
     public IslandWindow()
     {
         InitializeComponent();
@@ -166,6 +169,13 @@ public partial class IslandWindow : Window
         if (width <= 0) return;
         (DataContext as MainViewModel)?.SeekToFraction(e.GetPosition(ProgressBar).X / width);
         e.Handled = true;
+    }
+
+    private void OnOpenMainPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        e.Handled = true;
+        OpenMainRequested?.Invoke(this, EventArgs.Empty);
     }
 
     protected override void OnOpened(EventArgs e)

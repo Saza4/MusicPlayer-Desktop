@@ -1,6 +1,6 @@
 # Especificación: Dynamic Island («ahora suena» flotante)
 
-Estado: **aprobada**. M0-M7 hechos (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M7»). M4-M6 con sus puertas superadas a mano.
+Estado: **aprobada**. M0-M8 hechos (ver «Resultado del spike (M0)» y «Resultado de M4» a «de M8»). Puertas de M4, M6 y M8 superadas a mano.
 
 ## Contexto
 
@@ -241,6 +241,22 @@ Sonda de CPU (compilación Debug, Windows 11, volumen 0, ajustes restaurados): C
 - Desde código, una animación de `RenderTransform` con `TransformOperations` lanza `No animator registered for the property RenderTransform` dentro de `Show()` y la isla no aparece. Se detectó en M7 y quedó resuelto al no usar animaciones de Avalonia para la onda.
 - Si la onda se ve entrecortada, `WaveFrameInterval` es el ajuste: 30 fps cuesta unos 2,5 puntos más de CPU con la isla visible.
 
+## Resultado de M8
+
+- **Clic en la carátula o el título** (pastilla expandida): la isla emite `OpenMainRequested` y `IslandController` trae `MainWindow`. Si está minimizada la restaura con `ShowWindow(SW_RESTORE)`, que la devuelve a su estado anterior; `WindowState = Normal` la desmaximizaría. Después llama a `Show()` y `Activate()` y, si la ventana no queda en primer plano, aplica el plan B (`SetForegroundWindow`), que Windows permite porque el proceso acaba de recibir el clic del usuario. Los controles no disparan esto: el clic solo se atiende en la carátula y en los textos.
+- **Botón en la barra de reproducción**, entre «Pantalla completa» y el volumen: `Button` `.icon` con `ToggleIslandCommand`, acento (`.active`) con la isla activada, oculto fuera de Windows (`IsIslandSupported`). Su `ToolTip` y su nombre accesible dicen lo que hará el clic: «Ocultar isla flotante» o «Mostrar isla flotante» (`IslandToggleText`), como el botón de silencio.
+
+Sonda automática (sin modo de depuración, ajustes restaurados):
+
+| Control | Resultado |
+|---|---|
+| Botón de la barra | Se encuentra por UIA como «Ocultar isla flotante»; al pulsarlo pasa a «Mostrar isla flotante» y `settings.json` guarda `"ShowIsland": false` |
+| Isla apagada | Al minimizar no aparece |
+| Volver a encenderla | `"ShowIsland": true` |
+| Clic en el título con `MainWindow` maximizada y minimizada | Se restaura **maximizada**, queda en primer plano y la isla se oculta |
+
+**Puerta de M8 (a mano, el autor): pasa.** La sonda no podía probarla: sus clics no dan derecho al primer plano y Windows ya contaba como primer plano la ventana minimizada. Con el ratón real y otra app delante, el clic en la carátula o el título trae el reproductor al frente con el foco del teclado (la barra espaciadora pausa), también desde minimizado y maximizado.
+
 ## Archivos
 
 Nuevos (Desktop): `Views/IslandWindow.axaml(.cs)`, `Views/IslandMetrics.cs`, `Services/IslandController.cs`, `Services/NonActivatingWindow.cs`, `Services/WindowNative.cs` (región de clics y cursor real), `Themes/PlayerButtonStyles.axaml`.
@@ -259,7 +275,7 @@ Excepciones a «solo Desktop», necesarias por la convención del repositorio: C
 | M5 | Expansión con hover (**hecho**: ventana fija con región de clics, ver «Resultado de M5»), animación, constantes en un solo archivo y modo de depuración | Sonda: 0 saltos y región de clics = pastilla (+2 DIPs) en reposo. Pruebas de `IslandHover`. **A mano (autor, hecho):** expansión sin saltos; bordes con la Lupa y sombra corregidos tras la prueba |
 | M6 | Contenido expandido: textos, progreso con seek (`SeekToFraction`, sin bucle), controles, accesibilidad (**hecho**, ver «Resultado de M6»; puerta de foco superada a mano) | Botones ejecutan los comandos reales; ellipsis sin cambiar el ancho; un clic en la barra produce un solo `Seek`. **Puerta:** pulsar un botón de la isla con el Bloc de notas enfocado conserva su foco |
 | M7 | Onda animada solo al sonar; medición de CPU (**hecho**, ver «Resultado de M7») | Pausa = estática; ventana oculta sin consumo notable. Sonda: la onda se mueve solo al sonar; CPU visible y sonando igual que en M6. A mano (autor): la onda a 15 fps se ve bien |
-| M8 | Clic en carátula/título trae `MainWindow`; botón «Mostrar isla» en la barra | Restaura desde minimizada; el ajuste persiste. **Puerta:** `Activate()` lleva `MainWindow` al primer plano; si Windows lo impide, plan B (`SetForegroundWindow`) y aviso |
+| M8 | Clic en carátula/título trae `MainWindow`; botón «Mostrar isla» en la barra (**hecho**, ver «Resultado de M8»; puerta superada a mano) | Restaura desde minimizada; el ajuste persiste. **Puerta:** `Activate()` lleva `MainWindow` al primer plano; si Windows lo impide, plan B (`SetForegroundWindow`) y aviso |
 | M9 | Casos límite: monitores/DPI, temas en vivo, inmersivo, carátula ausente | Checklist completo |
 | M10 | Docs (`README`, reporte, spec final) | `dotnet build` sin warnings nuevos; todas las pruebas en verde |
 

@@ -91,9 +91,32 @@ public sealed class IslandController : IDisposable
             isModalOpen: _modals.IsOpen);
 
         if (show)
-            (_island ??= new IslandWindow { DataContext = _viewModel }).ShowFaded();
+            (_island ??= CreateIsland()).ShowFaded();
         else
             _island?.HideFaded();
+    }
+
+    private IslandWindow CreateIsland()
+    {
+        var island = new IslandWindow { DataContext = _viewModel };
+        island.OpenMainRequested += (_, _) => BringMainToFront();
+        return island;
+    }
+
+    /// <summary>
+    /// Clic en la carátula o el título de la isla: restaura la ventana principal si está minimizada (a su
+    /// estado anterior, maximizada incluida) y la activa. Si Windows no le da el primer plano con Activate(),
+    /// lo pide directamente (plan B). Al activarse, la regla de visibilidad oculta la isla.
+    /// </summary>
+    private void BringMainToFront()
+    {
+        if (_main is null) return;
+        if (_main.WindowState == WindowState.Minimized && !WindowNative.Restore(_main))
+            _main.WindowState = WindowState.Normal;
+        _main.Show();
+        _main.Activate();
+        if (!WindowNative.IsForeground(_main))
+            WindowNative.ForceForeground(_main);
     }
 
     public void Dispose()

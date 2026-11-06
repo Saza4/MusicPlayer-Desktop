@@ -13,6 +13,8 @@ namespace MusicPlayer.Desktop.Services;
 /// La isla no cambia de tamaño ni de sitio al expandirse: cambiar la ventana hace que Avalonia pinte el
 /// contenido un fotograma tarde y la pastilla salte (medido en M5); cambiar la región, no.</item>
 /// <item>El cursor real: el hover de Avalonia no se actualiza si lo que hay bajo un cursor quieto cambia.</item>
+/// <item>Traer la ventana principal desde la isla: restaurarla a su estado anterior y, si Activate() no le da
+/// el primer plano, pedirlo con SetForegroundWindow.</item>
 /// </list>
 /// Fuera de Windows no hace nada (la isla no se muestra allí).
 /// </summary>
@@ -33,6 +35,35 @@ public static class WindowNative
     {
         if (!OperatingSystem.IsWindows()) return null;
         return CursorOnWindows();
+    }
+
+    /// <summary>
+    /// Saca la ventana de minimizada a su estado anterior (maximizada si lo estaba; Avalonia con
+    /// WindowState = Normal la desmaximizaría). Devuelve false si no pudo hacerlo por Win32.
+    /// </summary>
+    public static bool Restore(Window window)
+    {
+        if (!OperatingSystem.IsWindows()) return false;
+        if (window.TryGetPlatformHandle()?.Handle is not { } hwnd || hwnd == IntPtr.Zero) return false;
+        ShowWindow(hwnd, SwRestore);
+        return true;
+    }
+
+    /// <summary>Si la ventana es la de primer plano del sistema.</summary>
+    public static bool IsForeground(Window window) =>
+        OperatingSystem.IsWindows()
+        && window.TryGetPlatformHandle()?.Handle is { } hwnd
+        && hwnd == GetForegroundWindow();
+
+    /// <summary>
+    /// Plan B si Activate() no basta: pide el primer plano directamente. Windows lo permite porque el
+    /// proceso acaba de recibir la entrada del usuario (su clic en la isla).
+    /// </summary>
+    public static bool ForceForeground(Window window)
+    {
+        if (!OperatingSystem.IsWindows()) return false;
+        if (window.TryGetPlatformHandle()?.Handle is not { } hwnd || hwnd == IntPtr.Zero) return false;
+        return SetForegroundWindow(hwnd);
     }
 
     [SupportedOSPlatform("windows")]
@@ -56,6 +87,19 @@ public static class WindowNative
         public int X;
         public int Y;
     }
+
+    private const int SwRestore = 9;
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(IntPtr hWnd, int cmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, [MarshalAs(UnmanagedType.Bool)] bool redraw);

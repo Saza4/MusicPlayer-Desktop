@@ -35,8 +35,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool _isShuffleOn;
 
     // Isla flotante de «ahora suena»: ajuste del usuario. Solo existe en Windows.
-    [ObservableProperty] private bool _showIsland = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IslandToggleText))]
+    private bool _showIsland = true;
     public bool IsIslandSupported { get; } = OperatingSystem.IsWindows();
+    // Texto del botón de la barra: dice lo que hará el clic (como MuteText).
+    public string IslandToggleText => ShowIsland ? "Ocultar isla flotante" : "Mostrar isla flotante";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RepeatText))]

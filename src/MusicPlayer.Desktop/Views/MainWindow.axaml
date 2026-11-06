@@ -601,7 +601,7 @@
                         </Grid>
                     </StackPanel>
 
-                    <!--  Derecha: Letra, Pantalla completa y Volumen  -->
+                    <!--  Derecha: Letra, Pantalla completa, Isla flotante y Volumen  -->
                     <StackPanel
                         Grid.Column="2"
                         HorizontalAlignment="Right"
@@ -623,6 +623,19 @@
                             Command="{Binding OpenImmersiveCommand}"
                             ToolTip.Tip="Pantalla completa">
                             <PathIcon Data="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                        </Button>
+                        <!--
+                            Isla flotante (solo Windows). Button con comando y no ToggleButton, para no pelear con el
+                            atajo global de Espacio. Acento cuando está activada; el texto dice lo que hará el clic.
+                        -->
+                        <Button
+                            AutomationProperties.Name="{Binding IslandToggleText}"
+                            Classes="icon"
+                            Classes.active="{Binding ShowIsland}"
+                            Command="{Binding ToggleIslandCommand}"
+                            IsVisible="{Binding IsIslandSupported}"
+                            ToolTip.Tip="{Binding IslandToggleText}">
+                            <PathIcon Data="M2 4h20v16H2V4zm2 2v12h16V6H4zm4 1h8a1.5 1.5 0 0 1 0 3H8a1.5 1.5 0 0 1 0-3z" />
                         </Button>
                         <Button
                             Margin="8,0,0,0"
