@@ -19,12 +19,37 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     private bool _restoring;
 
     [ObservableProperty] private ObservableCollection<LyricLineViewModel> _lines = new();
-    [ObservableProperty] private bool _isSynced;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowProgressiveImmersive), nameof(ShowClassicImmersive))]
+    private bool _isSynced;
+
     [ObservableProperty] private int _activeIndex = -1;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPanel))]
+    [NotifyPropertyChangedFor(nameof(ShowPanel), nameof(ShowClassicImmersive))]
     private bool _isAvailable;
+
+    // Spike M0 de letras progresivas (docs/specs/lyrics-progressive.md). Solo en Debug y con
+    // MUSICPLAYER_LYRICS_SPIKE=1; en M4 lo sustituye el ajuste LyricsStyle.
+#if DEBUG
+    public static bool UseProgressiveSpike { get; } =
+        Environment.GetEnvironmentVariable("MUSICPLAYER_LYRICS_SPIKE") == "1";
+#else
+    public static bool UseProgressiveSpike => false;
+#endif
+
+    /// <summary>Modo inmersivo: letra progresiva (solo letras sincronizadas).</summary>
+    public bool ShowProgressiveImmersive => UseProgressiveSpike && IsSynced;
+
+    /// <summary>Modo inmersivo: lista clásica (letras sin sincronizar, o estilo clásico).</summary>
+    public bool ShowClassicImmersive => IsAvailable && !ShowProgressiveImmersive;
+
+    /// <summary>Posición actual del reproductor, para el relleno fotograma a fotograma.</summary>
+    public TimeSpan CurrentPosition => player.CurrentTime;
+
+    /// <summary>Índice de la línea que suena en <paramref name="position"/>; -1 antes de la primera.</summary>
+    public int ActiveIndexAt(TimeSpan position) => _block.GetActiveLineIndex(position);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPanel))]

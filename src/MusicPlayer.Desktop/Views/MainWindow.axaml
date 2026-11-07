@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
+    xmlns:controls="using:MusicPlayer.Desktop.Controls"
     Title="Music Player"
     Width="960"
     Height="600"
@@ -1095,10 +1096,23 @@
                     </StackPanel>
                     <!--  Derecha: letras con la misma plantilla que el panel lateral  -->
                     <Panel Grid.Column="1" Margin="32,0,0,0">
+                        <!--  Spike M0 de letras progresivas (Debug, MUSICPLAYER_LYRICS_SPIKE=1)  -->
+                        <controls:ProgressiveLyricsView
+                            DimForeground="#59FFFFFF"
+                            IsVisible="{Binding Lyrics.ShowProgressiveImmersive}"
+                            Source="{Binding Lyrics}">
+                            <controls:ProgressiveLyricsView.IsRunning>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsImmersive" />
+                                    <Binding Path="IsPlaying" />
+                                    <Binding Path="Lyrics.ShowProgressiveImmersive" />
+                                </MultiBinding>
+                            </controls:ProgressiveLyricsView.IsRunning>
+                        </controls:ProgressiveLyricsView>
                         <ListBox
                             Background="Transparent"
                             Classes="lyrics"
-                            IsVisible="{Binding Lyrics.IsAvailable}"
+                            IsVisible="{Binding Lyrics.ShowClassicImmersive}"
                             ItemTemplate="{StaticResource LyricLineTemplate}"
                             ItemsSource="{Binding Lyrics.Lines}"
                             SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
