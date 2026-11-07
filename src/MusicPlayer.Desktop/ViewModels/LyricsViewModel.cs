@@ -51,6 +51,9 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     /// <summary>Índice de la línea que suena en <paramref name="position"/>; -1 antes de la primera.</summary>
     public int ActiveIndexAt(TimeSpan position) => _block.GetActiveLineIndex(position);
 
+    /// <summary>Cuánto está rellena la línea <paramref name="index"/> en <paramref name="position"/>, de 0 a 1.</summary>
+    public double FillAt(int index, TimeSpan position) => LyricsTiming.Fill(_block, index, position);
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPanel))]
     private bool _isOpen;

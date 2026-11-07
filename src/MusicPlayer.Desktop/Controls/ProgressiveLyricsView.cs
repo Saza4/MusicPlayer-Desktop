@@ -123,12 +123,7 @@ public sealed class ProgressiveLyricsView : StackPanel
             return;
         }
 
-        // Provisional: M1 lo lleva a Core (LyricsTiming) con pruebas y tope por longitud del texto.
-        var start = lines[index].Line.Timestamp;
-        var nextStart = index + 1 < lines.Count ? lines[index + 1].Line.Timestamp : start + TimeSpan.FromSeconds(5);
-        var estimated = TimeSpan.FromSeconds(Math.Clamp(lines[index].Text.Length * 0.08, 1.0, 8.0));
-        var duration = nextStart - start < estimated ? nextStart - start : estimated;
-        var fraction = duration <= TimeSpan.Zero ? 1 : Math.Clamp((position - start) / duration, 0, 1);
+        var fraction = source.FillAt(index, position);
 
 #if DEBUG
         _clock.Stats?.Record(position);

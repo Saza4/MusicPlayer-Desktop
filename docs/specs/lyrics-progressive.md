@@ -149,12 +149,27 @@ Dato clave: el `.lrc` solo da el **inicio** de cada línea, no cuándo termina c
 3. **Investigar por qué se redibuja la ventana completa** en cada fotograma. Si se puede invalidar solo la zona de la letra, el ahorro sería mayor que el de las tres mejoras juntas.
 4. Mejoras en M2/M3, en este orden: (1) degradado directo en el texto en lugar de `PushOpacityMask`; (2) parar el reloj con la línea completa y arrancarlo con la siguiente; (3) bajar a 20 fps solo si tras 1 y 2 sigue por encima del tope (a 20 fps se ve fluido).
 
+## Resultado de M1
+
+Lógica en Core, sin dependencias, con 74 pruebas nuevas (más las 2 del parser de antes): 421 en Core y 58 en Infrastructure, todas en verde. `dotnet build -c Release` solo con la CS8602 conocida.
+
+- **`LyricLine.Words`** (`IReadOnlyList<LyricWord>?`, al final del registro) y **`LyricWord(Text, Start, End)`**. Siempre `null`; las llamadas posicionales y los `with` existentes no cambian (RNF-5).
+- **`LyricBlock.GetLineEnd(index)`**: la marca de la línea siguiente; `null` para la última, para letras no sincronizadas o para un índice inválido.
+- **`LyricsTiming`**:
+  - `FillDuration`: 80 ms por carácter (sin espacios de los extremos), entre 1 y 8 s, y nunca más que el hueco hasta la siguiente línea. Cero si comparte marca con la siguiente o si es una línea vacía. La última línea usa solo la estimación.
+  - `Fill(block, index, posición)` en [0, 1] y `FillEnd`. Se calculan desde la posición: tras un salto atrás no queda nada del estado anterior (prueba propia).
+  - `GetInstrumentalGaps(block, duraciónPista?)` y `GapAt`. Hay pausa con ≥ 8 s entre el fin estimado de una línea y la siguiente, antes de la primera y después de la última (con la duración de la pista), y siempre desde una línea vacía explícita hasta la siguiente. Las pausas contiguas se unen. `InstrumentalGap.Progress` da el avance para el indicador «♪».
+  - Con las marcas y longitudes reales de `Chicago.lrc` (sin su texto), la única pausa es **02:03.46 → 02:13.00**. La entrada de 2,59 s y el final de ~3,9 s (pista de 4:05.53) no llegan al umbral.
+- **`SpringSolver`**: `Spring(rigidez, amortiguación)`, `Spring.FromResponse(response, dampingFraction)` y `Spring.Default` = el `spring()` de SwiftUI (0,55 s; 0,825; ~1 % de rebote). Euler semi-implícito con subpasos de ≤ 4 ms, estable con fotogramas de 200 ms. Una pausa de ≥ 1 s coloca directamente en el objetivo. Cambiar el objetivo a mitad del movimiento conserva la inercia, sin saltos. Trocear el mismo tiempo en fotogramas distintos cambia el resultado menos de medio píxel (con dobles el número de subpasos variaba; se cuenta en ticks).
+- **`LyricsScroll`**: `LineTops` con las alturas medidas, `TargetOffset` (ancla al 35 %; índice -1 o fuera de rango ajustado a la primera o la última línea) y `CascadeDelay`: 100 ms por línea con tope de 400 ms. Al avanzar se retrasan las líneas de debajo y al retroceder las de encima; un salto de más de una línea mueve todo a la vez.
+- El spike ya usa `LyricsTiming.Fill` mediante `LyricsViewModel.FillAt`; la estimación provisional de M0 desapareció.
+
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
 
 | # | Hito | Verificación |
 |---|------|--------------|
 | M0 | **Spike** con `Michael Jackson - Chicago.lrc`: control mínimo en el modo inmersivo, relleno por posición, reloj de fotogramas; medir CPU y suavidad (**hecho**, ver «Resultado de M0»; pendiente la prueba a mano) | Captura/vídeo y CPU con la letra visible. Decide `RequestAnimationFrame` frente a temporizador |
-| M1 | Core: `LyricsTiming` (con huecos instrumentales), `LyricBlock.GetLineEnd`, `SpringSolver`, `LyricsScroll`, `LyricLine.Words` (vacío). Pruebas del parser con el formato de `Chicago.lrc` (**hecho** solo lo del parser, ver «Resultado del análisis») | Pruebas: duraciones, empates, última línea, saltos atrás, convergencia del resorte, huecos |
+| M1 | Core: `LyricsTiming` (con huecos instrumentales), `LyricBlock.GetLineEnd`, `SpringSolver`, `LyricsScroll`, `LyricLine.Words` (vacío). Pruebas del parser con el formato de `Chicago.lrc` (**hecho**, ver «Resultado de M1») | Pruebas: duraciones, empates, última línea, saltos atrás, convergencia del resorte, huecos |
 | M2 | `FillTextBlock` con `FillX`, borde suave **con degradado en el texto (sin `PushOpacityMask`)**, texto en varios renglones y temas. Medida en **Release** e investigación del redibujo de la ventana completa | Capturas en Oscuro, Claro y Medianoche; relleno al 0, 50 y 100 %. CPU en Release frente al clásico |
 | M3 | `ProgressiveLyricsView`: desplazamiento con resorte, cascada, fundido, opacidad y escala por distancia. Reloj parado con la línea completa; 20 fps solo si aún supera el tope | Medida de CPU en Release frente al `ListBox` clásico (criterio 12) |
 | M4 | Integración en el modo inmersivo con `LyricsStyle` e interruptor temporal; panel lateral intacto | JSON antiguo → «Clásico»; pulsar línea salta; `Plain` sigue en el `ListBox` |
