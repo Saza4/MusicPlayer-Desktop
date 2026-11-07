@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Avalonia.Media.TextFormatting;
+using Avalonia.Utilities;
 
 namespace MusicPlayer.Desktop.Controls;
 
@@ -90,21 +92,50 @@ public sealed class FillTextBlock : Control
     }
 
     /// <summary>
-    /// El texto con un degradado horizontal: color pleno hasta <paramref name="from"/> y transparente desde
-    /// <paramref name="to"/>. Las coordenadas son las del control (comprobado con capturas en M2, también en el
-    /// segundo renglón). Con varias tiradas en un renglón (mezcla de alfabetos con otra fuente) no se ha probado.
+    /// El texto con un degradado horizontal en el renglón <paramref name="line"/>: color pleno hasta
+    /// <paramref name="from"/> y transparente desde <paramref name="to"/> (coordenadas del control).
     /// </summary>
-    private TextLayout EdgeLayout(double from, double to)
+    /// <remarks>
+    /// Avalonia dibuja cada tirada de texto (cada cambio de fuente, por ejemplo latín → kanji) con su propio
+    /// origen, y las coordenadas del pincel van con ella. Con un solo pincel, cada tirada empezaba el degradado
+    /// desde su borde izquierdo (M3, prueba con «Hello 世界 test»). Por eso cada tirada del renglón recibe su pincel,
+    /// desplazado por la x en que empieza. Las tiradas se recorren en orden visual, que coincide con el lógico
+    /// salvo en texto de derecha a izquierda (limitación documentada en la spec).
+    /// </remarks>
+    private TextLayout EdgeLayout(TextLine line, double from, double to)
     {
         var color = (Foreground as ISolidColorBrush)?.Color ?? Colors.White;
-        var brush = new ImmutableLinearGradientBrush(
-            [new ImmutableGradientStop(0, color), new ImmutableGradientStop(1, Color.FromArgb(0, color.R, color.G, color.B))],
-            opacity: Foreground?.Opacity ?? 1,
-            startPoint: new RelativePoint(from, 0, RelativeUnit.Absolute),
-            endPoint: new RelativePoint(to, 0, RelativeUnit.Absolute));
+        var opacity = Foreground?.Opacity ?? 1;
+        var stops = new[] { new ImmutableGradientStop(0, color), new ImmutableGradientStop(1, Color.FromArgb(0, color.R, color.G, color.B)) };
 
-        return new TextLayout(Text ?? string.Empty, _typeface, FontSize, brush,
-            textWrapping: TextWrapping.Wrap, maxWidth: _maxWidth);
+        ImmutableLinearGradientBrush Brush(double runX) => new(stops, opacity,
+            startPoint: new RelativePoint(from - runX, 0, RelativeUnit.Absolute),
+            endPoint: new RelativePoint(to - runX, 0, RelativeUnit.Absolute));
+
+        // Lo habitual es una sola tirada por renglón: entonces basta un pincel, sin tramos (más barato, M3).
+        var shapedRuns = 0;
+        foreach (var run in line.TextRuns)
+            if (run is ShapedTextRun) shapedRuns++;
+        if (shapedRuns <= 1)
+            return new TextLayout(Text ?? string.Empty, _typeface, FontSize, Brush(line.Start),
+                textWrapping: TextWrapping.Wrap, maxWidth: _maxWidth);
+
+        var overrides = new List<ValueSpan<TextRunProperties>>(shapedRuns);
+        var index = line.FirstTextSourceIndex;
+        var x = line.Start;
+        foreach (var run in line.TextRuns)
+        {
+            if (run is ShapedTextRun shaped)
+            {
+                overrides.Add(new ValueSpan<TextRunProperties>(index, shaped.Length,
+                    new GenericTextRunProperties(_typeface, FontSize, foregroundBrush: Brush(x))));
+                x += shaped.Size.Width;
+            }
+            index += run.Length;
+        }
+
+        return new TextLayout(Text ?? string.Empty, _typeface, FontSize, Brush(line.Start),
+            textWrapping: TextWrapping.Wrap, maxWidth: _maxWidth, textStyleOverrides: overrides);
     }
 
     public override void Render(DrawingContext context)
@@ -145,7 +176,7 @@ public sealed class FillTextBlock : Control
                 // PushOpacityMask abre una capa en cada fotograma (M2). TextLayout fija su pincel al crearse, así
                 // que el renglón parcial se dibuja con uno nuevo; el recorte deja fuera los demás renglones.
                 using (context.PushClip(rect))
-                    EdgeLayout(edge - soft, edge).Draw(context, default);
+                    EdgeLayout(line, edge - soft, edge).Draw(context, default);
             }
 
             before += width;

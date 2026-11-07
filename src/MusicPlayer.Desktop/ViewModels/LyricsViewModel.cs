@@ -15,6 +15,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     : ObservableObject
 {
     private LyricBlock _block = LyricBlock.Empty;
+    private TimeSpan? _trackDuration;
     private CancellationTokenSource? _cts;
     private bool _restoring;
 
@@ -58,11 +59,11 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     /// <summary>Posición actual del reproductor, para el relleno fotograma a fotograma.</summary>
     public TimeSpan CurrentPosition => player.CurrentTime;
 
-    /// <summary>Índice de la línea que suena en <paramref name="position"/>; -1 antes de la primera.</summary>
-    public int ActiveIndexAt(TimeSpan position) => _block.GetActiveLineIndex(position);
-
-    /// <summary>Cuánto está rellena la línea <paramref name="index"/> en <paramref name="position"/>, de 0 a 1.</summary>
-    public double FillAt(int index, TimeSpan position) => LyricsTiming.Fill(_block, index, position);
+    /// <summary>
+    /// Líneas y pausas instrumentales de la letra progresiva. Se reconstruye antes de cambiar <see cref="Lines"/>,
+    /// así que al recibir el cambio de <see cref="Lines"/> ya es la de la letra nueva.
+    /// </summary>
+    public LyricsTimeline Timeline { get; private set; } = LyricsTimeline.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPanel))]
@@ -128,11 +129,17 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
 
+        _trackDuration = track.Duration > TimeSpan.Zero ? track.Duration : null;
         SetBlock(LyricBlock.Empty);
 
         try
         {
             var block = await provider.GetLyricsAsync(track, cts.Token);
+#if DEBUG
+            // Pruebas de la letra progresiva con un .lrc sintético, sin letra real ni tocar la biblioteca.
+            if (Environment.GetEnvironmentVariable("MUSICPLAYER_LYRICS_OVERRIDE") is { Length: > 0 } overridePath)
+                block = new LrcLyricParser().Parse(await System.IO.File.ReadAllTextAsync(overridePath, cts.Token));
+#endif
             if (!cts.IsCancellationRequested)
                 SetBlock(block);
         }
@@ -179,6 +186,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     private void SetBlock(LyricBlock block)
     {
         _block = block;
+        Timeline = LyricsTimeline.Build(block, _trackDuration);
         Lines = new ObservableCollection<LyricLineViewModel>(
             block.Lines.Select(l => new LyricLineViewModel(l, block.Kind == LyricsKind.Synced)));
         IsSynced = block.Kind == LyricsKind.Synced;

@@ -224,6 +224,55 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 
 **Nota sobre `settings.json`:** cada sonda lo restaura idéntico al estado con que empezó. Entre M0 y M2 su `LastTrackId` pasó a Chicago fuera de las sondas, probablemente por la prueba a mano de M0 (la app guarda la última canción).
 
+## Decisiones para M3 (autor, 7 de noviembre de 2026)
+
+1. El fundido de arriba y abajo **no usa `OpacityMask`**: es opacidad por línea según su posición respecto a los bordes, con la misma función de atenuación que la opacidad por distancia.
+2. Se mantiene la regla de parar el reloj.
+3. Al terminar, medir en Release con desplazamiento y resortes. Si pasa de +5: primero desenfocar la carátula una sola vez; los 20 fps, como último recurso.
+4. Antes de M4: probar una línea sintética con alfabetos mezclados y corregir el borde del degradado o documentarlo.
+
+## Resultado de M3
+
+**Core** (46 pruebas nuevas; 469 en Core y 60 en Infrastructure, todas en verde):
+- **`LyricsTimeline`**: líneas y pausas en una sola secuencia. Las pausas deducidas (`GetInstrumentalGaps`) entran como entradas «♪», salvo las que ya son una línea vacía. Ofrece `ActiveEntryAt`, `FillAt` (las pausas se rellenan con su avance, criterio 5) y `NextStartAfter`, para despertar el reloj. Con las marcas de Chicago, la pausa de 02:03.46 entra justo tras su línea.
+- **`LyricsAppearance`**: una sola curva, `Falloff` (smoothstep de 1 a un mínimo), que da la opacidad (mínimo 0,5) y la escala (mínimo 0,95) por distancia a la activa (4 líneas hasta el mínimo, admite fracciones) y el fundido de los bordes (franja del 15 % del alto). Sin `OpacityMask` (decisión 1). El fundido se calcula con el borde de la línea más cercano al del panel, no con su centro, para que una línea no se vea cortada (primero se hizo por el centro y se vio cortada en las capturas).
+- **`GaussianBlur`**: desenfoque gaussiano separable sobre píxeles premultiplicados, con transparente fuera de la imagen, y `RadiusToSigma` con la conversión de Skia.
+
+**Desktop:**
+- **`ProgressiveLyricsView`** pasa de spike a panel con todas las entradas (`ClipToBounds`). Cada una es una pila con pronunciación, original (`FillTextBlock`) y traducción, que respetan las opciones de siempre con los tamaños escalados ×30/18 (criterio 6: solo el original se rellena; los otros renglones van brillantes en la activa y tenues en las demás).
+- **Desplazamiento:** el desplazamiento va en la transformación de cada línea, no en el diseño. Cada línea tiene su resorte (`Spring.Default`) y arranca con su retardo de cascada (`LyricsScroll.CascadeDelay`). Mientras espera, sigue hacia el objetivo anterior, para no frenar en seco. Al cambiar de tamaño, de letra o al volver al inmersivo se coloca sin animar. La activa queda al 35 % del alto.
+- **Reloj (notas para M3):** `DispatcherTimer` a 30 fps que solo corre si hay un relleno a medias con la pista sonando o un resorte en marcha. Si no, se para y se programa un despertar para la siguiente entrada (`NextStartAfter`). Al arrancar se reinicia la referencia de tiempo. Un salto o un cambio de pista llegan por `PropertyChanged` aunque el reloj esté parado.
+- **`BlurredBackdrop`**: la carátula del fondo se dibuja a 1/12, se desenfoca una vez en Core con el radio equivalente a `blur(60)` y se muestra ampliada. Solo se regenera al cambiar la carátula o el tamaño. Frente al `blur(60)` de antes, la diferencia en zonas de fondo es de 0,4-1,2/255 de media (máxima 15).
+- **`FillTextBlock`**: un pincel de degradado **por tirada** de texto (ver «Alfabetos mezclados»), con vía rápida de un solo pincel cuando el renglón tiene una sola tirada.
+- **`ProgressiveLyricsMetrics`**: todas las medidas y tiempos de la vista en un solo archivo.
+- Solo en Debug: `MUSICPLAYER_LYRICS_OVERRIDE=<ruta .lrc>` carga un `.lrc` sintético en lugar de la letra de la pista, para pruebas sin letra real y sin tocar la biblioteca.
+
+**Aspecto** (ráfagas en el inmersivo con Chicago): antes de empezar, la primera línea espera tenue en el ancla. Al cambiar de línea, la anterior sube, la nueva llega al ancla y las de debajo llegan con retraso (cascada). En reposo, la activa se rellena y las lejanas se atenúan hacia los bordes.
+
+**Alfabetos mezclados** (`.lrc` sintético con «Hello 世界 test, 你好 world, mixed 文字 here», «こんにちは and English 日本語 together», una línea solo latina y «مرحبا world right to left»):
+- **Fallaba:** Avalonia dibuja cada tirada de texto (cada cambio de fuente) con su propio origen, y las coordenadas del pincel van con ella, así que solo la primera tirada tenía el borde en su sitio. Las demás se veían brillantes a trozos («文字 here» brillante con «mixed» aún tenue).
+- **Corregido:** el degradado del renglón parcial va en `textStyleOverrides`, un pincel por tirada desplazado por la x en que empieza (`TextLine.TextRuns`, orden visual). Tras la corrección, el relleno es continuo: «Hello 世界 te|st», «こん|にちは», «こんにちは a|nd».
+- **Limitación (texto de derecha a izquierda):** el relleno barre siempre de izquierda a derecha, también sobre una palabra en árabe o hebreo. No hay tramos sueltos, pero en ese tramo el relleno va al revés de la lectura. Con mezcla de tramos LTR y RTL, el orden lógico de las tiradas podría no coincidir con el visual (no probado).
+
+**CPU en Release** (método de M0 y M2; `settings.json` restaurado idéntico en cada ejecución; 10 s con tres cambios de línea y sus desplazamientos):
+
+| Sesión | Clásico | Progresivo | Diferencia |
+|---|---|---|---|
+| Antes del fondo nuevo, 1.ª | 8,5 | 13,2 | +4,7 |
+| Antes del fondo nuevo, 2.ª | 8,1 | 15,2 | +7,1 |
+| A/B pincel por tirada (siempre / vía rápida) | 8,9 | 14,2 / 14,1 | +5,3 / +5,2 (sin diferencia) |
+| Fondo nuevo frente a `blur(60)`, 6 pasadas | 8,2 | 13,4 (con una atípica de 20,3) / `blur(60)`: 14,3 | +5,2 / +6,1 |
+| Fondo nuevo, 8 pasadas | 7,1 | 12,0 | +4,9 |
+| **Fondo nuevo, las 14 pasadas juntas** | **7,6** | **12,6** | **+5,0** |
+| En pausa (fondo nuevo) | — | 3,1 | reloj parado |
+
+- El ruido entre sesiones es de ±1,5 puntos; por eso las comparaciones se hacen dentro de la misma sesión.
+- El pincel por tirada no cuesta: la vía rápida se queda porque es más simple para el caso habitual.
+- Desenfocar la carátula una vez ahorra 1-2 puntos (+6,1 → +5,2 en la misma sesión).
+- **Criterio 12: justo en el tope (+5,0).** Queda el último recurso, los 20 fps; lo decide el autor.
+
+**Decisión tras M3 (autor):** no se aplican los 20 fps. Se está en el tope, no por encima; el ahorro esperado (~0,7 puntos) queda dentro del ruido, y la comprobación a mano de 20 fps fue solo del relleno, no del resorte. Los fps quedan como constante (`ProgressiveLyricsMetrics.FramesPerSecond`) y el autor los revisa a mano en M5.
+
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
 
 | # | Hito | Verificación |
@@ -231,8 +280,8 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 | M0 | **Spike** con `Michael Jackson - Chicago.lrc`: control mínimo en el modo inmersivo, relleno por posición, reloj de fotogramas; medir CPU y suavidad (**hecho**, ver «Resultado de M0»; pendiente la prueba a mano) | Captura/vídeo y CPU con la letra visible. Decide `RequestAnimationFrame` frente a temporizador |
 | M1 | Core: `LyricsTiming` (con huecos instrumentales), `LyricBlock.GetLineEnd`, `SpringSolver`, `LyricsScroll`, `LyricLine.Words` (vacío). Pruebas del parser con el formato de `Chicago.lrc` (**hecho**, ver «Resultado de M1») | Pruebas: duraciones, empates, última línea, saltos atrás, convergencia del resorte, huecos |
 | M2 | `FillTextBlock` con `FillX`, borde suave **con degradado en el texto (sin `PushOpacityMask`)**, texto en varios renglones y temas. Medida en **Release** e investigación del redibujo de la ventana completa (**hecho**, ver «Resultado de M2») | Capturas en Oscuro, Claro y Medianoche; relleno al 0, 50 y 100 %. CPU en Release frente al clásico |
-| M3 | `ProgressiveLyricsView`: desplazamiento con resorte, cascada, fundido, opacidad y escala por distancia. Reloj parado con la línea completa; 20 fps solo si aún supera el tope (ver «Notas para M3») | Medida de CPU en Release frente al `ListBox` clásico (criterio 12) |
-| M4 | Integración en el modo inmersivo; panel lateral intacto. (El ajuste `LyricsStyle` y su interruptor se adelantaron a M2, ver «Ajuste `LyricsStyle` adelantado».) | Pulsar línea salta; `Plain` sigue en el `ListBox` |
+| M3 | `ProgressiveLyricsView`: desplazamiento con resorte, cascada, fundido, opacidad y escala por distancia. Reloj parado con la línea completa; 20 fps solo si aún supera el tope (ver «Notas para M3») (**hecho**, ver «Resultado de M3»; 20 fps descartados, se revisan a mano en M5) | Medida de CPU en Release frente al `ListBox` clásico (criterio 12) |
+| M4 | Integración en el modo inmersivo; panel lateral intacto. (El ajuste `LyricsStyle` y su interruptor se adelantaron a M2, ver «Ajuste `LyricsStyle` adelantado».) Pulsar una línea salta a su marca. **Criterio 8:** la rueda del ratón o un gesto pausa el auto-desplazamiento unos segundos y luego retoma. **Revisión del fondo:** el desenfoque de la carátula se calcula fuera del hilo de la interfaz, sobre una versión reducida, y se actualiza al cambiar de pista o al editar la carátula | Pulsar línea salta; `Plain` sigue en el `ListBox`; rueda → desplazamiento manual y vuelta al ancla; fondo sin trabajo en el hilo de la interfaz y actualizado tras editar la carátula |
 | M5 | «Reducir movimiento» y revisión a mano | A mano (autor): sensación frente al vídeo de referencia |
 | M6 | Tras la aprobación: retirar el estilo clásico **solo del modo inmersivo** y el ajuste `LyricsStyle`. Docs (`README`, `reporte-reproductor.md`, esta spec) y `CLAUDE.md` | `dotnet build -c Release` sin warnings nuevos y pruebas en verde; CI en Windows y Ubuntu |
 

@@ -940,12 +940,12 @@
         <!--  Modo inmersivo  -->
         <ThemeVariantScope RequestedThemeVariant="Dark">
             <Grid Background="#FF101010" IsVisible="{Binding IsImmersive}">
-                <!--  Fondo: la portada ampliada y desenfocada  -->
-                <Image
-                    Effect="blur(60)"
+                <!--  Fondo: la portada ampliada y desenfocada, una sola vez (no un Effect que se recalcula en cada fotograma)  -->
+                <controls:BlurredBackdrop
+                    BlurRadius="60"
                     Opacity="0.9"
-                    Source="{Binding NowPlayingCover}"
-                    Stretch="UniformToFill" />
+                    RenderOptions.BitmapInterpolationMode="HighQuality"
+                    Source="{Binding NowPlayingCover}" />
                 <!--  Velo en degradado para que el texto siempre se lea  -->
                 <Border>
                     <Border.Background>
@@ -1109,15 +1109,15 @@
                         <!--  Letra progresiva (ajuste LyricsStyle)  -->
                         <controls:ProgressiveLyricsView
                             DimForeground="#59FFFFFF"
+                            IsPlaying="{Binding IsPlaying}"
                             IsVisible="{Binding Lyrics.ShowProgressiveImmersive}"
                             Source="{Binding Lyrics}">
-                            <controls:ProgressiveLyricsView.IsRunning>
+                            <controls:ProgressiveLyricsView.IsShown>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="IsImmersive" />
-                                    <Binding Path="IsPlaying" />
                                     <Binding Path="Lyrics.ShowProgressiveImmersive" />
                                 </MultiBinding>
-                            </controls:ProgressiveLyricsView.IsRunning>
+                            </controls:ProgressiveLyricsView.IsShown>
                         </controls:ProgressiveLyricsView>
                         <ListBox
                             Background="Transparent"
