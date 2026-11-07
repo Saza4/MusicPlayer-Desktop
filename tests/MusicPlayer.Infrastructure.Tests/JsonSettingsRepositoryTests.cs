@@ -53,6 +53,44 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.Null(loaded.LastTrackId);
         Assert.Equal("dark", loaded.ThemeId); // un settings.json anterior a los temas sigue en Oscuro
         Assert.True(loaded.ShowIsland);       // y uno anterior a la isla la recibe activada
+        Assert.Equal(LyricsStyle.Classic, loaded.LyricsStyle);
+    }
+
+    [Fact]
+    public async Task Load_SettingsFromV130_KeepClassicLyrics()
+    {
+        // settings.json tal como lo escribe la v1.3.0: completo, pero anterior a LyricsStyle.
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        await File.WriteAllTextAsync(FilePath, """
+            {
+              "Volume": 1,
+              "ShowTranslation": false,
+              "ShowPronunciation": false,
+              "HideOriginal": false,
+              "EmphasizePronunciation": false,
+              "LastTrackId": "7cc26186-a955-49fa-8e61-d524233eeee9",
+              "Shuffle": true,
+              "Repeat": 0,
+              "ThemeId": "negro-puro",
+              "ShowIsland": true
+            }
+            """);
+
+        var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
+
+        Assert.Equal(LyricsStyle.Classic, loaded.LyricsStyle);
+        Assert.Equal("negro-puro", loaded.ThemeId); // y lo demás se conserva
+        Assert.True(loaded.Shuffle);
+    }
+
+    [Fact]
+    public async Task SaveThenLoad_KeepsTheLyricsStyle()
+    {
+        await new JsonSettingsRepository(FilePath).SaveAsync(AppSettings.Default with { LyricsStyle = LyricsStyle.Progressive });
+
+        var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
+
+        Assert.Equal(LyricsStyle.Progressive, loaded.LyricsStyle);
     }
 
     [Fact]

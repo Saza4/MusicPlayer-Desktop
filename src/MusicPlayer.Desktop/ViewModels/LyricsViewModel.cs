@@ -30,17 +30,27 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     [NotifyPropertyChangedFor(nameof(ShowPanel), nameof(ShowClassicImmersive))]
     private bool _isAvailable;
 
-    // Spike M0 de letras progresivas (docs/specs/lyrics-progressive.md). Solo en Debug y con
-    // MUSICPLAYER_LYRICS_SPIKE=1; en M4 lo sustituye el ajuste LyricsStyle.
-#if DEBUG
-    public static bool UseProgressiveSpike { get; } =
-        Environment.GetEnvironmentVariable("MUSICPLAYER_LYRICS_SPIKE") == "1";
-#else
-    public static bool UseProgressiveSpike => false;
-#endif
+    // Estilo de la letra en el modo inmersivo (docs/specs/lyrics-progressive.md, criterio 10). Ajuste temporal:
+    // se retira, con el estilo clásico del inmersivo, cuando el autor apruebe el progresivo.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProgressiveStyle), nameof(ShowProgressiveImmersive), nameof(ShowClassicImmersive))]
+    private LyricsStyle _style = LyricsStyle.Classic;
+
+    /// <summary>Para el interruptor del modo inmersivo.</summary>
+    public bool IsProgressiveStyle
+    {
+        get => Style == LyricsStyle.Progressive;
+        set => Style = value ? LyricsStyle.Progressive : LyricsStyle.Classic;
+    }
+
+    partial void OnStyleChanged(LyricsStyle value)
+    {
+        if (!_restoring)
+            settings.Update(s => s with { LyricsStyle = value });
+    }
 
     /// <summary>Modo inmersivo: letra progresiva (solo letras sincronizadas).</summary>
-    public bool ShowProgressiveImmersive => UseProgressiveSpike && IsSynced;
+    public bool ShowProgressiveImmersive => Style == LyricsStyle.Progressive && IsSynced;
 
     /// <summary>Modo inmersivo: lista clásica (letras sin sincronizar, o estilo clásico).</summary>
     public bool ShowClassicImmersive => IsAvailable && !ShowProgressiveImmersive;
@@ -105,6 +115,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
             ShowPronunciation = saved.ShowPronunciation;
             HideOriginal = saved.HideOriginal;
             EmphasizePronunciation = saved.EmphasizePronunciation;
+            Style = saved.LyricsStyle;
         }
         finally
         {

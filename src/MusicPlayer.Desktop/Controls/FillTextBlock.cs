@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Media.TextFormatting;
 
 namespace MusicPlayer.Desktop.Controls;
@@ -45,6 +46,8 @@ public sealed class FillTextBlock : Control
 
     private TextLayout? _dim;
     private TextLayout? _bright;
+    private Typeface _typeface;
+    private double _maxWidth = double.PositiveInfinity;
 
     static FillTextBlock()
     {
@@ -81,7 +84,27 @@ public sealed class FillTextBlock : Control
             length += line.Width;
         FillLength = length;
 
+        _typeface = typeface;
+        _maxWidth = maxWidth;
         return new Size(_dim.WidthIncludingTrailingWhitespace, _dim.Height);
+    }
+
+    /// <summary>
+    /// El texto con un degradado horizontal: color pleno hasta <paramref name="from"/> y transparente desde
+    /// <paramref name="to"/>. Las coordenadas son las del control (comprobado con capturas en M2, también en el
+    /// segundo renglón). Con varias tiradas en un renglón (mezcla de alfabetos con otra fuente) no se ha probado.
+    /// </summary>
+    private TextLayout EdgeLayout(double from, double to)
+    {
+        var color = (Foreground as ISolidColorBrush)?.Color ?? Colors.White;
+        var brush = new ImmutableLinearGradientBrush(
+            [new ImmutableGradientStop(0, color), new ImmutableGradientStop(1, Color.FromArgb(0, color.R, color.G, color.B))],
+            opacity: Foreground?.Opacity ?? 1,
+            startPoint: new RelativePoint(from, 0, RelativeUnit.Absolute),
+            endPoint: new RelativePoint(to, 0, RelativeUnit.Absolute));
+
+        return new TextLayout(Text ?? string.Empty, _typeface, FontSize, brush,
+            textWrapping: TextWrapping.Wrap, maxWidth: _maxWidth);
     }
 
     public override void Render(DrawingContext context)
@@ -108,28 +131,21 @@ public sealed class FillTextBlock : Control
 
             if (fill - before >= width)
             {
-                // Renglón completo: sin máscara.
+                // Renglón completo: color pleno.
                 using (context.PushClip(rect))
                     _bright.Draw(context, default);
             }
             else
             {
                 // El borde recorre width + soft para que, al llegar al final, el degradado ya haya salido del texto
-                // y no haya un salto al pasar de «con máscara» a «sin máscara».
+                // y no haya un salto al pasar de «parcial» a «completo».
                 var edge = x0 + (width <= 0 ? 0 : advanced / width * (width + soft));
-                var mask = new LinearGradientBrush
-                {
-                    StartPoint = new RelativePoint(edge - soft, 0, RelativeUnit.Absolute),
-                    EndPoint = new RelativePoint(edge, 0, RelativeUnit.Absolute),
-                    GradientStops =
-                    {
-                        new GradientStop(Colors.Black, 0),
-                        new GradientStop(Colors.Transparent, 1),
-                    },
-                };
-                using (context.PushClip(rect.WithWidth(Math.Max(0, edge - x0))))
-                using (context.PushOpacityMask(mask, rect))
-                    _bright.Draw(context, default);
+
+                // El degradado va en el propio texto (de brillante a transparente), no en una máscara de opacidad:
+                // PushOpacityMask abre una capa en cada fotograma (M2). TextLayout fija su pincel al crearse, así
+                // que el renglón parcial se dibuja con uno nuevo; el recorte deja fuera los demás renglones.
+                using (context.PushClip(rect))
+                    EdgeLayout(edge - soft, edge).Draw(context, default);
             }
 
             before += width;

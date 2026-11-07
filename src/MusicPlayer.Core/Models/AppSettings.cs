@@ -10,7 +10,8 @@ public sealed record AppSettings(
     bool Shuffle = false,
     RepeatMode Repeat = RepeatMode.Off,
     string ThemeId = "dark",
-    bool ShowIsland = true) // al final: los settings.json anteriores la reciben activada
+    bool ShowIsland = true, // al final: los settings.json anteriores la reciben activada
+    LyricsStyle LyricsStyle = LyricsStyle.Classic) // al final: los settings.json anteriores siguen en Clásico
 {
     public static AppSettings Default { get; } = new();
 }

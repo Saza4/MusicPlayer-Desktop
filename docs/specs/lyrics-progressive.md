@@ -133,7 +133,7 @@ Dato clave: el `.lrc` solo da el **inicio** de cada línea, no cuándo termina c
 
 - **Fluidez de la posición:** el 100 % de los fotogramas trae una posición nueva, y el desvío medio frente al reloj de pared es de 0,0 ms (máximo 2,7 ms). El paso máximo entre fotogramas es de ~55 ms a 24 fps y de ~35 ms a 120 fps.
 - **Relleno:** una ráfaga de 14 capturas cada 250 ms sobre la primera línea («Ah, I met her on my way to Chicago») muestra el avance de izquierda a derecha con el borde suave, y «♪» con la siguiente línea antes de que empiece.
-- **De dónde sale el coste:** casi todo es redibujar la ventana a pantalla completa en cada fotograma (≈ +4 aunque solo se pinte el texto tenue). La máscara del borde suave suma ~2-3 puntos y el fondo desenfocado, ~2-3. El reloj en sí no cuesta. El coste crece con los fps, y por eso `RequestAnimationFrame` (sigue los ~120 Hz de la pantalla) se descarta.
+- **De dónde sale el coste** (*corregido en M2: la ventana no se redibuja entera; ver «Resultado de M2»*): casi todo es redibujar la ventana a pantalla completa en cada fotograma (≈ +4 aunque solo se pinte el texto tenue). La máscara del borde suave suma ~2-3 puntos y el fondo desenfocado, ~2-3. El reloj en sí no cuesta. El coste crece con los fps, y por eso `RequestAnimationFrame` (sigue los ~120 Hz de la pantalla) se descarta.
 - **Pausa y clásico:** con el reloj parado no hay fotogramas extra (0,3 «fps» en las estadísticas: solo los cambios de línea por `PropertyChanged`).
 - **Criterio 12 (≤ +5):** **no se cumple todavía** (+7,5). Medidas para M2 y M3, por orden de esperado ahorro:
   1. Parar el reloj cuando la línea activa está completa y programar el siguiente arranque para la marca de la línea siguiente. Ahorra en proporción al tiempo con la línea completa: poco en `Chicago.lrc` (líneas seguidas), mucho en canciones con pausas.
@@ -164,15 +164,75 @@ Lógica en Core, sin dependencias, con 74 pruebas nuevas (más las 2 del parser 
 - **`LyricsScroll`**: `LineTops` con las alturas medidas, `TargetOffset` (ancla al 35 %; índice -1 o fuera de rango ajustado a la primera o la última línea) y `CascadeDelay`: 100 ms por línea con tope de 400 ms. Al avanzar se retrasan las líneas de debajo y al retroceder las de encima; un salto de más de una línea mueve todo a la vez.
 - El spike ya usa `LyricsTiming.Fill` mediante `LyricsViewModel.FillAt`; la estimación provisional de M0 desapareció.
 
+## Ajuste `LyricsStyle` adelantado (inicio de M2)
+
+Se adelantó de M4 **solo el ajuste** para poder medir en Release (decisión del autor). El resto de M4 sigue en M4.
+
+- `Core/Models/LyricsStyle.cs` (`Classic`, `Progressive`) y `AppSettings.LyricsStyle`, **al final** y por defecto `Classic`.
+- `LyricsViewModel.Style` (restaurado en `Restore` y guardado al cambiar) e `IsProgressiveStyle` para el interruptor. `ShowProgressiveImmersive` = estilo progresivo y letra sincronizada.
+- Interruptor: `ToggleButton` «Letra progresiva», arriba a la derecha del modo inmersivo, visible solo con letra sincronizada. Con el foco en él, la barra espaciadora sigue siendo reproducir/pausa (el atajo global solo cede a los `CheckBox`).
+- Se quitó `UseProgressiveSpike` y la variable `MUSICPLAYER_LYRICS_SPIKE`. Quedan, solo en Debug, `MUSICPLAYER_LYRICS_CLOCK` y `MUSICPLAYER_LYRICS_STATS`.
+- Pruebas (Infrastructure): JSON parcial → `Classic`; el `settings.json` completo de la v1.3.0 (sin la clave) → `Classic` y el resto se conserva; ida y vuelta con `Progressive`.
+
+## Notas para M3
+
+- **Reiniciar la referencia de tiempo del resorte al reiniciar el reloj.** Si no, el primer fotograma tras una pausa ve un intervalo de 1 s o más y `SpringSolver.Step` coloca directamente en el objetivo, sin animar.
+- **El reloj solo se para cuando el relleno está completo y todos los resortes están en reposo** (`SpringSolver.IsSettled`), no solo cuando termina la línea.
+
+## Resultado de M2
+
+Sonda como en M0 (Windows 11, 1920×1080 a ~120 Hz, volumen 0, aleatorio e isla apagados, modo inmersivo con Chicago; `settings.json` copiado y restaurado idéntico por hash en cada ejecución; `library.json` sin cambios). El estilo se elige con `LyricsStyle` en `settings.json`, así que ya se mide en Release. CPU en % de un núcleo, 10 s tras 3 s de estabilización.
+
+**1. Release frente a Debug** (misma sesión, 3 pasadas, todavía con la máscara):
+
+| | Clásico | Progresivo | Diferencia |
+|---|---|---|---|
+| Release | 10,7 | 16,1 | **+5,4** |
+| Debug | 8,8 | 15,5 | +6,7 |
+
+En Release seguía por encima del tope, así que había que recortar.
+
+**2. ¿Se redibuja la ventana entera? No.** Con `MUSICPLAYER_RENDER_OVERLAY=DirtyRects` (nuevo, solo Debug), la zona sucia de cada fotograma es **solo el rectángulo de la línea que se rellena**. La conclusión de M0 («redibujar la ventana a pantalla completa») era una deducción y estaba mal. Lo que pesa es un coste fijo por fotograma: el overlay `RenderTimeGraph` daba ~3,25 ms de render de media. Dentro del rectángulo sucio se vuelve a componer todo lo que hay debajo, y eso se midió por separado:
+
+| Experimento (Debug, 3-4 pasadas) | Clásico | Progresivo |
+|---|---|---|
+| Normal | 8,0 / 8,6 | 15,4 / 15,1 |
+| Ventana principal oculta bajo el inmersivo | 7,5 | 15,3 (sin efecto) |
+| Sin el fondo `blur(60)` | 7,9 | 12,8 (≈ −2) |
+
+- Ocultar la ventana principal, que el inmersivo tapa pero sigue en el árbol, no ahorra nada. Sí explica una franja que se repinta cada 250 ms abajo (la barra de progreso tapada), en los dos estilos.
+- El fondo desenfocado cuesta ~2 puntos con el relleno en marcha: se recompone bajo la línea en cada fotograma. Si algún día hiciera falta, se podría desenfocar la carátula una vez en un mapa de bits y pintarla sin `Effect`. No hace falta (ver 3).
+- Invalidar solo la zona de la letra ya es lo que ocurre, así que ese ahorro no existe.
+
+**3. Degradado en el texto en lugar de `PushOpacityMask`** (mejora 1). El renglón a medio rellenar se dibuja con un `TextLayout` cuyo pincel es un `ImmutableLinearGradientBrush` (color pleno → transparente en `SoftEdge` DIPs), recortado a su renglón con `PushClip`, que no abre capa. Release, misma sesión, 6 pasadas (la versión con máscara es una copia del Release anterior):
+
+| Release | Pasadas | Media | Frente al clásico |
+|---|---|---|---|
+| Clásico | 10,3 / 9,4 / 9,5 / 8,3 / 8,7 / 9,2 | 9,2 | — |
+| Con máscara | 13,6 / 16,5 / 15,9 / 14,0 / 15,6 / 14,4 | 15,0 | +5,8 |
+| **Con degradado** | 13,7 / 11,2 / 12,8 / 13,4 / 11,9 / 14,7 | **13,0** | **+3,8** |
+
+En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 (una atípica). **Criterio 12 (≤ +5) cumplido en Release.** Según la decisión 2 tras M0, no se recorta más: la mejora 3 (20 fps) no se aplica. La mejora 2 (parar el reloj) queda en M3 con las condiciones de «Notas para M3», porque M3 necesita esa regla de todos modos para los resortes.
+
+**4. Aspecto.** Ráfagas de capturas en Release:
+- Primera línea (un renglón): igual que con la máscara. El borde suave cae donde corresponde: las coordenadas del degradado son las del control.
+- Línea de 77 caracteres de las 3:15.04 (dos renglones), alcanzada moviendo el `Slider` del inmersivo por UI Automation: el primer renglón se rellena y el relleno continúa en el segundo («Heav|en just for me)»), con el borde suave en su sitio.
+- Temas Negro puro, Claro y Medianoche: idénticos. El modo inmersivo fuerza la variante oscura, así que el texto es blanco y el tenue gris con cualquier tema (la spec pedía Oscuro; se usó Negro puro, el tema del autor, que también es oscuro).
+- No probado: un renglón con varias tiradas de texto (mezcla de alfabetos con otra fuente). Ahí el degradado podría no ir en coordenadas del control.
+
+**5. Limpieza.** Se quitaron los experimentos («ventana principal oculta», «sin fondo»). Quedan solo en Debug `MUSICPLAYER_RENDER_OVERLAY`, `MUSICPLAYER_LYRICS_CLOCK` y `MUSICPLAYER_LYRICS_STATS`.
+
+**Nota sobre `settings.json`:** cada sonda lo restaura idéntico al estado con que empezó. Entre M0 y M2 su `LastTrackId` pasó a Chicago fuera de las sondas, probablemente por la prueba a mano de M0 (la app guarda la última canción).
+
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
 
 | # | Hito | Verificación |
 |---|------|--------------|
 | M0 | **Spike** con `Michael Jackson - Chicago.lrc`: control mínimo en el modo inmersivo, relleno por posición, reloj de fotogramas; medir CPU y suavidad (**hecho**, ver «Resultado de M0»; pendiente la prueba a mano) | Captura/vídeo y CPU con la letra visible. Decide `RequestAnimationFrame` frente a temporizador |
 | M1 | Core: `LyricsTiming` (con huecos instrumentales), `LyricBlock.GetLineEnd`, `SpringSolver`, `LyricsScroll`, `LyricLine.Words` (vacío). Pruebas del parser con el formato de `Chicago.lrc` (**hecho**, ver «Resultado de M1») | Pruebas: duraciones, empates, última línea, saltos atrás, convergencia del resorte, huecos |
-| M2 | `FillTextBlock` con `FillX`, borde suave **con degradado en el texto (sin `PushOpacityMask`)**, texto en varios renglones y temas. Medida en **Release** e investigación del redibujo de la ventana completa | Capturas en Oscuro, Claro y Medianoche; relleno al 0, 50 y 100 %. CPU en Release frente al clásico |
-| M3 | `ProgressiveLyricsView`: desplazamiento con resorte, cascada, fundido, opacidad y escala por distancia. Reloj parado con la línea completa; 20 fps solo si aún supera el tope | Medida de CPU en Release frente al `ListBox` clásico (criterio 12) |
-| M4 | Integración en el modo inmersivo con `LyricsStyle` e interruptor temporal; panel lateral intacto | JSON antiguo → «Clásico»; pulsar línea salta; `Plain` sigue en el `ListBox` |
+| M2 | `FillTextBlock` con `FillX`, borde suave **con degradado en el texto (sin `PushOpacityMask`)**, texto en varios renglones y temas. Medida en **Release** e investigación del redibujo de la ventana completa (**hecho**, ver «Resultado de M2») | Capturas en Oscuro, Claro y Medianoche; relleno al 0, 50 y 100 %. CPU en Release frente al clásico |
+| M3 | `ProgressiveLyricsView`: desplazamiento con resorte, cascada, fundido, opacidad y escala por distancia. Reloj parado con la línea completa; 20 fps solo si aún supera el tope (ver «Notas para M3») | Medida de CPU en Release frente al `ListBox` clásico (criterio 12) |
+| M4 | Integración en el modo inmersivo; panel lateral intacto. (El ajuste `LyricsStyle` y su interruptor se adelantaron a M2, ver «Ajuste `LyricsStyle` adelantado».) | Pulsar línea salta; `Plain` sigue en el `ListBox` |
 | M5 | «Reducir movimiento» y revisión a mano | A mano (autor): sensación frente al vídeo de referencia |
 | M6 | Tras la aprobación: retirar el estilo clásico **solo del modo inmersivo** y el ajuste `LyricsStyle`. Docs (`README`, `reporte-reproductor.md`, esta spec) y `CLAUDE.md` | `dotnet build -c Release` sin warnings nuevos y pruebas en verde; CI en Windows y Ubuntu |
 
@@ -206,8 +266,9 @@ Pruebas añadidas en `LrcLyricParserTests`: cabecera mixta (`[id: x]` sin `\r` y
 Prueba a mano del spike (Debug):
 
 ```powershell
-$env:MUSICPLAYER_LYRICS_SPIKE = '1'; dotnet run --project src/MusicPlayer.Desktop
-# Comparar fluidez: $env:MUSICPLAYER_LYRICS_CLOCK = '20' | '60' | 'raf'
+dotnet run --project src/MusicPlayer.Desktop
+# Modo inmersivo → interruptor «Letra progresiva». Solo Debug, para comparar fluidez:
+# $env:MUSICPLAYER_LYRICS_CLOCK = '20' | '60' | 'raf'
 ```
 
 - Automática: `dotnet build -c Release` y `dotnet test -c Release` (403 actuales más las nuevas).
