@@ -1,6 +1,6 @@
 # Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
 
-Estado: **aprobada (7 de noviembre de 2026), en curso: M0 a M5 hechos; falta M6**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+Estado: **aprobada (7 de noviembre de 2026), terminada: M0 a M6 hechos**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
 
 ## Contexto
 
@@ -168,7 +168,7 @@ Así, ningún nombre que hoy se muestra deja de mostrarse. Una prueba lo fija pa
 | M3 | (**hecho**, ver «Resultado de M3») Infrastructure (lectura): lector de capas incrustadas y prioridad por capa en `CompanionLyricsProvider` (hermano > incrustado; la traducción se elige por idioma entre hermanas e incrustadas juntas). La lectura de hermanos con elección por idioma ya estaba hecha (ajustes tras M1, antes de M2). | Pruebas en MP3, FLAC y M4A: solo incrustado, solo hermano, ambos, varias traducciones. Además (pedido por el autor): poner y quitar la carátula, y aplicarla a todo un álbum (`CoverEditor.SetManyAsync`), conservan las capas en los tres formatos |
 | M4 | (**hecho**, ver «Resultado de M4» y «Prueba a mano de M4») Desktop A: `EmbedLyricsViewModel` busca los hermanos (junto al audio o al elegido), aviso en la línea de estado. | A mano (autor), **en tres copias** (MP3, FLAC y M4A), no en archivos reales: la escritura no se puede deshacer. Incrustar y abrir cada copia sin los hermanos |
 | M5 | (**hecho**, ver «Resultado de M5» y «Prueba a mano de 12b») Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
-| M6 | Docs en commit aparte: README (limitación, y qué pasa con las capas al «Convertir formato» con ffmpeg: lo comprueba el autor a mano una vez), `reporte-reproductor.md`, spec, CLAUDE.md (número de pruebas). Push, PR y CI verde en Windows y Ubuntu. | CI |
+| M6 | (**hecho**, ver «Resultado de M6») Docs en commit aparte: README (limitación, y qué pasa con las capas al «Convertir formato» con ffmpeg: lo comprueba el autor a mano una vez), `reporte-reproductor.md`, spec, CLAUDE.md (número de pruebas). Push, PR y CI verde en Windows y Ubuntu. | CI |
 
 ## Resultado del spike (M0)
 
@@ -295,3 +295,19 @@ En copias sintéticas (tono de 60 s y letra inventada, con `.lrc`, `.es.lrc` y `
 - **Con los `.lrc` movidos a otra carpeta:** la letra, la traducción y la pronunciación siguen saliendo, ahora desde el archivo: **ok** (autor).
 - **Copia de solo lectura:** el archivo quedó idéntico (mismo tamaño y fecha, sin campos).
 - **Sin `.lrc` principal:** no hay letra que mostrar, así que el botón de capas no aparece (criterio 12). La opción «(falta el .lrc)» se ve con una canción ya incrustada y sin `.lrc` al lado.
+
+## Resultado de M6
+
+- **Documentación:** README (funciones, número de pruebas y limitaciones: la de «no se incrustan las traducciones ni la pronunciación» ya no vale), `reporte-reproductor.md` (novedad 15, sección 4.3.5, mapa por capas, pruebas y limitaciones) y CLAUDE.md (612 pruebas en Core y 159 en Infrastructure).
+- **«Convertir formato» con ffmpeg** (lo comprobó Claude el 8 de noviembre de 2026 en lugar del autor, con los argumentos de `FfmpegAudioConverter.BuildArguments` y las copias incrustadas de la prueba de 12b, leyendo el resultado con TagLib):
+
+  | Origen → destino | Letra principal | Traducción y pronunciación |
+  |---|---|---|
+  | MP3 → MP3 | se pierde (queda en un TXXX `lyrics-spa`) | se conservan |
+  | MP3 → FLAC | se pierde | se conservan |
+  | MP3 → M4A | se pierde | se pierden |
+  | M4A → MP3 | se pierde (queda en un TXXX `USLT`) | se conservan |
+  | M4A → FLAC | se conserva | se conservan |
+  | M4A → M4A | se conserva | se pierden |
+
+  Desde FLAC no se probó (la copia ya no estaba). La pérdida de la principal es anterior a esta función. Sin la principal, las capas no se ven. Queda como limitación en el README y el reporte; conservar la letra al convertir (copiarla con TagLib después de ffmpeg) sería otra tarea.

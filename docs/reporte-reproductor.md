@@ -107,6 +107,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | v1.3.0 |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
 | 14  | Letra progresiva en el modo inmersivo (estilo Apple Music) | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | Sin release (rama `feature/letras-progresivas`) |
+| 15  | Capas de letra: traducción y pronunciación incrustadas, y menú de capas en el inmersivo | Core, Infrastructure, Desktop | Hecho: pruebas en MP3, FLAC y M4A, comprobado en la app por UI Automation y probado a mano por el autor en copias | Sin release (rama `feature/capas-letra`, PR #5) |
 
 ### 4.2 Novedades de la serie v1.1.0
 
@@ -231,6 +232,17 @@ Especificación, decisiones y medidas de cada hito (M0-M6): `docs/specs/lyrics-p
 - **Ajustes:** ninguno. El interruptor temporal Clásico/Progresivo y su ajuste `LyricsStyle` se retiraron al aprobarse el estilo (último commit con ellos: `cb75cf6`). Un `settings.json` que aún los tenga carga igual.
 - **Verificación:** sondas en Windows (CPU por pasadas, ráfagas de capturas, rueda enviada como mensaje, `settings.json` restaurado idéntico por hash) y prueba a mano del autor: relleno, saltos cortos y largos, rueda, pulsar una línea, cambio de pista a mitad de línea, redimensionar, traducción y pronunciación, y el fondo tras editar la carátula. Sin probar: arrastre en pantalla táctil y Linux.
 
+### 4.3.5 Capas de letra (sin release)
+
+Especificación, decisiones y resultado de cada hito (M0-M6): `docs/specs/lyrics-layers.md`.
+
+- **Qué es:** «Incrustar letra (.lrc)…» guarda también la traducción (`cancion.<idioma>.lrc`) y la pronunciación (`cancion.rom.lrc`) en el archivo de audio, en la misma escritura atómica que la principal. Al leer, cada capa sale del hermano o, si no está, del archivo. Se puede incrustar desde el clic derecho o desde el menú de capas del modo inmersivo.
+- **Dónde se guarda:** la principal, en su campo de siempre (USLT, `LYRICS`, `©lyr`); las capas, en campos propios con el mismo nombre en los tres formatos: `LYRICS_TRANSLATION_<CÓDIGO>` y `LYRICS_PRONUNCIATION` (TXXX en MP3, comentario Vorbis en FLAC, átomo `----:com.apple.iTunes` en M4A). Se escriben en mayúsculas y se leen sin distinguirlas. Otro reproductor nunca muestra la traducción como letra principal.
+- **Idiomas:** el código es ISO 639-1 con región (`pt-BR`, `es-419`) o escritura (`zh-Hans`) opcionales; `.alt`, `.mix` o `.live` no son traducciones. Se muestra una traducción: la del idioma exacto del sistema; si no, la del mismo idioma; si no, la primera alfabética. Dentro del mismo código, el hermano gana.
+- **Validación por capa:** UTF-8 estricto, 1 MB, con letra y del mismo tipo que el original (una capa sin marcas con un original sincronizado se ignoraría al leer, así que se salta). Principal inválido: no se escribe nada. Capa inválida: se salta y la línea de estado dice por qué.
+- **Menú de capas del inmersivo:** botón arriba a la derecha, solo con letra sincronizada y alguna capa. «Mostrar/Ocultar» traducción, pronunciación y original, con las mismas preferencias que el panel lateral; se desactiva lo que dejaría todo oculto, y la traducción lleva el código si no es de tu idioma. Al final, «Incrustar letras en el archivo»: tras escribir, la pista vuelve a cargarse en el mismo punto y sigue sonando si sonaba. Con el original oculto, se rellena la primera capa visible.
+- **Verificación:** pruebas en MP3, FLAC y M4A (escritura, lectura, prioridad, conservación de las capas al editar etiquetas, limpiar etiquetas y poner, quitar o aplicar a un álbum la carátula); la app, comprobada por UI Automation y capturas en Windows; y prueba a mano del autor en copias (incrustar en los tres formatos y leer la letra con los `.lrc` movidos).
+
 ### 4.4 Base anterior: lo que ya contenía v1.0.0
 
 Funciones construidas antes y consolidadas en la primera versión:
@@ -260,6 +272,7 @@ Funciones construidas antes y consolidadas en la primera versión:
 | Espacio y foco    | —                                                                                                                               | —                                      | `MainWindow.axaml.cs` (`OnOpened`, `OnPreviewKeyDown`), `SongList` en el XAML |
 | Estilos globales  | —                                                                                                                               | —                                      | `App.axaml` (tema, estilos y recursos), `MainWindow.axaml` (fondos y bordes)  |
 | Isla flotante     | `IslandVisibility`, `IslandPlacement`, `IslandHover`, `ModalTracker`, `TimeText.Remaining`, `PlaybackShortcuts.TargetAtFraction`, `AppSettings.ShowIsland` | `JsonSettingsRepository` (clave `ShowIsland`) | `IslandWindow`, `IslandController`, `IslandMetrics`, `WindowNative`, `NonActivatingWindow`, `Themes/PlayerButtonStyles.axaml`, botón en `MainWindow.axaml` |
+| Capas de letra    | `LyricsLayers`, `LyricsLanguage`, `LyricsLayerNames`, `LyricsLayerMenu`, `ILyricsLayerReader`, `ILyricsSiblingFinder`, `LyricsEditor.EmbedAsync` con capas, `LyricBlock.TranslationLanguage` | `TagLibLyricsLayerFields`, `TagLibLyricsLayerReader`, `LyricsSiblingFiles`, `LyricsSiblingFinder`, `TagLibLyricsWriter`, `CompanionLyricsProvider` | Botón y `MenuFlyout` en `MainWindow`, `LyricsViewModel` (`LayerMenu`, `ApplyLayerOption`, `EmbedMenuOption`), `EmbedLyricsViewModel`, `MainViewModel.EmbedLyricsInImmersiveAsync`, `ProgressiveLyricsView` (relleno de la primera capa visible) |
 | Letra progresiva  | `LyricsTiming`, `LyricsTimeline`, `SpringSolver`, `LyricsScroll`, `LyricsAppearance`, `GaussianBlur`, `LyricBlock.GetLineEnd`, `LyricLine.Words` (vacío, para el futuro) | — | `ProgressiveLyricsView`, `FillTextBlock`, `BlurredBackdrop`, `ProgressiveLyricsMetrics`, `LyricsViewModel` (`Timeline`, `SeekTo`) |
 
 ## 5. Historial de versiones (GitHub Releases)
@@ -412,7 +425,9 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | Pruebas añadidas por la isla flotante                              | +61        | +1                   | `IslandHover` 21, `IslandPlacement` 10, `IslandVisibility` 7, `ModalTracker` 6, `TimeText` 9, `TargetAtFraction` 8; `ShowIsland` en los ajustes |
 | Ejecución del 5 de noviembre de 2026 (`-c Release`)                | 345        | 58                   | Todas superadas. Compila con 0 errores y 1 advertencia |
 | Pruebas añadidas por la letra progresiva                           | +137       | +6                   | Relleno, pausas, línea de tiempo, resorte, desplazamiento (incluidos el manual y los saltos largos), atenuación, desenfoque, parser con el formato de prueba, y ajustes retirados que siguen cargando |
-| Última ejecución confirmada (7 de noviembre de 2026, `-c Release`) | 482        | 64                   | Todas superadas. Compila con 0 errores y 1 advertencia. CI del PR #4 en verde en Windows y Ubuntu con el código de M6 (commit `35a0878`). |
+| Ejecución del 7 de noviembre de 2026 (`-c Release`)                | 482        | 64                   | Todas superadas. Compila con 0 errores y 1 advertencia. CI del PR #4 en verde en Windows y Ubuntu con el código de M6 (commit `35a0878`). |
+| Pruebas añadidas por las capas de letra                            | +130       | +95                  | Idiomas y nombres, validación por capa, menú y relleno en Core; escritura, lectura, prioridad y conservación de las capas en MP3, FLAC y M4A en Infrastructure |
+| Última ejecución confirmada (8 de noviembre de 2026, `-c Release`) | 612        | 159                  | Todas superadas. Compila con 0 errores y 1 advertencia. CI del PR #5 en verde en Windows y Ubuntu. |
 
 La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las propiedades de la isla la desplazaron): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
@@ -420,7 +435,8 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 - **Carátula y conversión:** `CoverImage`, `CoverEditor`, `ConversionPlanner`, `ConversionService`, `LruCache.Remove`, invalidación de la caché de carátulas, `LibraryService.AddFilesAsync`, `TagLibCoverArtWriter` (con un PNG de 1×1) y los argumentos de ffmpeg. La conversión real no tiene prueba automática, porque en CI no hay ffmpeg.
 - **Carátula de álbum:** tres pruebas de `CoverEditor.SetManyAsync` (todas las pistas, un fallo que no detiene el resto, imagen inválida) y cuatro de `AlbumScope` (mismo álbum, mismo nombre con otro artista, recopilatorio, álbum desconocido).
-- **Letra incrustada:** siete en Core (texto, acentos y otros alfabetos, BOM, no UTF-8, vacío, demasiado grande, archivo inexistente) y seis en Infrastructure (incrustar, Unicode, sustituir, conservar etiquetas, no alterar los bytes de audio, sin temporales). Las seis usan solo archivos MP3: FLAC y M4A no tienen prueba automática.
+- **Letra incrustada:** siete en Core (texto, acentos y otros alfabetos, BOM, no UTF-8, vacío, demasiado grande, archivo inexistente) y seis en Infrastructure (incrustar, Unicode, sustituir, conservar etiquetas, no alterar los bytes de audio, sin temporales).
+- **Capas de letra:** en Core, idiomas (lista ISO 639-1, región y escritura, elección de traducción), nombres de hermanos y campos, validación por capa, resumen de la línea de estado, menú del inmersivo y renglón del relleno. En Infrastructure, con un MP3 y un FLAC armados en la prueba y un M4A guardado (`Fixtures/silencio.m4a`): escribir, reemplazar sin duplicar, conservar audio y etiquetas, campos con guion y en minúsculas, capas de 1 MB, conservación de las capas al editar etiquetas, limpiar etiquetas y poner, quitar o aplicar a un álbum la carátula, y lectura con prioridad hermano > incrustada.
 - **Isla flotante:** en Core, las reglas de visibilidad, la colocación en píxeles físicos a 100, 125 y 150 % y con orígenes negativos, la máquina de estados del hover (incluidos volver a entrar mientras se colapsa y las salidas espurias), el contador de selectores, el tiempo restante y el seek por fracción. La ventana se verificó con sondas automáticas en Windows (ver la spec).
 - **Letra progresiva:** en Core, la duración estimada y el relleno de cada línea, las pausas instrumentales, la línea de tiempo con líneas y pausas, el resorte (convergencia, estabilidad y troceado de fotogramas), el desplazamiento (ancla, cascada, límites del manual y saltos largos), la atenuación y el desenfoque gaussiano. En Infrastructure, que un `settings.json` con los ajustes retirados (`LyricsStyle`, `ReduceMotion`) carga sin copia `.corrupt`. El dibujo se verificó con sondas en Windows (ver la spec).
 - **No cubierto por pruebas automáticas:** el código de vista (menús, selectores, foco, barra espaciadora, la ventana de la isla y el dibujo de la letra progresiva). Se prueba a mano o con sondas.
@@ -469,8 +485,12 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - USLT es texto _sin sincronizar_ por especificación. Los tiempos `[mm:ss.xx]` viajan dentro del texto. La app los interpreta, pero un reproductor estricto los mostrará como texto. No se escribe SYLT, el marco sincronizado del estándar.
 - Solo UTF-8, de hasta 1 MB.
 - Sustituye la letra incrustada anterior sin preguntar y no hay botón para quitarla.
-- Solo se incrusta la letra principal. Los archivos de traducción y pronunciación (`.es.lrc`, `.rom.lrc`) no se incrustan.
-- En FLAC y M4A se confía en el mapeo de TagLib (`LYRICS`, `©lyr`). No se ha probado en esos formatos: las pruebas de `TagLibLyricsWriter` solo usan MP3.
+- La traducción y la pronunciación incrustadas (`LYRICS_TRANSLATION_<CÓDIGO>`, `LYRICS_PRONUNCIATION`) solo las muestra esta app; otros reproductores ven solo la principal. En WAV, OGG u Opus solo se incrusta la principal.
+- Hace falta el `cancion.lrc` principal para incrustar; con solo `.es.lrc` y `.rom.lrc` no se incrusta nada, y sin letra principal el botón de capas del inmersivo no aparece.
+- Incrustar desde el inmersivo descarga la pista para escribir y la vuelve a cargar en el mismo punto: se nota un corte breve.
+- Elegir entre varias traducciones no se puede desde la interfaz: se muestra la del idioma del sistema o la primera alfabética.
+- El texto del panel lateral «no tiene archivos .lrc de traducción ni de pronunciación» no tiene en cuenta las capas incrustadas.
+- **Convertir formato** (ffmpeg, comprobado el 8 de noviembre de 2026 de MP3 y M4A a MP3, M4A y FLAC): la letra principal solo sobrevive de M4A a M4A o a FLAC (de MP3, o hacia MP3, ffmpeg la deja en un campo de texto suelto que no es la letra); la traducción y la pronunciación se conservan hacia MP3 y FLAC y se pierden hacia M4A. Sin la principal, las capas tampoco se ven. Si vas a convertir, conserva los `.lrc` o vuelve a incrustar después.
 
 **Letra progresiva**
 
@@ -484,7 +504,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 **Teclado**
 
 - Mantener pulsada la barra repite el cambio de estado.
-- La barra ya no activa un botón enfocado: Enter sí lo hace.
+- La barra ya no activa un botón enfocado: Enter sí lo hace. Hasta el 8 de noviembre de 2026 no era del todo cierto: el botón se pulsaba al soltar la tecla (`Button.OnKeyUp`), así que Espacio en «Siguiente» pausaba y cambiaba de pista. Ahora la ventana se queda también con la tecla soltada.
 - La lista de controles que se quedan con las teclas es por tipo (`OwnsKeyboard`). Si se añade uno nuevo (`RadioButton`, `ToggleSwitch`), hay que sumarlo.
 - Los atajos de salto, volumen y silencio se probaron a mano en Windows y funcionan.
 - Windows puede negar el foco a una ventana nueva lanzada desde la terminal.
