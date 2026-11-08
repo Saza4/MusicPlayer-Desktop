@@ -1,6 +1,6 @@
 # Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
 
-Estado: **aprobada (7 de noviembre de 2026), en curso: M0 a M4 hechos; M5 hecho a falta de la prueba a mano del autor**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+Estado: **aprobada (7 de noviembre de 2026), en curso: M0 a M5 hechos; falta M6**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
 
 ## Contexto
 
@@ -167,7 +167,7 @@ Así, ningún nombre que hoy se muestra deja de mostrarse. Una prueba lo fija pa
 | M2 | (**hecho**, ver «Resultado de M2») Infrastructure (escritura): `ILyricsWriter` con capas, `TagLibLyricsWriter` por formato, reemplazo solo de las capas con fuente, verificación de todas. | MP3, FLAC y M4A: escribe, reemplaza sin duplicar, conserva etiquetas y audio, no deja temporales, falla sin tocar el original. Además (pedido por el autor): nombres con guion (`LYRICS_TRANSLATION_PT-BR`, `LYRICS_TRANSLATION_ZH-HANS`) en TXXX, Vorbis y `----`, con la mayúscula normalizada de vuelta (`pt-BR`, `zh-Hans`); borrar la principal (`Tag.Lyrics = null`) no toca las capas en FLAC y M4A; el editor de etiquetas y «Limpiar etiquetas» (ambos con `TagLibTrackTagWriter`) conservan las capas en los tres formatos; una capa de exactamente 1 MB se escribe y se relee en los tres |
 | M3 | (**hecho**, ver «Resultado de M3») Infrastructure (lectura): lector de capas incrustadas y prioridad por capa en `CompanionLyricsProvider` (hermano > incrustado; la traducción se elige por idioma entre hermanas e incrustadas juntas). La lectura de hermanos con elección por idioma ya estaba hecha (ajustes tras M1, antes de M2). | Pruebas en MP3, FLAC y M4A: solo incrustado, solo hermano, ambos, varias traducciones. Además (pedido por el autor): poner y quitar la carátula, y aplicarla a todo un álbum (`CoverEditor.SetManyAsync`), conservan las capas en los tres formatos |
 | M4 | (**hecho**, ver «Resultado de M4» y «Prueba a mano de M4») Desktop A: `EmbedLyricsViewModel` busca los hermanos (junto al audio o al elegido), aviso en la línea de estado. | A mano (autor), **en tres copias** (MP3, FLAC y M4A), no en archivos reales: la escritura no se puede deshacer. Incrustar y abrir cada copia sin los hermanos |
-| M5 | (**código hecho**, ver «Resultado de M5»; falta la prueba a mano) Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
+| M5 | (**hecho**, ver «Resultado de M5» y «Prueba a mano de 12b») Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
 | M6 | Docs en commit aparte: README (limitación, y qué pasa con las capas al «Convertir formato» con ffmpeg: lo comprueba el autor a mano una vez), `reporte-reproductor.md`, spec, CLAUDE.md (número de pruebas). Push, PR y CI verde en Windows y Ubuntu. | CI |
 
 ## Resultado del spike (M0)
@@ -287,3 +287,11 @@ En tres copias con audio sintético (un tono de 10 s generado con ffmpeg) y letr
 - **La etiqueta con el nombre del `.lrc`** ensanchaba el menú hasta salirse de la pantalla (623 px con un nombre real). Ahora dice «(falta el .lrc)» y el nombre va en la descripción emergente, que también se ve con la opción desactivada.
 - **Espacio en un botón enfocado:** `Button` hace clic al soltar Espacio (`OnKeyUp`), aunque la pulsación ya fuera el atajo de reproducir/pausar. En el botón de capas, pausaba y abría el menú. Afectaba a cualquier botón enfocado (por ejemplo «Siguiente»: pausaba y pasaba de pista). La ventana se queda ahora también con el Espacio soltado cuando la pulsación fue el atajo.
 - **Espacio dentro del menú:** Avalonia lleva ↑ ↓, Enter y Esc en el menú abierto, pero no Espacio. Un manejador en el presentador del menú (`OnLayersMenuOpened`) activa con Espacio la opción resaltada.
+
+## Prueba a mano de 12b (autor, 8 de noviembre de 2026)
+
+En copias sintéticas (tono de 60 s y letra inventada, con `.lrc`, `.es.lrc` y `.rom.lrc`), incrustando desde el menú de capas del inmersivo:
+- **MP3, FLAC y M4A:** incrustado. Leído después con TagLib, sin el código de la app: en cada archivo, el original en su campo estándar (USLT, `LYRICS` y `©lyr`), `LYRICS_TRANSLATION_ES` y `LYRICS_PRONUNCIATION`, cada uno una vez y con sus 15 líneas. Los `.lrc` no se modificaron.
+- **Con los `.lrc` movidos a otra carpeta:** la letra, la traducción y la pronunciación siguen saliendo, ahora desde el archivo: **ok** (autor).
+- **Copia de solo lectura:** el archivo quedó idéntico (mismo tamaño y fecha, sin campos).
+- **Sin `.lrc` principal:** no hay letra que mostrar, así que el botón de capas no aparece (criterio 12). La opción «(falta el .lrc)» se ve con una canción ya incrustada y sin `.lrc` al lado.
