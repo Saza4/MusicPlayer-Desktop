@@ -27,6 +27,14 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+#if DEBUG
+        // Diagnóstico del redibujo (spec de letras progresivas, M2): MUSICPLAYER_RENDER_OVERLAY=DirtyRects,Fps,...
+        // pinta encima lo que Avalonia repinta en cada fotograma.
+        if (Enum.TryParse<Avalonia.Rendering.RendererDebugOverlays>(
+                Environment.GetEnvironmentVariable("MUSICPLAYER_RENDER_OVERLAY"), out var overlays))
+            RendererDiagnostics.DebugOverlays = overlays;
+#endif
+
         // Tunnel: la ventana ve la tecla antes que el control enfocado, que la usaría para lo suyo.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, OnPreviewKeyUp, RoutingStrategies.Tunnel);

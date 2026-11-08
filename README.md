@@ -37,10 +37,11 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 **Letras y carátulas**
 
 - **Letras:** `.lrc` sincronizado (auto-scroll y salto al pulsar una línea) o texto USLT incrustado. Traducción y pronunciación desde archivos hermanos (`cancion.es.lrc`, `cancion.rom.lrc`).
+- **Letra progresiva en el modo inmersivo** (estilo Apple Music): la línea activa se rellena de izquierda a derecha según la posición real, el resto se desplaza con resorte y cascada y se atenúa con la distancia, y las pausas instrumentales largas muestran «♪». Pulsar una línea salta a ella; la rueda o un gesto desplazan a mano y a los 3 s la letra vuelve a su sitio. Las letras sin tiempos y el panel lateral siguen con la lista de siempre.
 - **Incrustar letra:** guarda un `.lrc` dentro de las etiquetas del archivo (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) con escritura atómica y verificación, para que la letra viaje con la canción.
 - **Carátulas bajo demanda** (incrustadas o `cover.jpg`) con caché LRU.
 - **Carátulas editables:** elige una imagen JPG o PNG (máx. 10 MB) o quita la actual, directamente en el archivo (TagLibSharp, escritura atómica). También puedes aplicar una imagen a todo un álbum de una vez.
-- **Modo inmersivo** con fondo desenfocado a partir de la carátula.
+- **Modo inmersivo** con fondo desenfocado a partir de la carátula (se desenfoca una sola vez, fuera del hilo de la interfaz).
 
 **Temas**
 
@@ -124,9 +125,10 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 403 pruebas (345 en Core y 58 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
-código de vista (menús, selectores, foco, teclado y la ventana de la isla), que se prueban a mano.
+Hay 546 pruebas (482 en Core y 64 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+código de vista (menús, selectores, foco, teclado, la ventana de la isla y el dibujo de la letra progresiva), que se prueban a mano.
 De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
+De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, la atenuación y el desenfoque.
 
 ## Limitaciones conocidas
 
@@ -135,6 +137,7 @@ De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escal
 - **Carátulas:** no se redimensionan, así que una portada pesada infla el archivo.
 - **Temas:** el texto sigue la variante base (clara u oscura) y no se puede personalizar. El modo inmersivo es siempre oscuro: solo el botón Reproducir/Pausa y los iconos activos siguen el tema.
 - **Isla flotante:** solo en Windows (en Linux no se muestra). Siempre en la pantalla principal. No se maneja con el teclado: se pensó para el ratón sin quitar el foco a otras apps.
+- **Letra progresiva:** no hay sincronía por palabra: los `.lrc` solo traen el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada. En árabe o hebreo (de derecha a izquierda) el relleno barre igualmente de izquierda a derecha. El arrastre con el dedo o el lápiz no se ha probado en una pantalla táctil, y en Linux no se ha probado.
 - **Linux:** el audio y la interfaz no se han probado.
 
 El detalle completo está en [`docs/reporte-reproductor.md`](docs/reporte-reproductor.md).

@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
+    xmlns:controls="using:MusicPlayer.Desktop.Controls"
     Title="Music Player"
     Width="960"
     Height="600"
@@ -939,12 +940,12 @@
         <!--  Modo inmersivo  -->
         <ThemeVariantScope RequestedThemeVariant="Dark">
             <Grid Background="#FF101010" IsVisible="{Binding IsImmersive}">
-                <!--  Fondo: la portada ampliada y desenfocada  -->
-                <Image
-                    Effect="blur(60)"
+                <!--  Fondo: la portada ampliada y desenfocada, una sola vez (no un Effect que se recalcula en cada fotograma)  -->
+                <controls:BlurredBackdrop
+                    BlurRadius="60"
                     Opacity="0.9"
-                    Source="{Binding NowPlayingCover}"
-                    Stretch="UniformToFill" />
+                    RenderOptions.BitmapInterpolationMode="HighQuality"
+                    Source="{Binding NowPlayingCover}" />
                 <!--  Velo en degradado para que el texto siempre se lea  -->
                 <Border>
                     <Border.Background>
@@ -1095,10 +1096,23 @@
                     </StackPanel>
                     <!--  Derecha: letras con la misma plantilla que el panel lateral  -->
                     <Panel Grid.Column="1" Margin="32,0,0,0">
+                        <!--  Letra sincronizada: progresiva (docs/specs/lyrics-progressive.md)  -->
+                        <controls:ProgressiveLyricsView
+                            DimForeground="#59FFFFFF"
+                            IsPlaying="{Binding IsPlaying}"
+                            IsVisible="{Binding Lyrics.ShowProgressiveImmersive}"
+                            Source="{Binding Lyrics}">
+                            <controls:ProgressiveLyricsView.IsShown>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsImmersive" />
+                                    <Binding Path="Lyrics.ShowProgressiveImmersive" />
+                                </MultiBinding>
+                            </controls:ProgressiveLyricsView.IsShown>
+                        </controls:ProgressiveLyricsView>
                         <ListBox
                             Background="Transparent"
                             Classes="lyrics"
-                            IsVisible="{Binding Lyrics.IsAvailable}"
+                            IsVisible="{Binding Lyrics.ShowClassicImmersive}"
                             ItemTemplate="{StaticResource LyricLineTemplate}"
                             ItemsSource="{Binding Lyrics.Lines}"
                             SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"

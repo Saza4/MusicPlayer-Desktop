@@ -15,16 +15,39 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     : ObservableObject
 {
     private LyricBlock _block = LyricBlock.Empty;
+    private TimeSpan? _trackDuration;
     private CancellationTokenSource? _cts;
     private bool _restoring;
 
     [ObservableProperty] private ObservableCollection<LyricLineViewModel> _lines = new();
-    [ObservableProperty] private bool _isSynced;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowProgressiveImmersive), nameof(ShowClassicImmersive))]
+    private bool _isSynced;
+
     [ObservableProperty] private int _activeIndex = -1;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPanel))]
+    [NotifyPropertyChangedFor(nameof(ShowPanel), nameof(ShowClassicImmersive))]
     private bool _isAvailable;
+
+    // Modo inmersivo (docs/specs/lyrics-progressive.md): la letra sincronizada va siempre con el estilo
+    // progresivo; la letra sin tiempos (Plain) sigue en la lista clásica. El panel lateral es siempre la lista.
+
+    /// <summary>Modo inmersivo: letra progresiva (letras sincronizadas).</summary>
+    public bool ShowProgressiveImmersive => IsSynced;
+
+    /// <summary>Modo inmersivo: lista clásica (letras sin sincronizar).</summary>
+    public bool ShowClassicImmersive => IsAvailable && !IsSynced;
+
+    /// <summary>Posición actual del reproductor, para el relleno fotograma a fotograma.</summary>
+    public TimeSpan CurrentPosition => player.CurrentTime;
+
+    /// <summary>
+    /// Líneas y pausas instrumentales de la letra progresiva. Se reconstruye antes de cambiar <see cref="Lines"/>,
+    /// así que al recibir el cambio de <see cref="Lines"/> ya es la de la letra nueva.
+    /// </summary>
+    public LyricsTimeline Timeline { get; private set; } = LyricsTimeline.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPanel))]
@@ -89,11 +112,32 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
 
+        _trackDuration = track.Duration > TimeSpan.Zero ? track.Duration : null;
         SetBlock(LyricBlock.Empty);
 
         try
         {
             var block = await provider.GetLyricsAsync(track, cts.Token);
+#if DEBUG
+            // Pruebas de la letra progresiva con un .lrc sintético, sin letra real ni tocar la biblioteca.
+            // Si junto a él hay «.es.lrc» o «.rom.lrc», se añaden como traducción y pronunciación.
+            if (Environment.GetEnvironmentVariable("MUSICPLAYER_LYRICS_OVERRIDE") is { Length: > 0 } overridePath)
+            {
+                var parser = new LrcLyricParser();
+                async Task<LyricBlock?> Companion(string suffix)
+                {
+                    var path = System.IO.Path.ChangeExtension(overridePath, suffix);
+                    return System.IO.File.Exists(path)
+                        ? parser.Parse(await System.IO.File.ReadAllTextAsync(path, cts.Token))
+                        : null;
+                }
+                block = parser.Parse(await System.IO.File.ReadAllTextAsync(overridePath, cts.Token));
+                var translation = await Companion(".es.lrc");
+                var pronunciation = await Companion(".rom.lrc");
+                if (translation is not null || pronunciation is not null)
+                    block = LyricsMerger.Merge(block, translation, pronunciation);
+            }
+#endif
             if (!cts.IsCancellationRequested)
                 SetBlock(block);
         }
@@ -132,14 +176,21 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     private void SeekToLine(LyricLineViewModel? line)
     {
         if (line is not { IsSynced: true }) return;
+        SeekTo(line.Line.Timestamp);
+    }
 
-        player.Seek(line.Line.Timestamp);
-        UpdatePosition(line.Line.Timestamp); // También funciona con la reproducción en pausa
+    /// <summary>Salta a <paramref name="position"/> (una línea o una pausa de la letra progresiva).</summary>
+    public void SeekTo(TimeSpan position)
+    {
+        if (!IsSynced) return;
+        player.Seek(position);
+        UpdatePosition(position); // También funciona con la reproducción en pausa
     }
 
     private void SetBlock(LyricBlock block)
     {
         _block = block;
+        Timeline = LyricsTimeline.Build(block, _trackDuration);
         Lines = new ObservableCollection<LyricLineViewModel>(
             block.Lines.Select(l => new LyricLineViewModel(l, block.Kind == LyricsKind.Synced)));
         IsSynced = block.Kind == LyricsKind.Synced;

@@ -27,4 +27,14 @@ public sealed record LyricBlock(
         }
         return result;
     }
+
+    /// <summary>
+    /// Fin del hueco de la línea: la marca de la siguiente. Null si es la última, si no está sincronizada o si el
+    /// índice no existe. Con dos líneas en la misma marca, la primera tiene un hueco de duración cero.
+    /// </summary>
+    public TimeSpan? GetLineEnd(int index)
+    {
+        if (Kind != LyricsKind.Synced || index < 0 || index + 1 >= Lines.Count) return null;
+        return Lines[index + 1].Timestamp;
+    }
 }
