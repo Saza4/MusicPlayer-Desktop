@@ -28,18 +28,18 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 **Biblioteca**
 
 - Escaneo de carpetas en segundo plano, metadatos con TagLibSharp, orden por artista, álbum, disco y pista, y persistencia en JSON. Quitar canciones de la biblioteca o del disco.
-- **Búsqueda en tiempo real** por título, artista y álbum, sin distinguir mayúsculas ni acentos.
+- **Búsqueda en tiempo real** por título, artista, artista del álbum y álbum, sin distinguir mayúsculas ni acentos. Cada palabra escrita debe coincidir en alguno de esos campos.
 - **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
 - **Playlists:** crear, renombrar, eliminar, agregar y quitar canciones.
 - **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists. Al agregar la carpeta nueva, las pistas movidas se reconocen por título, artista, álbum y duración y conservan sus playlists.
-- **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir y última canción.
+- **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir, última canción, tema e isla flotante.
 
 **Letras y carátulas**
 
-- **Letras:** `.lrc` sincronizado (auto-scroll y salto al pulsar una línea) o texto USLT incrustado. Traducción y pronunciación desde archivos hermanos (`cancion.es.lrc`, `cancion.rom.lrc`).
+- **Letras:** `.lrc` sincronizado (auto-scroll y salto al pulsar una línea) o texto USLT incrustado. Traducción y pronunciación desde archivos hermanos: `cancion.<idioma>.lrc` (el idioma es el de la interfaz del sistema, por ejemplo `cancion.es.lrc`) y `cancion.rom.lrc` para la pronunciación.
 - **Letra progresiva en el modo inmersivo** (estilo Apple Music): la línea activa se rellena de izquierda a derecha según la posición real, el resto se desplaza con resorte y cascada y se atenúa con la distancia, y las pausas instrumentales largas muestran «♪». Pulsar una línea salta a ella; la rueda o un gesto desplazan a mano y a los 3 s la letra vuelve a su sitio. Las letras sin tiempos y el panel lateral siguen con la lista de siempre.
 - **Incrustar letra:** guarda un `.lrc` dentro de las etiquetas del archivo (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) con escritura atómica y verificación, para que la letra viaje con la canción.
-- **Carátulas bajo demanda** (incrustadas o `cover.jpg`) con caché LRU.
+- **Carátulas bajo demanda** (incrustadas o un archivo de la carpeta llamado `cover`, `folder`, `front`, `album` o `albumart`, en `.jpg`, `.jpeg` o `.png`, en ese orden de prioridad) con caché LRU.
 - **Carátulas editables:** elige una imagen JPG o PNG (máx. 10 MB) o quita la actual, directamente en el archivo (TagLibSharp, escritura atómica). También puedes aplicar una imagen a todo un álbum de una vez.
 - **Modo inmersivo** con fondo desenfocado a partir de la carátula (se desenfoca una sola vez, fuera del hilo de la interfaz).
 

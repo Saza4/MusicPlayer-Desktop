@@ -1,7 +1,7 @@
 # MusicPlayer-Desktop — Documento maestro y reporte de novedades
 
 > Reproductor de música local, ligero y multiplataforma. **C# · .NET 8 · Avalonia UI 11**.
-> Estado a **7 de noviembre de 2026** · última release: **v1.3.0** (la letra progresiva está en la rama `feature/letras-progresivas`, sin release).
+> Estado a **8 de noviembre de 2026** · última release: **v1.3.0** (la letra progresiva ya está fusionada en `main` con el PR #4, commit `e99dec2`, pero aún sin release).
 
 Este documento reúne en un solo lugar: la visión y la especificación del proyecto, el reporte de todo lo implementado durante el desarrollo, el historial de versiones tal como se publicó en GitHub Releases, las decisiones de diseño, las limitaciones conocidas y la hoja de ruta. Al final, como anexos, se conserva la especificación original y el prompt maestro.
 
@@ -56,6 +56,8 @@ Este documento reúne en un solo lugar: la visión y la especificación del proy
 | Conversión de audio       | `ffmpeg` instalado en el equipo (opcional, no se redistribuye)                               |
 | CI                        | GitHub Actions                                                                               |
 
+**Versiones de los paquetes:** Avalonia 11.2.5 (con Fluent e Inter), CommunityToolkit.Mvvm 8.4.2, Microsoft.Extensions.DependencyInjection 8.0.1, ManagedBass y ManagedBass.Mix 4.0.2, TagLibSharp 2.3.0, xunit 2.5.3 (con Microsoft.NET.Test.Sdk 17.8.0 y coverlet 6.0.0). Core no tiene paquetes. `Avalonia.Diagnostics` solo se incluye en Debug.
+
 ## 3. Arquitectura actual
 
 ```mermaid
@@ -71,10 +73,10 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 
 | Proyecto                     | Responsabilidad                           | Piezas principales                                                                                                                                                                                                                                                                                                                         |
 | ---------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MusicPlayer.Core`           | Modelos, contratos y lógica pura          | `Track`, `TrackTags`, `LibrarySnapshot`, `PlayQueue<T>`, `LibraryScanner`, `LibraryService`, `PlaylistManager`, `TrackFilter`, `TrackSorter`, `LibraryGrouper`, `LrcLyricParser`, `LyricsMerger`, `LruCache`, `CachedCoverArtProvider`, `TagEditor`, `CoverEditor`, `AlbumScope`, `LyricsEditor`, `ConversionPlanner`, `ConversionService`, `ThemeFactory`, `ThemeCatalog`, `BuiltInThemes`, `ColorContrast`, `PlaybackShortcuts`, `TimeText`, `IslandVisibility`, `IslandPlacement`, `IslandHover`, `ModalTracker` |
+| `MusicPlayer.Core`           | Modelos, contratos y lógica pura          | `Track`, `TrackTags`, `LibrarySnapshot`, `PlayQueue<T>`, `LibraryScanner`, `LibraryService`, `PlaylistManager`, `TrackFilter`, `TrackSorter`, `LibraryGrouper`, `LrcLyricParser`, `LyricsMerger`, `LruCache`, `CachedCoverArtProvider`, `TagEditor`, `CoverEditor`, `AlbumScope`, `LyricsEditor`, `ConversionPlanner`, `ConversionService`, `ThemeFactory`, `ThemeCatalog`, `BuiltInThemes`, `ColorContrast`, `PlaybackShortcuts`, `TimeText`, `IslandVisibility`, `IslandPlacement`, `IslandHover`, `ModalTracker`, `TrackRelocator`, `TagSuggester`, `FileNameParser`, `TitleCleaner`, `SettingsService`, `LyricsTiming`, `LyricsTimeline`, `SpringSolver`, `LyricsScroll`, `LyricsAppearance`, `GaussianBlur` |
 | `MusicPlayer.Audio`          | Motor de sonido                           | `BassAudioPlayer` (implementa `IAudioPlayer` con BASS y BASSmix)                                                                                                                                                                                                                                                                           |
 | `MusicPlayer.Infrastructure` | Acceso a archivos y herramientas externas | `TagLibTrackMetadataReader`, `TagLibTrackTagWriter`, `TagLibCoverArtWriter`, `TagLibLyricsWriter`, `SafeFileEdit`, `EmbeddedCoverArtProvider`, `FolderCoverArtProvider`, `EmbeddedLyricsProvider`, `LrcFileLyricsProvider`, `CompanionLyricsProvider`, `FfmpegAudioConverter`, `JsonThemeRepository`, repositorios JSON, `AtomicJson`, `AppPaths` |
-| `MusicPlayer.Desktop`        | Interfaz y composición                    | `MainWindow`, `MainViewModel`, `LyricsViewModel`, `PlaylistViewModel`, `TagEditorViewModel`, `TagAutoFixViewModel`, `ConvertViewModel`, `AlbumCoverViewModel`, `EmbedLyricsViewModel`, `ThemeViewModel`, `ThemeService`, `CoverArtLoader`, `IslandWindow`, `IslandController`, `IslandMetrics`, `NonActivatingWindow`, `WindowNative`, selectores de archivos y carpetas, `CompositionRoot`                                                                              |
+| `MusicPlayer.Desktop`        | Interfaz y composición                    | `MainWindow`, `MainViewModel`, `LyricsViewModel`, `PlaylistViewModel`, `TagEditorViewModel`, `TagAutoFixViewModel`, `ConvertViewModel`, `AlbumCoverViewModel`, `EmbedLyricsViewModel`, `ThemeViewModel`, `ThemeService`, `CoverArtLoader`, `IslandWindow`, `IslandController`, `IslandMetrics`, `NonActivatingWindow`, `WindowNative`, `ProgressiveLyricsView`, `FillTextBlock`, `BlurredBackdrop`, `ProgressiveLyricsMetrics`, `TrackItemViewModel`, `AlbumItemViewModel`, `ArtistItemViewModel`, selectores de archivos y carpetas, `CompositionRoot`                                                                              |
 | `tests/`                     | Pruebas                                   | `MusicPlayer.Core.Tests`, `MusicPlayer.Infrastructure.Tests`                                                                                                                                                                                                                                                                               |
 
 **Decisiones transversales:**
@@ -86,6 +88,53 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 - **Identidad estable de las pistas:** el `Id` de cada canción se conserva al reescanear, reubicar archivos y editar etiquetas, de modo que las playlists sobreviven.
 - **Archivos bloqueados en Windows:** antes de escribir en un archivo, el reproductor lo suelta (`Unload` y `PrepareNext(null)`).
 - **Un solo punto de composición:** todos los servicios son singletons registrados en `CompositionRoot.cs`, con `ValidateOnBuild`.
+
+### 3.1 Detalles de comportamiento
+
+Reglas finas del código que no aparecen en otras secciones (verificadas contra el código el 8 de noviembre de 2026).
+
+**Biblioteca y búsqueda**
+
+- **Búsqueda (`TrackFilter`):** la consulta se separa en palabras y todas deben coincidir (AND) en título, artista, artista del álbum o álbum.
+- **Orden (`TrackSorter`):** el disco 0 cuenta como disco 1.
+- **Reubicación (`TrackRelocator`):** solo empareja si la coincidencia por título, artista y álbum es única en ambos lados y la duración difiere como mucho 1 s. Lo ambiguo se deja sin emparejar.
+- **Archivos no disponibles:** la comprobación corre sola al arrancar y el botón «Volver a revisar» de la barra de aviso la repite.
+- **Navegación:** pestañas Canciones, Álbumes y Artistas (solo en la biblioteca, no dentro de una playlist), un botón de retroceso («← Artistas», «← {artista}», «← Álbumes») y «▶ Reproducir» en la barra del álbum o artista, que reproduce desde el principio.
+
+**Reproducción**
+
+- **Aleatorio (`PlayQueue`):** una vuelta nueva evita empezar por la última pista de la anterior. Si se quita la pista en curso, «Siguiente» sigue desde la anterior.
+- **Anterior:** reinicia la pista si ya van más de 3 s; si no, retrocede.
+- **Ratón y teclado:** doble clic en una canción la reproduce; `Esc` cierra el modo inmersivo (con el modo inmersivo la ventana pasa a pantalla completa y recuerda su estado anterior).
+- **Ajustes (`SettingsService`):** el guardado se aplaza 500 ms; si falla, se reintenta en el siguiente cambio o al cerrar (`FlushAsync`).
+
+**Etiquetas**
+
+- **Autocompletar (`FileNameParser`, `TitleCleaner`):** el número de pista solo se reconoce con separador explícito (`-`, `.` o `)`) y no si lo que sigue empieza por un dígito («10.000 Reasons»). Los `_` pasan a espacios solo si el nombre no tiene espacios. Se quitan «(Official Video)», «(HD/HQ/4K)» y las marcas de sitios de descarga (klickaud, y2mate, ytmp3, savefrom). La casilla «Usar la carpeta como álbum si falta» y los botones «Todas» y «Ninguna» están en el panel.
+- **Escritura de audio (`SafeFileEdit`):** durante la edición queda `~tags-{guid}.ext` en la carpeta del archivo; si el proceso muere en ese momento, el temporal permanece. La verificación posterior es parcial: título y número de pista en las etiquetas, tamaño de la imagen en la carátula y texto en la letra.
+
+**Letras y carátulas**
+
+- **Hermanos de letra (`CompanionLyricsProvider`):** la traducción es `cancion.<idioma>.lrc`, con el idioma de la interfaz del sistema (`CultureInfo.CurrentUICulture`); `cancion.rom.lrc` es la pronunciación. Si el idioma del sistema es `rom`, no se lee traducción.
+- **Unión (`LyricsMerger`):** tolerancia de 300 ms entre líneas; en letras sin tiempos solo se une si ambas tienen el mismo número de líneas.
+- **Carátula de carpeta (`FolderCoverArtProvider`):** busca `cover`, `folder`, `front`, `album` y `albumart` (`.jpg`, `.jpeg`, `.png`), en ese orden de prioridad. La incrustada se lee con `ReadStyle.None` y prefiere la frontal.
+
+**Persistencia**
+
+- **Formato:** los JSON llevan `Version = 1`. La compatibilidad con archivos antiguos se logra con campos opcionales (por ejemplo `DiscNumber` y `AlbumArtist` en la biblioteca) y porque el deserializador ignora las claves desconocidas, de modo que los ajustes retirados cargan sin problema.
+- **Dos implementaciones de escritura atómica:** `AtomicJson` (ajustes, playlists) y `JsonLibraryRepository`, que repite el mismo patrón (`.tmp`, `File.Move`, `.corrupt`) por su cuenta.
+
+**Conversión (`FfmpegAudioConverter`)**
+
+- Nunca sobrescribe: usa `-n` y `File.Move` sin sobrescribir. Convierte solo el primer flujo de audio (`-map 0:a:0`) y escribe MP3 con ID3v2.3. Escribe primero en `~conv-{guid}.ext`.
+
+**Isla flotante**
+
+- No aparece en la barra de tareas ni en Alt+Tab (`WS_EX_TOOLWINDOW`).
+
+**Compilación y CI**
+
+- El CI usa Windows y Ubuntu 24.04, `actions/checkout@v7` y `actions/setup-dotnet@v6` con .NET 8.0.x; no publica nada. No hay `global.json` ni `<Version>` en los `.csproj`: la versión vive en el tag de GitHub.
 
 ## 4. Reporte de novedades
 
@@ -106,7 +155,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | v1.3.0 |
 | 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | v1.3.0 |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
-| 14  | Letra progresiva en el modo inmersivo (estilo Apple Music) | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | Sin release (rama `feature/letras-progresivas`) |
+| 14  | Letra progresiva en el modo inmersivo (estilo Apple Music) | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | Sin release (fusionada en `main`, PR #4) |
 
 ### 4.2 Novedades de la serie v1.1.0
 
@@ -171,13 +220,13 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 - **Causa del problema:** `MainWindow` no tenía ningún manejador para la barra espaciadora (solo Escape en modo inmersivo), y al arrancar Avalonia no enfoca ningún control. Después de un clic, el control enfocado se quedaba con la barra para lo suyo (un botón se activaba, una fila se seleccionaba).
 - **Foco inicial:** al abrir la ventana se llama a `Activate()` y el foco lógico queda en la lista de canciones (`SongList`), de modo que las flechas funcionan desde el primer momento.
 - **Espacio global:** un manejador de tipo _tunnel_ en la ventana alterna reproducir y pausar con `TogglePlayPauseCommand`, antes de que el control enfocado reciba la tecla.
-- **Excepciones:** no intercepta la barra cuando el foco está en `TextBox`, `ComboBox`, `ComboBoxItem`, `CheckBox` o `MenuItem`, que la necesitan para escribir, abrir listas, marcar casillas o activar menús. Tampoco con Ctrl, Alt o Mayús.
+- **Excepciones:** no intercepta la barra cuando el foco está en `TextBox`, `ComboBox`, `ComboBoxItem`, `CheckBox` o `MenuItem`, que la necesitan para escribir, abrir listas, marcar casillas o activar menús. Tampoco con Ctrl, Alt o Mayús. Esta excepción de `CheckBox` vale solo para la barra espaciadora (`MainWindow.axaml.cs`, `OnPreviewKeyDown`): `OwnsKeyboard` no incluye `CheckBox`, así que `M`, `←`, `→` y `Ctrl+↑` `Ctrl+↓` (4.3.1) sí actúan con una casilla enfocada.
 
 #### Pausa mejorada y estilos globales
 
 - **Pausa mejorada:** entre v1.1.0 y v1.2.0 no cambia nada en `MusicPlayer.Audio` ni en `TogglePlayPause` (`MainViewModel`). El único cambio de reproducir y pausar de la release es el manejador de la barra espaciadora (commit `f95fb1b`). _Deducción:_ la nota «Pausa mejorada» describe ese cambio; «transición suave y sin interrupciones» va más allá de lo que hace el código.
 - **Estilos globales** (commit `b382184`):
-  - `App.axaml` fija `RequestedThemeVariant="Dark"`: la app ya no sigue el tema claro u oscuro del sistema (en v1.2.0; con los temas, ver 4.3.2, el tema del sistema es una opción).
+  - `App.axaml` fija `RequestedThemeVariant="Dark"`: la app ya no sigue el tema claro u oscuro del sistema (en v1.2.0; desde v1.3.0 Oscuro es el tema por defecto y el tema del sistema es una opción, ver 4.3.2).
   - Paleta: fondo `#0F0F0F`, paneles `#000000` y velos blancos translúcidos (`#14FFFFFF`, `#1FFFFFFF`, `#26FFFFFF`).
   - Estilos para `ListBox` y `ListBoxItem` (pasar el cursor y la selección en gris en lugar del color de acento), `FlyoutPresenter`, `MenuFlyoutPresenter`, `ContextMenu` y `ToolTip`.
   - Diccionario `ThemeDictionaries["Dark"]` para botones, cuadros de texto, `ComboBox`, filas de lista y menús.
@@ -469,7 +518,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - USLT es texto _sin sincronizar_ por especificación. Los tiempos `[mm:ss.xx]` viajan dentro del texto. La app los interpreta, pero un reproductor estricto los mostrará como texto. No se escribe SYLT, el marco sincronizado del estándar.
 - Solo UTF-8, de hasta 1 MB.
 - Sustituye la letra incrustada anterior sin preguntar y no hay botón para quitarla.
-- Solo se incrusta la letra principal. Los archivos de traducción y pronunciación (`.es.lrc`, `.rom.lrc`) no se incrustan.
+- Solo se incrusta la letra principal. Los archivos de traducción y pronunciación (`.es.lrc`, `.rom.lrc`) no se incrustan en `main` (la rama sin fusionar `feature/capas-letra` lo cambia, ver la hoja de ruta).
 - En FLAC y M4A se confía en el mapeo de TagLib (`LYRICS`, `©lyr`). No se ha probado en esos formatos: las pruebas de `TagLibLyricsWriter` solo usan MP3.
 
 **Letra progresiva**
@@ -520,6 +569,9 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 1. **Integración con el sistema:** SMTC en Windows y MPRIS en Linux.
 2. **Probar en Linux:** omitido por ahora.
+3. **Capas de letra incrustadas:** la rama `feature/capas-letra` (commit `5a818af`, sin fusionar a `main`; spec en esa rama: `docs/specs/lyrics-layers.md`) guardaría la traducción y la pronunciación dentro del archivo de audio. No forma parte de `main` ni de la release v1.3.0.
+
+**Deuda menor conocida (restos de la plantilla de Avalonia, sin borrar):** `ViewLocator.cs` en Desktop, la entrada `<Folder Include="Models\"/>` del `.csproj` de Desktop, y la referencia a `Avalonia.Diagnostics` (solo en Debug, sin llamar a `AttachDevTools`).
 
 ## 11. Metodología de trabajo
 
