@@ -982,6 +982,7 @@
                     <Button.Flyout>
                         <MenuFlyout
                             Closed="OnLayersMenuClosed"
+                            Opened="OnLayersMenuOpened"
                             Opening="OnLayersMenuOpening"
                             Placement="BottomEdgeAlignedRight" />
                     </Button.Flyout>

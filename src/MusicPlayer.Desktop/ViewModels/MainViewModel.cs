@@ -642,6 +642,48 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// «Incrustar letras en el archivo» desde el menú de capas del inmersivo (docs/specs/lyrics-layers.md, criterio
+    /// 12b). Escribir pasa por <see cref="OnTagsSaving"/>, que descarga la pista y cierra el inmersivo: después se
+    /// vuelve a cargar en el mismo punto, se reabre el inmersivo y sigue sonando si sonaba. Sin selector de archivos.
+    /// </summary>
+    public async Task EmbedLyricsInImmersiveAsync()
+    {
+        if (CurrentTrack is not { } item) return;
+        var position = _player.CurrentTime;
+        var wasPlaying = _player.State == PlaybackState.Playing;
+
+        if (await EmbedLyrics.EmbedAsync(item.Track, allowPicker: false) && CurrentTrack is null)
+            ResumePlayback(item, position, wasPlaying);
+    }
+
+    // Como StartPlayback, pero en una posición y sin arrancar si estaba en pausa. Vale para la misma pista recién
+    // escrita: la cola no se tocó al descargarla.
+    private void ResumePlayback(TrackItemViewModel item, TimeSpan position, bool play)
+    {
+        if (!File.Exists(item.Track.FilePath))
+        {
+            MarkAvailability(item, false);
+            Status = $"\"{item.Title}\" no está disponible: el archivo se movió o se borró";
+            return;
+        }
+        try
+        {
+            _player.Load(item.Track.FilePath);
+            ShowTrack(item);
+            if (position > TimeSpan.Zero && position < _player.Duration)
+                _player.Seek(position);
+            if (play) _player.Play();
+            UpdateGapless();
+            IsImmersive = true;
+        }
+        catch (Exception ex)
+        {
+            ClearCurrentTrack();
+            Status = ex.Message;
+        }
+    }
+
     [RelayCommand]
     private void OpenImmersive()
     {

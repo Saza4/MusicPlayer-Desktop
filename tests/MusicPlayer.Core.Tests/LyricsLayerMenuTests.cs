@@ -149,6 +149,20 @@ public class LyricsLayerMenuTests
     public void TranslationLabel_CarriesTheCodeWhenItIsNotTheSystemLanguage(string? code, string culture, string label) =>
         Assert.Equal(label, Row(Build(Opts(), code: code, culture: culture), LyricsRow.Translation).Label);
 
+    // ---- Incrustar desde el menú (criterio 12b) ----
+
+    [Fact]
+    public void EmbedOption_WithTheMainNextToTheAudio_IsEnabled() =>
+        Assert.Equal(new LyricsEmbedMenuItem("Incrustar letras en el archivo", true,
+                "Incrusta cancion.lrc y sus capas en el archivo de audio"),
+            LyricsLayerMenu.EmbedOption("cancion.lrc", mainExists: true));
+
+    [Fact]
+    public void EmbedOption_WithoutTheMain_IsDisabledAndSaysWhatIsMissing() =>
+        Assert.Equal(new LyricsEmbedMenuItem("Incrustar letras en el archivo (falta el .lrc)", false,
+                "Falta tema.en vivo.lrc junto a la canción"),
+            LyricsLayerMenu.EmbedOption("tema.en vivo.lrc", mainExists: false));
+
     // ---- Relleno (criterio 17) ----
 
     [Theory]

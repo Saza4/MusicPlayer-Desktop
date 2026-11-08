@@ -23,6 +23,8 @@ public partial class MainWindow : Window
     private long _lastStepAt;
     private bool _muteKeyDown;
     private bool _layersMenuOpen;
+    private bool _spaceWasShortcut;
+    private bool _layersMenuHooked;
 
     public MainWindow()
     {
@@ -39,7 +41,7 @@ public partial class MainWindow : Window
         // Tunnel: la ventana ve la tecla antes que el control enfocado, que la usaría para lo suyo.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, OnPreviewKeyUp, RoutingStrategies.Tunnel);
-        Deactivated += (_, _) => _muteKeyDown = false; // si se suelta la M con otra ventana en primer plano
+        Deactivated += (_, _) => _muteKeyDown = _spaceWasShortcut = false; // si se suelta la tecla con otra ventana en primer plano
         Opened += OnOpened;
 
         DataContextChanged += (_, _) =>
@@ -84,6 +86,7 @@ public partial class MainWindow : Window
         {
             case (Key.Space, KeyModifiers.None) when e.Source is not CheckBox:
                 vm.TogglePlayPauseCommand.Execute(null);
+                _spaceWasShortcut = true;
                 break;
 
             case (Key.M, KeyModifiers.None):
@@ -117,6 +120,15 @@ public partial class MainWindow : Window
     private void OnPreviewKeyUp(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.M) _muteKeyDown = false;
+
+        // Un botón hace clic con Espacio al soltar la tecla (Button.OnKeyUp), aunque la pulsación ya fuera el atajo de
+        // reproducir/pausar. Sin esto, Espacio en un botón enfocado pausaba y además lo pulsaba (en el de capas del
+        // inmersivo, abría el menú; criterio 16 de docs/specs/lyrics-layers.md).
+        if (e.Key == Key.Space && _spaceWasShortcut)
+        {
+            _spaceWasShortcut = false;
+            e.Handled = true;
+        }
     }
 
     // Limita la repetición de una tecla mantenida (saltos y volumen) a un paso cada RepeatInterval ms.
@@ -142,9 +154,28 @@ public partial class MainWindow : Window
 
     private void OnLayersMenuClosed(object? sender, EventArgs e) => _layersMenuOpen = false;
 
+    // Con el menú abierto, el foco está en el menú: Avalonia ya lleva ↑ ↓, Enter y Esc, pero no Espacio. Espacio activa
+    // la opción resaltada (criterio 16). El presentador se crea una vez y se reutiliza: se engancha la primera vez.
+    private void OnLayersMenuOpened(object? sender, EventArgs e)
+    {
+        if (_layersMenuHooked || sender is not MenuFlyout menu) return;
+        if (menu.Items.OfType<MenuItem>().FirstOrDefault()?.Parent is not Control presenter) return;
+        presenter.AddHandler(KeyDownEvent, (_, args) =>
+        {
+            if (args.Key != Key.Space || args.KeyModifiers != KeyModifiers.None) return;
+            args.Handled = true;
+            _spaceWasShortcut = true; // al soltar, el botón enfocado no debe reabrir el menú
+            if (menu.Items.OfType<MenuItem>().FirstOrDefault(i => i.IsSelected && i.IsEnabled) is not { } item) return;
+            item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            menu.Hide();
+        }, RoutingStrategies.Tunnel);
+        _layersMenuHooked = true;
+    }
+
     // El menú nunca está vacío al abrirse: en Avalonia 11.2.5, un MenuFlyout vacío se abre sin nada a la vista aunque
-    // se llene en Opening (comprobado con una reproducción mínima). Por eso se llena cada vez que cambian las capas
-    // o las preferencias, y otra vez al abrir. El botón solo se ve si hay capas, así que entonces hay opciones.
+    // se llene en Opening (comprobado con una reproducción mínima). Por eso se llena, con el menú cerrado, cada vez
+    // que cambian las capas o las preferencias, y otra vez al abrir. El botón solo se ve si hay capas, así que entonces
+    // hay opciones. Con el menú abierto no se rellena: borraría la opción recién pulsada y el menú no se cerraría.
     private void FillLayersMenu()
     {
         if (LayersButton.Flyout is not MenuFlyout menu || DataContext is not MainViewModel vm) return;
@@ -157,6 +188,15 @@ public partial class MainWindow : Window
             item.Click += (_, _) => vm.Lyrics.ApplyLayerOption(row); // recalcula: nunca actúa sobre una capa que ya no está
             menu.Items.Add(item);
         }
+
+        // Criterio 12b: incrustar desde aquí, sin selector; desactivada si falta el .lrc principal.
+        var embedOption = vm.Lyrics.EmbedMenuOption();
+        var embed = new MenuItem { Header = embedOption.Label, IsEnabled = embedOption.IsEnabled };
+        ToolTip.SetTip(embed, embedOption.ToolTip);
+        ToolTip.SetShowOnDisabled(embed, true);
+        embed.Click += (_, _) => _ = vm.EmbedLyricsInImmersiveAsync();
+        menu.Items.Add(new Separator());
+        menu.Items.Add(embed);
     }
 
     // Otra pista (o la misma sin capas): el menú abierto se cierra en lugar de quedar con opciones viejas.
@@ -167,7 +207,7 @@ public partial class MainWindow : Window
             LayersButton.Flyout?.Hide();
             return;
         }
-        if (e.PropertyName is nameof(LyricsViewModel.Lines) or nameof(LyricsViewModel.HasTranslation)
+        if (!_layersMenuOpen && e.PropertyName is nameof(LyricsViewModel.Lines) or nameof(LyricsViewModel.HasTranslation)
             or nameof(LyricsViewModel.HasPronunciation) or nameof(LyricsViewModel.TranslationLanguage)
             or nameof(LyricsViewModel.ShowTranslation) or nameof(LyricsViewModel.ShowPronunciation)
             or nameof(LyricsViewModel.HideOriginal))

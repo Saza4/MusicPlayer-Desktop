@@ -9,6 +9,9 @@ public enum LyricsRow { Original, Pronunciation, Translation }
 /// Una opción del menú: su etiqueta («Ocultar traducción (en)»), si se puede pulsar y las preferencias que deja al
 /// pulsarla.
 /// </summary>
+/// <summary>«Incrustar letras en el archivo»: etiqueta, si se puede pulsar y la descripción emergente.</summary>
+public sealed record LyricsEmbedMenuItem(string Label, bool IsEnabled, string ToolTip);
+
 public sealed record LyricsLayerMenuItem(LyricsRow Row, string Label, bool IsEnabled, LyricsDisplayOptions Result);
 
 /// <summary>
@@ -62,6 +65,20 @@ public static class LyricsLayerMenu
     // Sin contar el respaldo de Resolve (que vuelve a mostrar el original): si nada queda pedido, todo quedaría oculto.
     private static bool LeavesSomethingVisible(LyricsDisplayOptions o, bool hasTranslation, bool hasPronunciation) =>
         !o.HideOriginal || (o.ShowTranslation && hasTranslation) || (o.ShowPronunciation && hasPronunciation);
+
+    /// <summary>Etiqueta de «Incrustar letras en el archivo» en el menú (criterio 12b).</summary>
+    public const string EmbedLabel = "Incrustar letras en el archivo";
+
+    /// <summary>
+    /// Opción de incrustar del menú (criterio 12b): sin el principal junto al audio no se incrusta nada (criterio 6),
+    /// así que se ve desactivada y dice qué falta. El nombre del archivo va en la descripción emergente y no en la
+    /// etiqueta: un nombre largo ensanchaba el menú hasta salirse de la pantalla. Sin selector de archivos.
+    /// </summary>
+    /// <param name="mainFileName">Nombre del principal que se busca («cancion.lrc»).</param>
+    public static LyricsEmbedMenuItem EmbedOption(string mainFileName, bool mainExists) =>
+        mainExists
+            ? new(EmbedLabel, true, $"Incrusta {mainFileName} y sus capas en el archivo de audio")
+            : new($"{EmbedLabel} (falta el .lrc)", false, $"Falta {mainFileName} junto a la canción");
 
     /// <summary>
     /// Renglón que se rellena en la línea activa (criterio 17): el original si se ve; si no, la primera capa visible

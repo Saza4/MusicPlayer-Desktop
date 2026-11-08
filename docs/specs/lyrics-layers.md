@@ -62,6 +62,10 @@ Lo que ya existe y se reutiliza:
 
 12. Un botón con icono vectorial de burbuja con caracteres (distinto del de comillas) abre un `MenuFlyout`.
     - Solo se muestra con letra **sincronizada** y al menos una capa disponible, sea hermana o incrustada.
+12b. **Incrustar desde el inmersivo** (añadido tras M5, a petición del autor: la petición original incluía incrustar desde el modo inmersivo y se perdió al escribir el criterio 12). Al final del mismo menú, tras un separador, «Incrustar letras en el archivo». Reutiliza `EmbedLyricsViewModel`, la misma escritura y la misma línea de estado que el clic derecho (criterios 1-7), sin lógica nueva de incrustado.
+    - **Reproducción:** escribir descarga la pista y cierra el inmersivo (`OnTagsSaving` → `ClearCurrentTrack`, para liberar el archivo en Windows). Después se vuelve a cargar la misma pista en el mismo punto, se reabre el inmersivo y sigue sonando si sonaba (o queda en pausa si lo estaba). Se nota un corte breve. También se reanuda si la escritura falla, porque el archivo ya se soltó.
+    - **Sin principal:** sin `cancion.lrc` junto al audio, la opción se ve desactivada y dice qué falta: «Incrustar letras en el archivo (falta cancion.lrc)». Desde el inmersivo no se abre el selector de archivos; si el principal desaparece entre abrir el menú y pulsar, la línea de estado lo dice y no se escribe nada.
+    - La etiqueta y el desactivado viven en Core (`LyricsLayerMenu.EmbedOption`), con prueba.
 13. **Opciones del menú:**
     - «Mostrar/Ocultar traducción», «Mostrar/Ocultar pronunciación» y «Mostrar/Ocultar original». Cada una solo aparece si su capa existe (el original, siempre que haya alguna otra).
     - **Las etiquetas siguen el estado resuelto por `Resolve()`**, no la preferencia guardada: si `HideOriginal` está activo pero el original se ve porque no queda otra capa visible, la etiqueta dice «Ocultar original».
@@ -268,3 +272,18 @@ En tres copias con audio sintético (un tono de 10 s generado con ffmpeg) y letr
 - **Sin probar en la interfaz:** el menú, el icono, el teclado y el relleno de la pronunciación o la traducción no se han visto en pantalla. Es la prueba a mano de M5.
 
 **Ajuste tras M5: el menú no abría (prueba a mano del autor).** El botón y su descripción salían, pero el menú no se desplegaba, con la pista sonando o en pausa (comprobado por UI Automation en la app: ningún `MenuItem` al pulsar). **Causa:** en Avalonia 11.2.5, un `MenuFlyout` vacío al abrirse se abre sin nada a la vista aunque se llene en `Opening`. Una reproducción mínima en Win32 lo confirma: vacío y lleno en `Opening` → `Opening`, `Opened` y ninguna opción; con una opción desde el principio y sustituida en `Opening` → se ven las nuevas. **Arreglo:** `MainWindow.FillLayersMenu` llena el menú cada vez que cambian las capas o las preferencias, y otra vez al abrir. Como el botón solo se ve si hay capas, el menú nunca está vacío.
+
+**Ajuste tras M5: incrustar desde el inmersivo (criterio 12b).** `LyricsLayerMenu.EmbedOption` (Core, 2 pruebas), `LyricsViewModel.EmbedMenuOption` (busca `cancion.lrc` junto a la pista), `EmbedLyricsViewModel.EmbedAsync(pista, allowPicker)` (devuelve si pidió soltar el archivo) y `MainViewModel.EmbedLyricsInImmersiveAsync`, que guarda la posición y si sonaba y, tras escribir, vuelve a cargar la pista con `ResumePlayback` (la cola no se toca al descargarla). Core: 612.
+
+**Comprobado en la app tras los ajustes (8 de noviembre de 2026, por UI Automation y capturas).** Con una pista real de la biblioteca, en silencio, y la letra sintética de `MUSICPLAYER_LYRICS_OVERRIDE` (original, `.es.lrc` y `.rom.lrc`), sin escribir en ningún archivo de audio:
+- El menú abre con la pista sonando y en pausa, con las etiquetas según lo que se ve, y se cierra al pulsar una opción. Al reabrirlo, las etiquetas están al día.
+- «Ocultar original»: queda la pronunciación sobre la traducción, y la pronunciación se rellena de izquierda a derecha mientras la traducción de la línea activa va entera (criterio 17). Con solo la pronunciación visible, «Ocultar pronunciación» sale desactivada (criterio 13).
+- «Incrustar letras en el archivo (falta el .lrc)» sale desactivada con una pista sin `.lrc` al lado.
+- Teclado (criterio 16): Espacio con el foco en el botón y el menú cerrado solo reproduce o pausa; Enter abre el menú; ↓ resalta; Espacio o Enter activan la opción resaltada y cierran el menú sin tocar la reproducción; Esc cierra el menú sin salir del inmersivo.
+- **Sin comprobar en la app:** incrustar y reanudar (criterio 12b). Las copias de prueba no están en la biblioteca, y no se añadieron carpetas a la biblioteca real ni se escribió en audio real. Queda para la prueba a mano.
+
+**Fallos encontrados al comprobarlo, y arreglados:**
+- **El menú no se cerraba al pulsar una opción:** el cambio de preferencia lo rellenaba mientras estaba abierto y borraba la opción recién pulsada. Ahora solo se rellena cerrado; al abrir se recalcula igual.
+- **La etiqueta con el nombre del `.lrc`** ensanchaba el menú hasta salirse de la pantalla (623 px con un nombre real). Ahora dice «(falta el .lrc)» y el nombre va en la descripción emergente, que también se ve con la opción desactivada.
+- **Espacio en un botón enfocado:** `Button` hace clic al soltar Espacio (`OnKeyUp`), aunque la pulsación ya fuera el atajo de reproducir/pausar. En el botón de capas, pausaba y abría el menú. Afectaba a cualquier botón enfocado (por ejemplo «Siguiente»: pausaba y pasaba de pista). La ventana se queda ahora también con el Espacio soltado cuando la pulsación fue el atajo.
+- **Espacio dentro del menú:** Avalonia lleva ↑ ↓, Enter y Esc en el menú abierto, pero no Espacio. Un manejador en el presentador del menú (`OnLayersMenuOpened`) activa con Espacio la opción resaltada.

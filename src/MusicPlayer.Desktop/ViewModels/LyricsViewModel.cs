@@ -17,6 +17,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     : ObservableObject
 {
     private LyricBlock _block = LyricBlock.Empty;
+    private Track? _track;
     private TimeSpan? _trackDuration;
     private CancellationTokenSource? _cts;
     private bool _restoring;
@@ -100,6 +101,17 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         HideOriginal = item.Result.HideOriginal;
     }
 
+    /// <summary>
+    /// «Incrustar letras en el archivo» del menú de capas (criterio 12b): desactivada, con lo que falta, si no está
+    /// el .lrc principal junto al audio.
+    /// </summary>
+    public LyricsEmbedMenuItem EmbedMenuOption()
+    {
+        if (_track is null) return new(LyricsLayerMenu.EmbedLabel, false, "No hay canción");
+        var main = System.IO.Path.ChangeExtension(_track.FilePath, ".lrc");
+        return LyricsLayerMenu.EmbedOption(System.IO.Path.GetFileName(main), System.IO.File.Exists(main));
+    }
+
     private LyricsDisplayOptions CurrentOptions() =>
         new(ShowTranslation, ShowPronunciation, HideOriginal, EmphasizePronunciation);
 
@@ -142,6 +154,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
 
+        _track = track;
         _trackDuration = track.Duration > TimeSpan.Zero ? track.Duration : null;
         SetBlock(LyricBlock.Empty);
 
@@ -247,6 +260,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     public void Clear()
     {
         _cts?.Cancel(); // evita que una carga en curso reponga la letra
+        _track = null;
         SetBlock(LyricBlock.Empty);
     }
 }
