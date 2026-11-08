@@ -63,6 +63,8 @@ public static class CompositionRoot
         services.AddSingleton<CoverEditor>();
         services.AddSingleton<ILyricsWriter, TagLibLyricsWriter>();
         services.AddSingleton<LyricsEditor>();
+        services.AddSingleton<ILyricsSiblingFinder>(_ =>
+            new LyricsSiblingFinder(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName));
         services.AddSingleton<IAudioConverter, FfmpegAudioConverter>();
         services.AddSingleton<ConversionService>();
 

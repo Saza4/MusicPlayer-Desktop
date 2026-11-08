@@ -1,13 +1,14 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using MusicPlayer.Core.Interfaces;
 using MusicPlayer.Core.Models;
 using MusicPlayer.Core.Services;
 using MusicPlayer.Desktop.Services;
 
 namespace MusicPlayer.Desktop.ViewModels;
 
-public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService picker)
+public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService picker, ILyricsSiblingFinder siblings)
 {
     private bool _busy;
 
@@ -35,9 +36,12 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
                 : await picker.PickLyricsAsync($"Letra para \"{track.Title}\"");
             if (source is null) return;
 
+            // Las capas se toman junto al principal: junto al audio o junto al archivo elegido (spec, criterio 6).
+            var layers = siblings.Find(source);
+
             Saving?.Invoke(track);
-            await editor.EmbedAsync(track, source);
-            Notified?.Invoke($"Letra de \"{track.Title}\" incrustada desde {Path.GetFileName(source)}");
+            var report = await editor.EmbedAsync(track, source, layers);
+            Notified?.Invoke(report.Describe(track.Title, Path.GetFileName(source)));
         }
         catch (Exception ex)
         {

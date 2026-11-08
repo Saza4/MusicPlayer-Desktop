@@ -18,6 +18,14 @@ public class LyricsEmbedReportTests
         Assert.Equal("Letra de \"X\" incrustada desde song.lrc: original, traducción (es) y pronunciación",
             new LyricsEmbedReport([Es, Rom], []).Describe("X", "song.lrc"));
 
+    // Los hermanos llegan con la pronunciación delante (LyricsLayerNames.FindSiblings); el texto sigue el criterio 7.
+    [Fact]
+    public void TheOrderDoesNotDependOnHowTheyArrive() =>
+        Assert.Equal("Letra de \"X\" incrustada desde song.lrc: original, traducción (en), traducción (es) y pronunciación" +
+                     " · saltadas: traducción (en), está vacía; pronunciación, pesa más de 1 MB",
+            new LyricsEmbedReport([Rom, Es, En], [new LyricsLayerSkip(Rom, "pesa más de 1 MB"), new LyricsLayerSkip(En, "está vacía")])
+                .Describe("X", "song.lrc"));
+
     [Fact]
     public void ListsWhatWasSkippedAndWhy() =>
         Assert.Equal("Letra de \"X\" incrustada desde song.lrc: original y traducción (es) · saltada: traducción (en), no está en UTF-8",

@@ -34,16 +34,21 @@ public sealed record LyricsEmbedReport(IReadOnlyList<LyricsLayerSource> Embedded
     /// «Letra de "X" incrustada desde x.lrc». Con capas:
     /// «Letra de "X" incrustada desde x.lrc: original, traducción (es) y pronunciación · saltada: traducción (en), no está en UTF-8».
     /// </summary>
+    /// <remarks>El orden no depende de cómo llegan: traducciones por código y luego la pronunciación (criterio 7).</remarks>
     public string Describe(string title, string mainFileName)
     {
         var text = $"Letra de \"{title}\" incrustada desde {mainFileName}";
         if (Embedded.Count > 0)
-            text += ": " + JoinSpanish(new[] { "original" }.Concat(Embedded.Select(e => e.Label)).ToList());
+            text += ": " + JoinSpanish(new[] { "original" }.Concat(InOrder(Embedded, e => e).Select(e => e.Label)).ToList());
         if (Skipped.Count > 0)
             text += (Skipped.Count == 1 ? " · saltada: " : " · saltadas: ") +
-                    string.Join("; ", Skipped.Select(s => $"{s.Source.Label}, {s.Reason}"));
+                    string.Join("; ", InOrder(Skipped, s => s.Source).Select(s => $"{s.Source.Label}, {s.Reason}"));
         return text;
     }
+
+    private static IEnumerable<T> InOrder<T>(IEnumerable<T> items, Func<T, LyricsLayerSource> source) =>
+        items.OrderBy(i => source(i).Kind == LyricsLayerKind.Pronunciation)
+             .ThenBy(i => source(i).Language, StringComparer.Ordinal);
 
     private static string JoinSpanish(IReadOnlyList<string> items) =>
         items.Count == 1 ? items[0] : string.Join(", ", items.Take(items.Count - 1)) + " y " + items[^1];
