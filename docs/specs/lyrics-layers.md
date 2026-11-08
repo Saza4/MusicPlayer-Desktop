@@ -1,6 +1,6 @@
 # Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
 
-Estado: **aprobada (7 de noviembre de 2026), en curso: M0 hecho**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+Estado: **aprobada (7 de noviembre de 2026), en curso: M0 y M1 hechos**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
 
 ## Contexto
 
@@ -22,6 +22,7 @@ Lo que ya existe y se reutiliza:
 1. «Incrustar letra (.lrc)…» incrusta en **una sola escritura atómica** (`SafeFileEdit`) el principal y las capas que existan junto a él.
    - Capas que cuentan: `<nombre>.<código>.lrc` como traducción y `<nombre>.rom.lrc` como pronunciación.
    - **Código de idioma válido:** un código ISO 639-1 real (lista fija en Core, sin depender de las culturas del sistema), con una subetiqueta opcional de región (`pt-BR`, dos letras) o de escritura (`zh-Hans`, cuatro letras). Se normaliza: idioma en minúsculas, región en mayúsculas y escritura con mayúscula inicial. `.alt.lrc`, `.mix.lrc` o `.rom.lrc` no son traducciones (`alt` y `mix` solo están en ISO 639-3; `rom` es la pronunciación).
+   - **Los códigos de tres letras no cuentan como traducción nueva.** Única excepción, por compatibilidad: el código de idioma del propio sistema, que es lo que se lee hoy (ver «Compatibilidad con los nombres de hoy»).
    - Los hermanos no se borran ni se modifican; se comprueba con un hash en la prueba.
 2. **Dónde se guarda cada capa:**
    - El principal sigue en su campo estándar, sin cambios: USLT, `LYRICS` y `©lyr`.
@@ -116,6 +117,7 @@ Lo que ya existe y se reutiliza:
 - **`settings.json` anterior:** carga igual.
 - **Varias traducciones** (`.es.lrc` y `.en.lrc`): se incrustan todas y se muestra una (criterio 10).
 - **Audio con un punto en el nombre** (`tema.en vivo.mp3`): los hermanos son `tema.en vivo.es.lrc`. La regla toma el nombre sin extensión del audio como prefijo exacto.
+- **Mismo código repetido** (`cancion.es.lrc` y `cancion.ES.lrc`, posible en Linux): se toma uno, el primero en orden ordinal del nombre.
 - **Archivo en uso por la reproducción:** se libera antes de escribir con el evento `Saving` → `OnTagsSaving`, como hoy.
 
 ## Decisiones tomadas (del usuario)
@@ -124,6 +126,20 @@ Lo que ya existe y se reutiliza:
 3. «Ocultar original» **ya existe** (`LyricsDisplayOptions.HideOriginal`) y se reutiliza. No se puede ocultar todo. Con el original oculto, se rellena la primera capa visible.
 4. Sin diálogo: se incrusta todo lo que haya, en una sola escritura. Reincrustar reemplaza solo las capas con fuente. Un hermano sin principal no se incrusta. La línea de estado resume.
 5. 1 MB por capa. Principal inválido: se cancela. Secundaria inválida: se salta y se avisa.
+
+## Compatibilidad con los nombres de hoy
+
+Comprobado antes de M1. Hoy `CompanionLyricsProvider` solo prueba **un** nombre de traducción: `<nombre>.<CultureInfo.CurrentUICulture.TwoLetterISOLanguageName>.lrc` (más `<nombre>.rom.lrc`). En Windows coincide sin distinguir mayúsculas (`cancion.ES.lrc` vale); en Linux, solo en minúsculas.
+
+| Hoy | Cuántos | Con la regla nueva |
+|---|---|---|
+| Código ISO 639-1 del sistema (`es`, `pt`, `zh`…) | todos los de dos letras de .NET están en la lista de 183, salvo `iv` | se sigue mostrando |
+| Código de tres letras del sistema, en culturas sin ISO 639-1 (`fil`, `haw`, `chr`… en .NET 8 son 101) | uno: el del sistema | **se sigue mostrando** por la excepción de compatibilidad: el código del sistema vale aunque no esté en la lista |
+| `iv` (cultura invariante, por ejemplo en Linux sin ICU) | uno | se sigue aceptando por la misma excepción (inofensivo) |
+| Con región (`es-MX`, `pt-BR`) | **nunca** se leía: con el sistema en `es-MX` se busca `.es.lrc` | pasa a contar como traducción (nuevo) |
+| Otros idiomas (`.en.lrc` con el sistema en español) | nunca se leían | pasan a contar (criterio 10) |
+
+Así, ningún nombre que hoy se muestra deja de mostrarse. Una prueba lo fija para `.es.lrc`, `.ES.lrc` (Windows), `.fil.lrc` con el sistema en `fil` y `.es-MX.lrc`. Los códigos de tres letras **distintos** del del sistema no cuentan como traducción.
 
 ## Revisión del autor (P1-P6 aceptados, con ajustes)
 - **P1. Nombres de campo:** `LYRICS_TRANSLATION_<CÓDIGO>` y `LYRICS_PRONUNCIATION` en los tres formatos, escritos en mayúsculas y leídos sin distinguir mayúsculas (criterio 2). TXXX y no USLT adicionales: otro reproductor nunca muestra la traducción como letra principal, y `Tag.Lyrics = null` no las borra (comprobado en M0).
@@ -141,12 +157,12 @@ Lo que ya existe y se reutiliza:
 | Hito | Contenido | Verificación |
 |---|---|---|
 | M0 | (**hecho**, ver «Resultado del spike») Spike de TagLib 2.3.0: escribir y leer TXXX, Vorbis y `----` con texto multilínea y Unicode, ~1 MB y reabriendo el archivo. Archivos de prueba FLAC/M4A (P6). Resultado anotado en la spec; la spec entra en el commit. | Pruebas del spike en Infrastructure |
-| M1 | Core: modelo de capas (`LyricsLayers`: principal, traducciones por código, pronunciación), regla de nombres de hermanos (`<nombre>.<código>.lrc`) y de campos, elección de traducción. `LyricsEditor` valida por capa y devuelve un resumen (incrustado y saltado con su motivo). | Pruebas Core con un escritor falso |
-| M2 | Infrastructure (escritura): `ILyricsWriter` con capas, `TagLibLyricsWriter` por formato, reemplazo solo de las capas con fuente, verificación de todas. | MP3, FLAC y M4A: escribe, reemplaza sin duplicar, conserva etiquetas y audio, no deja temporales, falla sin tocar el original |
+| M1 | (**hecho**, ver «Resultado de M1») Core: modelo de capas (`LyricsLayers`: principal, traducciones por código, pronunciación), regla de nombres de hermanos (`<nombre>.<código>.lrc`) y de campos, elección de traducción. `LyricsEditor` valida por capa y devuelve un resumen (incrustado y saltado con su motivo). | Pruebas Core con un escritor falso |
+| M2 | Infrastructure (escritura): `ILyricsWriter` con capas, `TagLibLyricsWriter` por formato, reemplazo solo de las capas con fuente, verificación de todas. | MP3, FLAC y M4A: escribe, reemplaza sin duplicar, conserva etiquetas y audio, no deja temporales, falla sin tocar el original. Además (pedido por el autor): nombres con guion (`LYRICS_TRANSLATION_PT-BR`, `LYRICS_TRANSLATION_ZH-HANS`) en TXXX, Vorbis y `----`, con la mayúscula normalizada de vuelta (`pt-BR`, `zh-Hans`); borrar la principal (`Tag.Lyrics = null`) no toca las capas en FLAC y M4A; el editor de etiquetas y «Limpiar etiquetas» (ambos con `TagLibTrackTagWriter`) conservan las capas en los tres formatos; una capa de exactamente 1 MB se escribe y se relee en los tres |
 | M3 | Infrastructure (lectura): lector de capas incrustadas; `CompanionLyricsProvider` con prioridad por capa (hermano > incrustado) y elección de traducción. | Pruebas: solo incrustado, solo hermano, ambos, varias traducciones |
 | M4 | Desktop A: `EmbedLyricsViewModel` busca los hermanos (junto al audio o al elegido), aviso en la línea de estado. | A mano (autor), **en tres copias** (MP3, FLAC y M4A), no en archivos reales: la escritura no se puede deshacer. Incrustar y abrir cada copia sin los hermanos |
 | M5 | Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
-| M6 | Docs en commit aparte: README (limitación), `reporte-reproductor.md`, spec, CLAUDE.md (número de pruebas). Push, PR y CI verde en Windows y Ubuntu. | CI |
+| M6 | Docs en commit aparte: README (limitación, y qué pasa con las capas al «Convertir formato» con ffmpeg: lo comprueba el autor a mano una vez), `reporte-reproductor.md`, spec, CLAUDE.md (número de pruebas). Push, PR y CI verde en Windows y Ubuntu. | CI |
 
 ## Resultado del spike (M0)
 
@@ -162,3 +178,12 @@ Con TagLibSharp 2.3.0, primero en el scratchpad y luego como pruebas (`TagLibLyr
 - **FLAC de prueba armado a mano** (`fLaC` + STREAMINFO de 34 bytes, sin marcos de audio): TagLib lo abre, lo escribe y lo relee. No hace falta un archivo guardado.
 - **M4A de prueba:** no se arma a mano. `Fixtures/silencio.m4a` (778 bytes, AAC, 8 kHz, mono, 0,1 s, sin metadatos): `ffmpeg -f lavfi -i anullsrc=r=8000:cl=mono -t 0.1 -c:a aac -b:a 16k -map_metadata -1 -fflags +bitexact -flags:a +bitexact silencio.m4a`.
 - La escritura real (`TagLibLyricsWriter` con capas) es M2; las pruebas de M0 solo fijan lo que TagLib permite.
+
+## Resultado de M1
+
+Todo en Core, con pruebas (569 en Core, +87):
+- **`LyricsLayers.cs`** (modelos): `LyricsLayerKind`, `LyricsLayerSource` (tipo, código y ruta; `Label` para la línea de estado), `LyricsLayer` (texto validado), `LyricsLayers` (principal y capas de una escritura), `LyricsLayerSkip` y `LyricsEmbedReport` con `Describe`, que da el texto de la línea de estado (sin capas, el mismo de hoy).
+- **`LyricsLanguage`**: lista fija ISO 639-1 (183 códigos), `Normalize` (región de dos letras o escritura de cuatro; `es-419` y `es-latino` no valen), `FromSuffix` (con la excepción de compatibilidad del código del sistema), `FromField` (lee lo que se escribió, incluido un código del sistema de tres letras), `Pick` (criterio 10) e `IsSystemLanguage` (si la etiqueta del menú lleva código).
+- **`LyricsLayerNames`**: `FieldName` en mayúsculas, `TryParseField` sin distinguir mayúsculas y con el código normalizado, `FindSiblings` (prefijo exacto del nombre sin extensión, sin distinguir mayúsculas; ignora `.alt`, `.mix`, `.live`, `.fil` ajeno al sistema, `.es-latino` y los nombres con más puntos).
+- **`LyricsEditor`** recibe ahora también `ILyricParser` y tiene `EmbedAsync(pista, principal, capas)`: valida cada capa por separado (UTF-8 estricto, ≤ 1 MB, no vacía, y que el analizador saque letra), salta las inválidas con su motivo y escribe todo en **una sola llamada** a `ILyricsWriter`. El principal inválido lanza como hoy y no escribe nada. Una capa de exactamente 1 MB se acepta. `EmbedAsync(pista, principal)` sigue igual, sin capas.
+- **`ILyricsWriter.Write(ruta, LyricsLayers)`**: firma nueva. Hasta M2, `TagLibLyricsWriter` escribe solo el principal y lanza `NotSupportedException` si llegan capas (nadie las pasa todavía), en lugar de perderlas sin avisar.

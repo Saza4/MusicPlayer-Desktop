@@ -1,15 +1,22 @@
 using MusicPlayer.Core.Interfaces;
+using MusicPlayer.Core.Models;
 
 namespace MusicPlayer.Infrastructure;
 
 public sealed class TagLibLyricsWriter : ILyricsWriter
 {
-    public void Write(string filePath, string lyrics) =>
+    public void Write(string filePath, LyricsLayers layers)
+    {
+        // Las capas llegan en M2 (docs/specs/lyrics-layers.md); hasta entonces, mejor fallar que perderlas sin avisar.
+        if (layers.Extras.Count > 0)
+            throw new NotSupportedException("Incrustar traducción y pronunciación aún no está disponible.");
+
         SafeFileEdit.Run(filePath, temp =>
         {
-            Apply(temp, lyrics);
-            Verify(temp, lyrics);
+            Apply(temp, layers.Main);
+            Verify(temp, layers.Main);
         });
+    }
 
     private static void Apply(string path, string lyrics)
     {
