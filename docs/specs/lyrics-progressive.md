@@ -273,6 +273,24 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 
 **Decisión tras M3 (autor):** no se aplican los 20 fps. Se está en el tope, no por encima; el ahorro esperado (~0,7 puntos) queda dentro del ruido, y la comprobación a mano de 20 fps fue solo del relleno, no del resorte. Los fps quedan como constante (`ProgressiveLyricsMetrics.FramesPerSecond`) y el autor los revisa a mano en M5.
 
+## Resultado de M4
+
+**Decisiones del autor para M4:** criterio 8 dentro de M4; revisar que el desenfoque de la carátula se calcule fuera del hilo de la interfaz, sobre una versión reducida, y que se actualice al cambiar de pista o al editar la carátula.
+
+- **Pulsar para saltar:** `Tapped` (ratón, dedo o lápiz) sobre una línea salta a su marca; sobre una pausa «♪», a su inicio (`LyricsViewModel.SeekTo`, que también usa `SeekToLine` del `ListBox`). Al saltar vuelve el desplazamiento automático sin esperar. Las líneas muestran el cursor de mano.
+- **Criterio 8:** la rueda (y las ruedas de precisión de los touchpad, que llegan como rueda) desplaza 60 DIPs por paso con el resorte, todas las líneas a la vez. Arrastrar con el dedo o el lápiz mueve el contenido pegado al dedo (a partir de 8 DIPs; antes es un toque). Tras **3 s** sin tocar nada (`ManualScrollHold`), la activa vuelve al ancla con el resorte. Mientras se arrastra no se retoma. El desplazamiento manual se acota en Core (`LyricsScroll.ClampManualOffset`, 7 pruebas nuevas) para que siempre quede alguna línea en el ancla. Con el ratón no hay arrastre: rueda para desplazar y clic para saltar.
+- **Opacidad y escala:** ahora se miden respecto a la **línea activa**, esté donde esté (criterio 2, literal), en lugar de respecto al ancla. Al desplazar a mano, la activa sigue destacada.
+- **Fondo (`BlurredBackdrop`):** reducir (`Bitmap.CreateScaledBitmap`, como UniformToFill), recortar el centro y desenfocar ocurre en `Task.Run`. El resultado vuelve al hilo de la interfaz y se descarta si entretanto cambió la carátula o el tamaño. Se regenera solo si cambia la instancia de la carátula o el tamaño reducido (1/12); mientras tanto se ve el anterior. Antes, el desenfoque de M3 corría en `Render`, en el hilo de la interfaz.
+  - **Cambio de pista:** llega un `Bitmap` nuevo en `NowPlayingCover` → se regenera.
+  - **Edición de la carátula de la pista que suena:** los editores (etiquetas, carátula del álbum) avisan con `Saving` → `MainViewModel.ClearCurrentTrack()` deja `NowPlayingCover = null` y cierra el inmersivo, y `CoverArtLoader.Invalidate` vacía la caché. Al volver a reproducirla se carga la carátula nueva, que es otra instancia → se regenera. No hizo falta código nuevo para esto.
+- **Reloj:** el `DispatcherTimer` de fotogramas se para al crearlo (ese constructor lo arranca); hasta ahora lo paraba el primer `Tick`.
+
+**Verificación a mano (autor, Debug): pasa.**
+- Pulsar una línea salta a su marca.
+- La rueda desplaza y a los 3 s la letra vuelve a su sitio.
+- Al editar la carátula de la pista que suena y volver a reproducirla, el fondo cambia.
+- **Arrastre con el dedo o el lápiz: sin probar en hardware táctil** (el autor no tiene pantalla táctil).
+
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
 
 | # | Hito | Verificación |
@@ -281,7 +299,7 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 | M1 | Core: `LyricsTiming` (con huecos instrumentales), `LyricBlock.GetLineEnd`, `SpringSolver`, `LyricsScroll`, `LyricLine.Words` (vacío). Pruebas del parser con el formato de `Chicago.lrc` (**hecho**, ver «Resultado de M1») | Pruebas: duraciones, empates, última línea, saltos atrás, convergencia del resorte, huecos |
 | M2 | `FillTextBlock` con `FillX`, borde suave **con degradado en el texto (sin `PushOpacityMask`)**, texto en varios renglones y temas. Medida en **Release** e investigación del redibujo de la ventana completa (**hecho**, ver «Resultado de M2») | Capturas en Oscuro, Claro y Medianoche; relleno al 0, 50 y 100 %. CPU en Release frente al clásico |
 | M3 | `ProgressiveLyricsView`: desplazamiento con resorte, cascada, fundido, opacidad y escala por distancia. Reloj parado con la línea completa; 20 fps solo si aún supera el tope (ver «Notas para M3») (**hecho**, ver «Resultado de M3»; 20 fps descartados, se revisan a mano en M5) | Medida de CPU en Release frente al `ListBox` clásico (criterio 12) |
-| M4 | Integración en el modo inmersivo; panel lateral intacto. (El ajuste `LyricsStyle` y su interruptor se adelantaron a M2, ver «Ajuste `LyricsStyle` adelantado».) Pulsar una línea salta a su marca. **Criterio 8:** la rueda del ratón o un gesto pausa el auto-desplazamiento unos segundos y luego retoma. **Revisión del fondo:** el desenfoque de la carátula se calcula fuera del hilo de la interfaz, sobre una versión reducida, y se actualiza al cambiar de pista o al editar la carátula | Pulsar línea salta; `Plain` sigue en el `ListBox`; rueda → desplazamiento manual y vuelta al ancla; fondo sin trabajo en el hilo de la interfaz y actualizado tras editar la carátula |
+| M4 | Integración en el modo inmersivo; panel lateral intacto. (El ajuste `LyricsStyle` y su interruptor se adelantaron a M2, ver «Ajuste `LyricsStyle` adelantado».) Pulsar una línea salta a su marca. **Criterio 8:** la rueda del ratón o un gesto pausa el auto-desplazamiento unos segundos y luego retoma. **Revisión del fondo:** el desenfoque de la carátula se calcula fuera del hilo de la interfaz, sobre una versión reducida, y se actualiza al cambiar de pista o al editar la carátula (**hecho**, ver «Resultado de M4»; arrastre táctil sin probar en hardware) | Pulsar línea salta; `Plain` sigue en el `ListBox`; rueda → desplazamiento manual y vuelta al ancla; fondo sin trabajo en el hilo de la interfaz y actualizado tras editar la carátula |
 | M5 | «Reducir movimiento» y revisión a mano | A mano (autor): sensación frente al vídeo de referencia |
 | M6 | Tras la aprobación: retirar el estilo clásico **solo del modo inmersivo** y el ajuste `LyricsStyle`. Docs (`README`, `reporte-reproductor.md`, esta spec) y `CLAUDE.md` | `dotnet build -c Release` sin warnings nuevos y pruebas en verde; CI en Windows y Ubuntu |
 

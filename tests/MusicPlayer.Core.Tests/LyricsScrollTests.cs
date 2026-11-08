@@ -87,6 +87,23 @@ public class LyricsScrollTests
         Assert.Equal(expectCascade ? TimeSpan.FromMilliseconds(300) : TimeSpan.Zero, delay);
     }
 
+    [Theory]
+    [InlineData(200, 200)]      // dentro: igual
+    [InlineData(1000, 350)]     // más allá de la primera línea en el ancla
+    [InlineData(-500, 130)]     // más allá de la última línea en el ancla
+    [InlineData(350, 350)]
+    [InlineData(130, 130)]
+    public void ClampManualOffset_KeepsSomeLineAtTheAnchor(double offset, double expected)
+    {
+        Assert.Equal(expected, LyricsScroll.ClampManualOffset(Heights, 20, offset, viewportHeight: 1000));
+    }
+
+    [Fact]
+    public void ClampManualOffset_NoLines_IsAnchor()
+    {
+        Assert.Equal(350, LyricsScroll.ClampManualOffset([], 20, -80, 1000));
+    }
+
     [Fact]
     public void CascadeDelay_CustomStepAndMax()
     {

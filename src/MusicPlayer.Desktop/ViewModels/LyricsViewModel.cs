@@ -178,9 +178,15 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     private void SeekToLine(LyricLineViewModel? line)
     {
         if (line is not { IsSynced: true }) return;
+        SeekTo(line.Line.Timestamp);
+    }
 
-        player.Seek(line.Line.Timestamp);
-        UpdatePosition(line.Line.Timestamp); // También funciona con la reproducción en pausa
+    /// <summary>Salta a <paramref name="position"/> (una línea o una pausa de la letra progresiva).</summary>
+    public void SeekTo(TimeSpan position)
+    {
+        if (!IsSynced) return;
+        player.Seek(position);
+        UpdatePosition(position); // También funciona con la reproducción en pausa
     }
 
     private void SetBlock(LyricBlock block)

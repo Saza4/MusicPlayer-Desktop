@@ -33,6 +33,15 @@ public static class ProgressiveLyricsMetrics
     /// <summary>El resorte del desplazamiento (el spring() de SwiftUI, como el original).</summary>
     public static readonly Spring Spring = Spring.Default;
 
+    /// <summary>Criterio 8: tras desplazar a mano, tiempo sin tocar nada hasta que vuelve el automático.</summary>
+    public static readonly TimeSpan ManualScrollHold = TimeSpan.FromSeconds(3);
+
+    /// <summary>Desplazamiento por cada paso de la rueda (las ruedas de precisión dan fracciones).</summary>
+    public const double WheelStep = 60;
+
+    /// <summary>Lo que hay que mover el dedo para que deje de ser un toque y pase a ser arrastre.</summary>
+    public const double DragThreshold = 8;
+
     /// <summary>Nunca se programa un despertar más corto que esto.</summary>
     public static readonly TimeSpan MinWake = TimeSpan.FromMilliseconds(1);
 }

@@ -43,6 +43,19 @@ public static class LyricsScroll
     }
 
     /// <summary>
+    /// Acota un desplazamiento manual (rueda o arrastre, criterio 8) para que siempre quede alguna línea en el
+    /// ancla: como mucho la primera (tope de arriba) y como poco la última (tope de abajo).
+    /// </summary>
+    public static double ClampManualOffset(IReadOnlyList<double> heights, double spacing, double offset,
+        double viewportHeight, double anchor = DefaultAnchor)
+    {
+        if (heights.Count == 0) return TargetOffset(heights, spacing, 0, viewportHeight, anchor);
+        var first = TargetOffset(heights, spacing, 0, viewportHeight, anchor);                 // el mayor
+        var last = TargetOffset(heights, spacing, heights.Count - 1, viewportHeight, anchor);  // el menor
+        return Math.Clamp(offset, last, first);
+    }
+
+    /// <summary>
     /// Retardo con que empieza a moverse cada línea al cambiar la línea activa. Al avanzar una línea, las de
     /// debajo de la nueva activa se retrasan más cuanto más lejos están; al retroceder una, las de encima. Un salto
     /// de más de una línea (seek, cambio de pista) mueve todo a la vez, para que llegue cuanto antes.

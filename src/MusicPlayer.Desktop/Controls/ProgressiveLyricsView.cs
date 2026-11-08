@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using MusicPlayer.Core.Services;
@@ -21,6 +22,8 @@ namespace MusicPlayer.Desktop.Controls;
 /// <remarks>
 /// El reloj de fotogramas solo corre mientras hace falta: relleno a medias con la pista sonando, o algún resorte en
 /// movimiento. Si no, se para y se despierta con el inicio de la siguiente entrada (o con un cambio del modelo).
+/// Interacción (M4): pulsar una línea salta a su marca; la rueda o arrastrar con el dedo desplazan a mano, y tras
+/// <see cref="ProgressiveLyricsMetrics.ManualScrollHold"/> sin tocar nada vuelve el desplazamiento automático.
 /// </remarks>
 public sealed class ProgressiveLyricsView : Panel
 {
@@ -41,6 +44,8 @@ public sealed class ProgressiveLyricsView : Panel
     private readonly Stopwatch _time = Stopwatch.StartNew();
     private readonly DispatcherTimer _frames;
     private readonly DispatcherTimer _wake;
+    private readonly DispatcherTimer _resume;   // fin de la pausa del auto-desplazamiento (criterio 8)
+    private readonly Cursor _hand = new(StandardCursorType.Hand);
     private LyricsViewModel? _subscribed;
 
     private double[] _tops = [];
@@ -52,9 +57,17 @@ public sealed class ProgressiveLyricsView : Panel
     private bool _running;
     private TimeSpan _lastFrame;
 
+    private double? _manual;              // desplazamiento manual en curso; null = automático
+    private IPointer? _drag;              // dedo o lápiz que arrastra
+    private Point _dragStart;
+    private double _dragBase;
+    private bool _dragMoved;              // ya no es un toque: no salta a la línea
+
     public ProgressiveLyricsView()
     {
         ClipToBounds = true;
+        Background = Brushes.Transparent; // la rueda y los gestos cuentan en todo el panel, no solo sobre el texto
+        AddHandler(Gestures.TappedEvent, OnTapped);
 
         var fps = M.FramesPerSecond;
 #if DEBUG
@@ -63,9 +76,13 @@ public sealed class ProgressiveLyricsView : Panel
             fps = custom;
         _stats = ClockStats.FromEnvironment();
 #endif
+        // Este constructor arranca el temporizador: se para hasta que haga falta (StartClock).
         _frames = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / fps), DispatcherPriority.Render, (_, _) => Tick());
+        _frames.Stop();
         _wake = new DispatcherTimer(DispatcherPriority.Normal);
         _wake.Tick += (_, _) => { _wake.Stop(); Tick(); };
+        _resume = new DispatcherTimer(M.ManualScrollHold, DispatcherPriority.Normal, (_, _) => ResumeAuto());
+        _resume.Stop();
     }
 
     public LyricsViewModel? Source { get => GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
@@ -112,6 +129,8 @@ public sealed class ProgressiveLyricsView : Panel
         base.OnDetachedFromVisualTree(e);
         StopClock();
         _wake.Stop();
+        _resume.Stop();
+        _manual = null;
     }
 
     // Con el reloj parado (pausa, línea completa), un salto o un cambio de pista llegan por aquí.
@@ -134,7 +153,7 @@ public sealed class ProgressiveLyricsView : Panel
                 var line = entry.Kind == TimelineEntryKind.Line && entry.LineIndex < source.Lines.Count
                     ? source.Lines[entry.LineIndex]
                     : null; // pausa deducida: «♪»
-                var item = new LineItem(line, DimForeground);
+                var item = new LineItem(line, DimForeground) { Cursor = _hand };
                 _items.Add(item);
                 Children.Add(item);
             }
@@ -144,6 +163,8 @@ public sealed class ProgressiveLyricsView : Panel
         _heights = [];
         _active = int.MinValue;
         _snap = true;
+        _manual = null; // otra letra: vuelve el automático
+        _resume.Stop();
         InvalidateMeasure();
         Tick();
     }
@@ -201,7 +222,7 @@ public sealed class ProgressiveLyricsView : Panel
         if (active >= _items.Count) active = _items.Count - 1;
 
         if (active != _active) OnActiveChanged(active, now);
-        _target = LyricsScroll.TargetOffset(_heights, M.LineSpacing, active, _viewport, M.Anchor);
+        _target = _manual ?? LyricsScroll.TargetOffset(_heights, M.LineSpacing, active, _viewport, M.Anchor);
 
         if (_snap)
         {
@@ -256,18 +277,120 @@ public sealed class ProgressiveLyricsView : Panel
 
     private void ApplyVisuals()
     {
-        var anchorY = _viewport * M.Anchor;
         var fade = _viewport * LyricsAppearance.EdgeFadeFraction;
+
+        // La distancia se mide a la línea activa (criterio 2), esté donde esté: también si se desplaza a mano.
+        // Antes de la primera, al ancla.
+        var reference = _active >= 0 && _active < _items.Count
+            ? _tops[_active] + _items[_active].Offset
+            : _viewport * M.Anchor;
 
         for (int i = 0; i < _items.Count; i++)
         {
             var item = _items[i];
             var top = _tops[i] + item.Offset;
-            var distance = (top - anchorY) / M.ReferenceStep;
+            var distance = (top - reference) / M.ReferenceStep;
             var opacity = LyricsAppearance.LineOpacity(distance) *
                           LyricsAppearance.EdgeOpacity(top, _heights[i], _viewport, fade);
             item.Apply(LyricsAppearance.LineScale(distance), opacity);
         }
+    }
+
+    // ---- Interacción (M4) ----
+
+    // Pulsar una línea (ratón, dedo o lápiz) salta a su marca; una pausa «♪», a su inicio.
+    private void OnTapped(object? sender, TappedEventArgs e)
+    {
+        if (_dragMoved || Source is not { } source) return;
+
+        var y = e.GetPosition(this).Y;
+        var entries = source.Timeline.Entries;
+        for (int i = 0; i < _items.Count && i < entries.Count && i < _tops.Length; i++)
+        {
+            var top = _tops[i] + _items[i].Offset;
+            if (y < top || y > top + _heights[i] || _items[i].Opacity <= 0) continue;
+
+            _manual = null; // al saltar vuelve el automático, sin esperar
+            _resume.Stop();
+            source.SeekTo(entries[i].Start);
+            Tick();
+            e.Handled = true;
+            return;
+        }
+    }
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        if (_items.Count == 0 || e.Delta.Y == 0) return;
+
+        // Rueda hacia arriba (delta > 0) = ver lo anterior = bajar el contenido.
+        BeginManual((_manual ?? _target) + e.Delta.Y * M.WheelStep, followPointer: false);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        _dragMoved = false;
+        if (e.Pointer.Type == PointerType.Mouse) return; // con ratón: rueda para desplazar, clic para saltar
+
+        _drag = e.Pointer;
+        _dragStart = e.GetPosition(this);
+        _dragBase = _manual ?? _target;
+        e.Pointer.Capture(this);
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        if (!ReferenceEquals(e.Pointer, _drag)) return;
+
+        var dy = e.GetPosition(this).Y - _dragStart.Y;
+        if (!_dragMoved && Math.Abs(dy) < M.DragThreshold) return;
+        _dragMoved = true;
+        BeginManual(_dragBase + dy, followPointer: true);
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        if (!ReferenceEquals(e.Pointer, _drag)) return;
+        _drag = null;
+        e.Pointer.Capture(null);
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        if (ReferenceEquals(e.Pointer, _drag)) _drag = null;
+    }
+
+    /// <summary>Desplazamiento a mano: el automático se pausa y se retoma tras un rato sin tocar nada.</summary>
+    private void BeginManual(double offset, bool followPointer)
+    {
+        if (_heights.Length != _items.Count || _viewport <= 0) return;
+
+        _manual = LyricsScroll.ClampManualOffset(_heights, M.LineSpacing, offset, _viewport, M.Anchor);
+        foreach (var item in _items)
+        {
+            if (followPointer) item.SnapTo(_manual.Value); // el contenido va pegado al dedo
+            else item.StartAt = TimeSpan.Zero;             // con la rueda, todas a la vez y con el resorte
+        }
+
+        _resume.Stop();
+        _resume.Start();
+        Tick();
+    }
+
+    private void ResumeAuto()
+    {
+        _resume.Stop();
+        if (_drag is not null) { _resume.Start(); return; } // aún arrastrando: se espera a que suelte
+
+        _manual = null;
+        foreach (var item in _items) item.StartAt = TimeSpan.Zero; // vuelta al ancla, sin cascada
+        Tick();
     }
 
     // ---- Reloj ----
