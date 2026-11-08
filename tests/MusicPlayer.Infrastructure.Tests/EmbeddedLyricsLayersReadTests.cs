@@ -123,6 +123,23 @@ public class EmbeddedLyricsLayersReadTests : IDisposable
         Assert.Equal("Hi", (await ReadAsync(path, "de-DE")).Lines[0].Translation);    // primera alfabética
     }
 
+    // Criterio 13: la etiqueta del menú lleva el código de la traducción mostrada, venga de donde venga.
+    [Fact]
+    public async Task TheBlockCarriesTheCodeOfTheShownTranslation()
+    {
+        var path = NewFile("m4a");
+        Embed(path, Tr("pt-BR", "[00:01.00]Olá"), Rom("[00:01.00]Rom"));
+        Sibling("song.en.lrc", "[00:01.00]Hi");
+
+        Assert.Equal("en", (await ReadAsync(path, "de-DE")).TranslationLanguage);
+        Assert.Equal("pt-BR", (await ReadAsync(path, "pt-PT")).TranslationLanguage);
+
+        File.Delete(Path.Combine(_dir, "song.en.lrc"));
+        var noTranslation = NewFile("mp3");
+        Embed(noTranslation, Rom("[00:01.00]Rom"));
+        Assert.Null((await ReadAsync(noTranslation)).TranslationLanguage);
+    }
+
     [Fact]
     public async Task SeveralTranslations_SiblingsAndEmbeddedMixed()
     {

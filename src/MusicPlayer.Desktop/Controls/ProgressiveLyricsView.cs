@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -425,10 +424,10 @@ public sealed class ProgressiveLyricsView : Panel
     {
         private readonly LyricLineViewModel? _line;
         private readonly FillTextBlock _lead;
-        private readonly TextBlock? _pronunciation;
-        private readonly TextBlock? _translation;
+        private readonly FillTextBlock? _pronunciation;
+        private readonly FillTextBlock? _translation;
+        private FillTextBlock _filled;   // el renglón que se rellena (criterio 17 de lyrics-layers.md)
         private readonly MatrixTransform _transform = new();
-        private IBrush? _dim;
         private bool _isActive;
         private double _scale = 1;
         private double _fill;
@@ -439,12 +438,12 @@ public sealed class ProgressiveLyricsView : Panel
         public LineItem(LyricLineViewModel? line, IBrush? dim)
         {
             _line = line;
-            _dim = dim;
             Spacing = M.RowSpacing;
             RenderTransformOrigin = new RelativePoint(0, 0.5, RelativeUnit.Relative); // escala desde la izquierda
             RenderTransform = _transform;
 
             _lead = new FillTextBlock { FontWeight = FontWeight.Bold, SoftEdge = M.SoftEdge, DimForeground = dim };
+            _filled = _lead;
 
             if (line is null)
             {
@@ -454,8 +453,8 @@ public sealed class ProgressiveLyricsView : Panel
                 return;
             }
 
-            _pronunciation = new TextBlock { TextWrapping = TextWrapping.Wrap, FontWeight = FontWeight.SemiBold };
-            _translation = new TextBlock { TextWrapping = TextWrapping.Wrap, FontStyle = FontStyle.Italic };
+            _pronunciation = new FillTextBlock { FontWeight = FontWeight.SemiBold, SoftEdge = M.SoftEdge, DimForeground = dim };
+            _translation = new FillTextBlock { FontStyle = FontStyle.Italic, SoftEdge = M.SoftEdge, DimForeground = dim };
             Children.Add(_pronunciation);
             Children.Add(_lead);
             Children.Add(_translation);
@@ -474,22 +473,42 @@ public sealed class ProgressiveLyricsView : Panel
 
         public void SetDim(IBrush? dim)
         {
-            _dim = dim;
-            _lead.DimForeground = dim;
-            UpdateExtrasBrush();
+            foreach (var row in Rows()) row.DimForeground = dim;
         }
 
         public void SetActive(bool active)
         {
             _isActive = active;
-            if (!active) SetFill(0); // las ya cantadas vuelven a tenue (criterio 2)
-            UpdateExtrasBrush();
+            SetFill(active ? _fill : 0); // las ya cantadas vuelven a tenue (criterio 2)
         }
 
+        /// <summary>
+        /// Rellena el renglón elegido hasta <paramref name="fraction"/>. Los demás no se rellenan (criterio 6 de
+        /// lyrics-progressive.md, enmendado): brillantes en la activa y tenues en las otras.
+        /// </summary>
         public void SetFill(double fraction)
         {
             _fill = fraction;
-            _lead.FillX = fraction * _lead.FillLength;
+            foreach (var row in Rows())
+                row.FillX = ReferenceEquals(row, _filled) ? fraction * row.FillLength
+                          : _isActive ? double.PositiveInfinity
+                          : 0;
+        }
+
+        private IEnumerable<FillTextBlock> Rows()
+        {
+            yield return _lead;
+            if (_pronunciation is not null) yield return _pronunciation;
+            if (_translation is not null) yield return _translation;
+        }
+
+        // FillLength se conoce al medir: un renglón que acaba de aparecer (al ocultar el original con la pista en
+        // pausa, por ejemplo) se rellena hasta su sitio sin esperar al siguiente fotograma.
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            var size = base.MeasureOverride(availableSize);
+            SetFill(_fill);
+            return size;
         }
 
         public void SnapTo(double target)
@@ -545,19 +564,13 @@ public sealed class ProgressiveLyricsView : Panel
             _translation.IsVisible = _line.ShowTranslation;
             _translation.FontSize = _line.TranslationFontSize * M.FontScale;
 
-            UpdateExtrasBrush();
-            SetFill(_fill);
-        }
-
-        // Pronunciación y traducción no se rellenan (criterio 6): brillantes en la activa y tenues en las demás.
-        private void UpdateExtrasBrush()
-        {
-            foreach (var row in new[] { _pronunciation, _translation })
+            _filled = LyricsLayerMenu.FillRow(_line.ShowOriginal, _line.ShowPronunciation, _line.ShowTranslation) switch
             {
-                if (row is null) continue;
-                if (_isActive) row.ClearValue(TextElement.ForegroundProperty);
-                else row.Foreground = _dim;
-            }
+                LyricsRow.Pronunciation => _pronunciation,
+                LyricsRow.Translation => _translation,
+                _ => _lead
+            };
+            SetFill(_fill);
         }
     }
 

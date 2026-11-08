@@ -42,7 +42,10 @@ public sealed class CompanionLyricsProvider(
 
         return translation is null && pronunciation is null
             ? original
-            : LyricsMerger.Merge(original, translation, pronunciation);
+            : LyricsMerger.Merge(original, translation, pronunciation) with
+            {
+                TranslationLanguage = translation is null ? null : code
+            };
     }
 
     private async Task<LyricBlock?> LayerAsync(

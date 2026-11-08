@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private WindowState _stateBeforeImmersive = WindowState.Normal;
     private long _lastStepAt;
     private bool _muteKeyDown;
+    private bool _layersMenuOpen;
 
     public MainWindow()
     {
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
 
             vm.PropertyChanged += OnViewModelPropertyChanged;
             vm.Playlists.PropertyChanged += OnPlaylistsPropertyChanged;
+            vm.Lyrics.PropertyChanged += OnLyricsPropertyChanged;
         };
     }
 
@@ -72,7 +74,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (OwnsKeyboard(e.Source))
+        // Con el menú de capas abierto, las teclas son suyas (Espacio y Enter activan la opción, Esc cierra):
+        // criterio 16 de docs/specs/lyrics-layers.md. Cerrado, Espacio en su botón reproduce o pausa, como en los demás.
+        if (_layersMenuOpen || OwnsKeyboard(e.Source))
             return;
 
         switch (e.Key, e.KeyModifiers)
@@ -126,6 +130,34 @@ public partial class MainWindow : Window
     }
 
     // Controles que usan estas teclas para lo suyo: escribir, abrir una lista desplegable, navegar un menú.
+    // ---- Menú de capas del modo inmersivo (docs/specs/lyrics-layers.md, criterios 12-16) ----
+
+    // Las opciones se recalculan al abrir: etiquetas según lo que se ve y desactivadas si lo dejarían todo oculto.
+    private void OnLayersMenuOpening(object? sender, EventArgs e)
+    {
+        if (sender is not MenuFlyout menu || DataContext is not MainViewModel vm) return;
+
+        menu.Items.Clear();
+        foreach (var option in vm.Lyrics.LayerMenu())
+        {
+            var item = new MenuItem { Header = option.Label, IsEnabled = option.IsEnabled };
+            var row = option.Row;
+            item.Click += (_, _) => vm.Lyrics.ApplyLayerOption(row); // recalcula: nunca actúa sobre una capa que ya no está
+            menu.Items.Add(item);
+        }
+        _layersMenuOpen = true;
+    }
+
+    private void OnLayersMenuClosed(object? sender, EventArgs e) => _layersMenuOpen = false;
+
+    // Otra pista (o la misma sin capas): el menú abierto se cierra en lugar de quedar con opciones viejas.
+    private void OnLyricsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!_layersMenuOpen) return;
+        if (e.PropertyName is nameof(LyricsViewModel.Lines) or nameof(LyricsViewModel.ShowLayersButton))
+            LayersButton.Flyout?.Hide();
+    }
+
     private static bool OwnsKeyboard(object? source) =>
         source is TextBox or ComboBox or ComboBoxItem or MenuItem or Avalonia.Controls.ContextMenu;
 

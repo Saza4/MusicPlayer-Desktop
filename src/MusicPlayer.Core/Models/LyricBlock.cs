@@ -3,10 +3,15 @@ namespace MusicPlayer.Core.Models;
 public enum LyricsKind { None, Plain, Synced }
 
 /// <summary>Letra completa de una canción.</summary>
+/// <param name="TranslationLanguage">
+/// Código de la traducción unida a las líneas («en»), para la etiqueta del menú del modo inmersivo
+/// (docs/specs/lyrics-layers.md, criterio 13). Null si no hay traducción o no se sabe.
+/// </param>
 public sealed record LyricBlock(
     LyricsKind Kind,
     IReadOnlyList<LyricLine> Lines,
-    string? Language = null)
+    string? Language = null,
+    string? TranslationLanguage = null)
 {
     public static LyricBlock Empty { get; } = new(LyricsKind.None, Array.Empty<LyricLine>());
 

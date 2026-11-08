@@ -30,6 +30,9 @@ public sealed class FillTextBlock : Control
     public static readonly StyledProperty<FontWeight> FontWeightProperty =
         TextElement.FontWeightProperty.AddOwner<FillTextBlock>();
 
+    public static readonly StyledProperty<FontStyle> FontStyleProperty =
+        TextElement.FontStyleProperty.AddOwner<FillTextBlock>();
+
     public static readonly StyledProperty<FontFamily> FontFamilyProperty =
         TextElement.FontFamilyProperty.AddOwner<FillTextBlock>();
 
@@ -53,7 +56,7 @@ public sealed class FillTextBlock : Control
 
     static FillTextBlock()
     {
-        AffectsMeasure<FillTextBlock>(TextProperty, FontSizeProperty, FontWeightProperty, FontFamilyProperty,
+        AffectsMeasure<FillTextBlock>(TextProperty, FontSizeProperty, FontWeightProperty, FontStyleProperty, FontFamilyProperty,
             ForegroundProperty, DimForegroundProperty);
         AffectsRender<FillTextBlock>(FillXProperty, SoftEdgeProperty);
     }
@@ -61,6 +64,7 @@ public sealed class FillTextBlock : Control
     public string? Text { get => GetValue(TextProperty); set => SetValue(TextProperty, value); }
     public double FontSize { get => GetValue(FontSizeProperty); set => SetValue(FontSizeProperty, value); }
     public FontWeight FontWeight { get => GetValue(FontWeightProperty); set => SetValue(FontWeightProperty, value); }
+    public FontStyle FontStyle { get => GetValue(FontStyleProperty); set => SetValue(FontStyleProperty, value); }
     public FontFamily FontFamily { get => GetValue(FontFamilyProperty); set => SetValue(FontFamilyProperty, value); }
     public IBrush? Foreground { get => GetValue(ForegroundProperty); set => SetValue(ForegroundProperty, value); }
     public IBrush? DimForeground { get => GetValue(DimForegroundProperty); set => SetValue(DimForegroundProperty, value); }
@@ -73,7 +77,7 @@ public sealed class FillTextBlock : Control
     protected override Size MeasureOverride(Size availableSize)
     {
         var text = Text ?? string.Empty;
-        var typeface = new Typeface(FontFamily, FontStyle.Normal, FontWeight);
+        var typeface = new Typeface(FontFamily, FontStyle, FontWeight);
         var maxWidth = double.IsInfinity(availableSize.Width) ? double.PositiveInfinity : availableSize.Width;
 
         _dim = new TextLayout(text, typeface, FontSize, DimForeground,

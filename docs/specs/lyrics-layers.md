@@ -1,6 +1,6 @@
 # Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
 
-Estado: **aprobada (7 de noviembre de 2026), en curso: M0 a M3 hechos; M4 hecho a falta de la prueba a mano del autor**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+Estado: **aprobada (7 de noviembre de 2026), en curso: M0 a M4 hechos; M5 hecho a falta de la prueba a mano del autor**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
 
 ## Contexto
 
@@ -162,8 +162,8 @@ Así, ningún nombre que hoy se muestra deja de mostrarse. Una prueba lo fija pa
 | M1 | (**hecho**, ver «Resultado de M1») Core: modelo de capas (`LyricsLayers`: principal, traducciones por código, pronunciación), regla de nombres de hermanos (`<nombre>.<código>.lrc`) y de campos, elección de traducción. `LyricsEditor` valida por capa y devuelve un resumen (incrustado y saltado con su motivo). | Pruebas Core con un escritor falso |
 | M2 | (**hecho**, ver «Resultado de M2») Infrastructure (escritura): `ILyricsWriter` con capas, `TagLibLyricsWriter` por formato, reemplazo solo de las capas con fuente, verificación de todas. | MP3, FLAC y M4A: escribe, reemplaza sin duplicar, conserva etiquetas y audio, no deja temporales, falla sin tocar el original. Además (pedido por el autor): nombres con guion (`LYRICS_TRANSLATION_PT-BR`, `LYRICS_TRANSLATION_ZH-HANS`) en TXXX, Vorbis y `----`, con la mayúscula normalizada de vuelta (`pt-BR`, `zh-Hans`); borrar la principal (`Tag.Lyrics = null`) no toca las capas en FLAC y M4A; el editor de etiquetas y «Limpiar etiquetas» (ambos con `TagLibTrackTagWriter`) conservan las capas en los tres formatos; una capa de exactamente 1 MB se escribe y se relee en los tres |
 | M3 | (**hecho**, ver «Resultado de M3») Infrastructure (lectura): lector de capas incrustadas y prioridad por capa en `CompanionLyricsProvider` (hermano > incrustado; la traducción se elige por idioma entre hermanas e incrustadas juntas). La lectura de hermanos con elección por idioma ya estaba hecha (ajustes tras M1, antes de M2). | Pruebas en MP3, FLAC y M4A: solo incrustado, solo hermano, ambos, varias traducciones. Además (pedido por el autor): poner y quitar la carátula, y aplicarla a todo un álbum (`CoverEditor.SetManyAsync`), conservan las capas en los tres formatos |
-| M4 | (**código hecho**, ver «Resultado de M4»; falta la prueba a mano) Desktop A: `EmbedLyricsViewModel` busca los hermanos (junto al audio o al elegido), aviso en la línea de estado. | A mano (autor), **en tres copias** (MP3, FLAC y M4A), no en archivos reales: la escritura no se puede deshacer. Incrustar y abrir cada copia sin los hermanos |
-| M5 | Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
+| M4 | (**hecho**, ver «Resultado de M4» y «Prueba a mano de M4») Desktop A: `EmbedLyricsViewModel` busca los hermanos (junto al audio o al elegido), aviso en la línea de estado. | A mano (autor), **en tres copias** (MP3, FLAC y M4A), no en archivos reales: la escritura no se puede deshacer. Incrustar y abrir cada copia sin los hermanos |
+| M5 | (**código hecho**, ver «Resultado de M5»; falta la prueba a mano) Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
 | M6 | Docs en commit aparte: README (limitación, y qué pasa con las capas al «Convertir formato» con ffmpeg: lo comprueba el autor a mano una vez), `reporte-reproductor.md`, spec, CLAUDE.md (número de pruebas). Push, PR y CI verde en Windows y Ubuntu. | CI |
 
 ## Resultado del spike (M0)
@@ -245,3 +245,24 @@ Todo en Core, con pruebas (569 en Core, +87):
 **Revisión del ajuste (autor):**
 - **«Principal solo con metadatos» es alcanzable:** desde M1, la validación del principal solo exige que exista, pese ≤ 1 MB, esté en UTF-8 y no esté vacío; no lo analiza. `[ti:Solo cabecera]` se incrusta, y la prueba `EmbedWithLayers_MainWithoutLyrics_SkipsEveryLayer` lo fija (el escritor recibe ese principal). La rama se queda.
 - **Principal y capa sin marcas:** sí se ven en el panel lateral, pero solo con el mismo número de líneas (sin contar las vacías). Con otro número se saltan. Prueba: `EmbedWithLayers_PlainMain_SkipsAPlainLayerWithAnotherLineCount` (Core: 582, +1).
+
+## Prueba a mano de M4 (autor, 8 de noviembre de 2026)
+
+En tres copias con audio sintético (un tono de 10 s generado con ffmpeg) y letra inventada; cada una con `.lrc`, `.es.lrc`, `.rom.lrc`, un `.en.lrc` sin marcas y un `.fr.lrc` en Latin-1:
+- **MP3:** letra leída del archivo con los `.lrc` movidos, línea de estado al incrustar, incrustar dos veces (VLC muestra los tres campos, sin duplicados) e incrustar con la canción sonando: **ok**.
+- **FLAC:** línea de estado y letra leída del archivo: **ok**.
+- **M4A:** línea de estado y letra leída del archivo: **ok**.
+- Incrustar dos veces, incrustar con la canción sonando y abrir en otro reproductor solo se probaron a mano en MP3. En FLAC y M4A, que reincrustar no duplica lo cubren las pruebas de M2.
+
+## Resultado de M5
+
+- **`LyricsLayerMenu`** (Core): `IsButtonVisible` (criterio 12: letra sincronizada y al menos una capa), `Build` (criterio 13) y `FillRow` (criterio 17).
+  - `Build` devuelve las opciones en orden (traducción, pronunciación y original; cada una solo si su capa existe), con la etiqueta según `Resolve()` («Ocultar original» si el original se ve por el respaldo), desactivada si dejaría todo oculto (sin contar el respaldo de `Resolve`) y con las preferencias que deja al pulsarla. La traducción lleva el código si no es del idioma del sistema («Mostrar traducción (en)»; `es-419` con el sistema en `es-MX`, sin código).
+  - `FillRow`: el original si se ve; si no, la pronunciación y, si no, la traducción. Se calcula por línea, así que una línea sin capas con el original oculto sigue rellenando el original.
+- **`LyricBlock.TranslationLanguage`**: `CompanionLyricsProvider` guarda el código de la traducción unida (hermana o incrustada) para la etiqueta.
+- **`LyricsViewModel`**: `ShowLayersButton`, `LayerMenu()` y `ApplyLayerOption(fila)`. Esta recalcula el menú con el estado de ahora y no hace nada si la opción ya no existe o está desactivada (cambio de pista con el menú abierto). Cambia `ShowTranslation`, `ShowPronunciation` y `HideOriginal`, las mismas preferencias que el panel lateral (criterio 14), que se guardan como siempre: no hay ajustes nuevos (criterio 21).
+- **Inmersivo** (`MainWindow`): botón arriba a la derecha, simétrico al de cerrar, con una burbuja y una «A» (`PathIcon`, distinta del icono «Letra»). El `MenuFlyout` se llena al abrirse (`OnLayersMenuOpening`) y se cierra si cambian las líneas o deja de haber capas. Sin colores nuevos: el botón usa la clase `icon` de siempre.
+- **Teclado (criterio 16):** con el menú cerrado, el atajo de la ventana (túnel) ya convierte Espacio en el botón en reproducir/pausa. Con el menú abierto, la ventana no aplica ningún atajo; además, `OwnsKeyboard` ya excluía `MenuItem`.
+- **Relleno (criterio 17):** en `ProgressiveLyricsView`, pronunciación y traducción pasan de `TextBlock` a `FillTextBlock` (que gana `FontStyle` para la cursiva). Se rellena el renglón de `FillRow`; los demás van llenos en la línea activa y tenues en las otras, como antes. Al medir se recoloca el relleno, para que un renglón que acaba de aparecer (ocultar el original con la pista en pausa) quede en su sitio sin esperar al siguiente fotograma.
+- **Pruebas** (Core: 610, +28; Infrastructure: 159, +1): botón, opciones y orden, etiquetas según lo que se ve, desactivado (también «Ocultar traducción» cuando es la única visible), resultado de cada opción, código en la etiqueta y renglón del relleno. En Infrastructure, el código de la traducción mostrada en el bloque.
+- **Sin probar en la interfaz:** el menú, el icono, el teclado y el relleno de la pronunciación o la traducción no se han visto en pantalla. Es la prueba a mano de M5.
