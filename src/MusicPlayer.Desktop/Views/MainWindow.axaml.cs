@@ -49,6 +49,7 @@ public partial class MainWindow : Window
             vm.PropertyChanged += OnViewModelPropertyChanged;
             vm.Playlists.PropertyChanged += OnPlaylistsPropertyChanged;
             vm.Lyrics.PropertyChanged += OnLyricsPropertyChanged;
+            FillLayersMenu();
         };
     }
 
@@ -135,7 +136,18 @@ public partial class MainWindow : Window
     // Las opciones se recalculan al abrir: etiquetas según lo que se ve y desactivadas si lo dejarían todo oculto.
     private void OnLayersMenuOpening(object? sender, EventArgs e)
     {
-        if (sender is not MenuFlyout menu || DataContext is not MainViewModel vm) return;
+        FillLayersMenu();
+        _layersMenuOpen = true;
+    }
+
+    private void OnLayersMenuClosed(object? sender, EventArgs e) => _layersMenuOpen = false;
+
+    // El menú nunca está vacío al abrirse: en Avalonia 11.2.5, un MenuFlyout vacío se abre sin nada a la vista aunque
+    // se llene en Opening (comprobado con una reproducción mínima). Por eso se llena cada vez que cambian las capas
+    // o las preferencias, y otra vez al abrir. El botón solo se ve si hay capas, así que entonces hay opciones.
+    private void FillLayersMenu()
+    {
+        if (LayersButton.Flyout is not MenuFlyout menu || DataContext is not MainViewModel vm) return;
 
         menu.Items.Clear();
         foreach (var option in vm.Lyrics.LayerMenu())
@@ -145,17 +157,21 @@ public partial class MainWindow : Window
             item.Click += (_, _) => vm.Lyrics.ApplyLayerOption(row); // recalcula: nunca actúa sobre una capa que ya no está
             menu.Items.Add(item);
         }
-        _layersMenuOpen = true;
     }
-
-    private void OnLayersMenuClosed(object? sender, EventArgs e) => _layersMenuOpen = false;
 
     // Otra pista (o la misma sin capas): el menú abierto se cierra en lugar de quedar con opciones viejas.
     private void OnLyricsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (!_layersMenuOpen) return;
-        if (e.PropertyName is nameof(LyricsViewModel.Lines) or nameof(LyricsViewModel.ShowLayersButton))
+        if (_layersMenuOpen && e.PropertyName is nameof(LyricsViewModel.Lines) or nameof(LyricsViewModel.ShowLayersButton))
+        {
             LayersButton.Flyout?.Hide();
+            return;
+        }
+        if (e.PropertyName is nameof(LyricsViewModel.Lines) or nameof(LyricsViewModel.HasTranslation)
+            or nameof(LyricsViewModel.HasPronunciation) or nameof(LyricsViewModel.TranslationLanguage)
+            or nameof(LyricsViewModel.ShowTranslation) or nameof(LyricsViewModel.ShowPronunciation)
+            or nameof(LyricsViewModel.HideOriginal))
+            FillLayersMenu();
     }
 
     private static bool OwnsKeyboard(object? source) =>
