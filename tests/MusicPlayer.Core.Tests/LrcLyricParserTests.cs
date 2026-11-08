@@ -49,15 +49,16 @@ public class LrcLyricParserTests
     [Fact]
     public void Parse_MixedLineEndingsInHeader_IgnoresHeaderAndKeepsLyrics()
     {
-        // Como "Chicago.lrc": la primera cabecera lleva espacio tras ':' y termina en \n; el resto, en \r\n.
+        // Con el formato de "Chicago.lrc" (cabecera real, letra inventada): la primera cabecera lleva espacio tras ':'
+        // y termina en \n; el resto, en \r\n.
         var content = "[id: bccjinbd]\n[ti:Chicago]\r\n[ar:Michael Jackson]\r\n[ve:4.00]\r\n\r\n" +
-                      "[00:02.59]Ah, I met her on my way to Chicago\r\n[00:06.37]Where she was all alone\r\n";
+                      "[00:02.59]Primera línea inventada\r\n[00:06.37]Segunda línea inventada\r\n";
 
         var block = _parser.Parse(content);
 
         Assert.Equal(LyricsKind.Synced, block.Kind);
         Assert.Equal(2, block.Lines.Count);
-        Assert.Equal("Ah, I met her on my way to Chicago", block.Lines[0].Text);
+        Assert.Equal("Primera línea inventada", block.Lines[0].Text);
         Assert.Equal(TimeSpan.FromMilliseconds(2590), block.Lines[0].Timestamp);
     }
 

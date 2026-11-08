@@ -132,7 +132,7 @@ Dato clave: el `.lrc` solo da el **inicio** de cada línea, no cuándo termina c
 | 30 fps, sin el fondo `blur(60)` | 11,9 / 11,7 | ≈ +4 | 24 |
 
 - **Fluidez de la posición:** el 100 % de los fotogramas trae una posición nueva, y el desvío medio frente al reloj de pared es de 0,0 ms (máximo 2,7 ms). El paso máximo entre fotogramas es de ~55 ms a 24 fps y de ~35 ms a 120 fps.
-- **Relleno:** una ráfaga de 14 capturas cada 250 ms sobre la primera línea («Ah, I met her on my way to Chicago») muestra el avance de izquierda a derecha con el borde suave, y «♪» con la siguiente línea antes de que empiece.
+- **Relleno:** una ráfaga de 14 capturas cada 250 ms sobre la primera línea (un solo renglón) muestra el avance de izquierda a derecha con el borde suave, y «♪» con la siguiente línea antes de que empiece.
 - **De dónde sale el coste** (*corregido en M2: la ventana no se redibuja entera; ver «Resultado de M2»*): casi todo es redibujar la ventana a pantalla completa en cada fotograma (≈ +4 aunque solo se pinte el texto tenue). La máscara del borde suave suma ~2-3 puntos y el fondo desenfocado, ~2-3. El reloj en sí no cuesta. El coste crece con los fps, y por eso `RequestAnimationFrame` (sigue los ~120 Hz de la pantalla) se descarta.
 - **Pausa y clásico:** con el reloj parado no hay fotogramas extra (0,3 «fps» en las estadísticas: solo los cambios de línea por `PropertyChanged`).
 - **Criterio 12 (≤ +5):** **no se cumple todavía** (+7,5). Medidas para M2 y M3, por orden de esperado ahorro:
@@ -216,7 +216,7 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 
 **4. Aspecto.** Ráfagas de capturas en Release:
 - Primera línea (un renglón): igual que con la máscara. El borde suave cae donde corresponde: las coordenadas del degradado son las del control.
-- Línea de 77 caracteres de las 3:15.04 (dos renglones), alcanzada moviendo el `Slider` del inmersivo por UI Automation: el primer renglón se rellena y el relleno continúa en el segundo («Heav|en just for me)»), con el borde suave en su sitio.
+- Línea de 77 caracteres de las 3:15.04 (dos renglones), alcanzada moviendo el `Slider` del inmersivo por UI Automation: el primer renglón se rellena y el relleno continúa en el segundo y su borde suave cae a mitad de una palabra, en su sitio.
 - Temas Negro puro, Claro y Medianoche: idénticos. El modo inmersivo fuerza la variante oscura, así que el texto es blanco y el tenue gris con cualquier tema (la spec pedía Oscuro; se usó Negro puro, el tema del autor, que también es oscuro).
 - No probado: un renglón con varias tiradas de texto (mezcla de alfabetos con otra fuente). Ahí el degradado podría no ir en coordenadas del control.
 
