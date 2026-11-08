@@ -1,7 +1,7 @@
 # MusicPlayer-Desktop — Documento maestro y reporte de novedades
 
 > Reproductor de música local, ligero y multiplataforma. **C# · .NET 8 · Avalonia UI 11**.
-> Estado a **5 de noviembre de 2026** · última release: **v1.3.0**.
+> Estado a **7 de noviembre de 2026** · última release: **v1.3.0** (la letra progresiva está en la rama `feature/letras-progresivas`, sin release).
 
 Este documento reúne en un solo lugar: la visión y la especificación del proyecto, el reporte de todo lo implementado durante el desarrollo, el historial de versiones tal como se publicó en GitHub Releases, las decisiones de diseño, las limitaciones conocidas y la hoja de ruta. Al final, como anexos, se conserva la especificación original y el prompt maestro.
 
@@ -106,6 +106,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 | 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | v1.3.0 |
 | 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | v1.3.0 |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
+| 14  | Letra progresiva en el modo inmersivo (estilo Apple Music) | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | Sin release (rama `feature/letras-progresivas`) |
 
 ### 4.2 Novedades de la serie v1.1.0
 
@@ -217,6 +218,19 @@ Especificación, decisiones y resultados medidos de cada hito: `docs/specs/dynam
 - **Selectores:** `ModalTracker` cuenta los selectores nativos abiertos (carpeta, imagen y letra) para que la isla no aparezca encima mientras desactivan la ventana principal.
 - **Verificación:** sondas automáticas en Windows para posición, foco, clics a través, saltos durante la animación (0 en ~2 500 muestras), comandos, seek, CPU, monitores, temas, modo inmersivo y carátula ausente. A mano: hover y bordes con la Lupa, foco con el Bloc de notas, primer plano al pulsar el título y escala de la pantalla principal. Modo de depuración: en Debug, `MUSICPLAYER_ISLAND_FORCE=1` la muestra con la ventana principal activa.
 
+### 4.3.4 Letra progresiva en el modo inmersivo (sin release)
+
+Especificación, decisiones y medidas de cada hito (M0-M6): `docs/specs/lyrics-progressive.md`.
+
+- **Qué es:** en el modo inmersivo, la letra sincronizada se muestra completa con la línea activa a un 35 % del alto, rellenándose de izquierda a derecha según la posición real (con borde suave). Las demás se atenúan y encogen un poco con la distancia; las de los bordes se funden. Al cambiar de línea, todo se desplaza con un resorte (el `spring()` de SwiftUI) y en cascada. Las pausas instrumentales de 8 s o más muestran «♪», que se rellena con su avance.
+- **Referencia:** `ProgressingStyleLyrics.swift` (Magesh Sridhar). Se replica el resultado, no la implementación: todo se deriva de la posición, así que saltar, pausar o cambiar de pista siempre deja la letra bien.
+- **Interacción:** pulsar una línea (o «♪») salta a ella. La rueda o arrastrar con el dedo desplazan a mano, y a los 3 s sin tocar nada vuelve el desplazamiento automático. Un salto de más de una pantalla se coloca sin animar.
+- **Qué no cambia:** el panel lateral y las letras sin tiempos (`Plain`) siguen con la lista clásica. La traducción y la pronunciación se muestran con las opciones de siempre; solo se rellena el texto original.
+- **Coste:** reloj propio a 30 fps pedidos (~24 reales) que solo corre mientras hay algo que mover; en pausa, 0 fotogramas. Con rueda y desplazamientos, +3,4 puntos de un núcleo en Release frente a la lista clásica (tope fijado: +5). La carátula del fondo se desenfoca una sola vez, a 1/12 y fuera del hilo de la interfaz, en lugar de un `blur(60)` recalculado en cada fotograma.
+- **Descartado:** desenfoque de las líneas inactivas (por diseño), «reducir movimiento» (decisión del autor tras verlo hecho; Avalonia 11.2.5 no expone la preferencia del sistema) y 20 fps (no hicieron falta).
+- **Ajustes:** ninguno. El interruptor temporal Clásico/Progresivo y su ajuste `LyricsStyle` se retiraron al aprobarse el estilo (último commit con ellos: `cb75cf6`). Un `settings.json` que aún los tenga carga igual.
+- **Verificación:** sondas en Windows (CPU por pasadas, ráfagas de capturas, rueda enviada como mensaje, `settings.json` restaurado idéntico por hash) y prueba a mano del autor: relleno, saltos cortos y largos, rueda, pulsar una línea, cambio de pista a mitad de línea, redimensionar, traducción y pronunciación, y el fondo tras editar la carátula. Sin probar: arrastre en pantalla táctil y Linux.
+
 ### 4.4 Base anterior: lo que ya contenía v1.0.0
 
 Funciones construidas antes y consolidadas en la primera versión:
@@ -246,6 +260,7 @@ Funciones construidas antes y consolidadas en la primera versión:
 | Espacio y foco    | —                                                                                                                               | —                                      | `MainWindow.axaml.cs` (`OnOpened`, `OnPreviewKeyDown`), `SongList` en el XAML |
 | Estilos globales  | —                                                                                                                               | —                                      | `App.axaml` (tema, estilos y recursos), `MainWindow.axaml` (fondos y bordes)  |
 | Isla flotante     | `IslandVisibility`, `IslandPlacement`, `IslandHover`, `ModalTracker`, `TimeText.Remaining`, `PlaybackShortcuts.TargetAtFraction`, `AppSettings.ShowIsland` | `JsonSettingsRepository` (clave `ShowIsland`) | `IslandWindow`, `IslandController`, `IslandMetrics`, `WindowNative`, `NonActivatingWindow`, `Themes/PlayerButtonStyles.axaml`, botón en `MainWindow.axaml` |
+| Letra progresiva  | `LyricsTiming`, `LyricsTimeline`, `SpringSolver`, `LyricsScroll`, `LyricsAppearance`, `GaussianBlur`, `LyricBlock.GetLineEnd`, `LyricLine.Words` (vacío, para el futuro) | — | `ProgressiveLyricsView`, `FillTextBlock`, `BlurredBackdrop`, `ProgressiveLyricsMetrics`, `LyricsViewModel` (`Timeline`, `SeekTo`) |
 
 ## 5. Historial de versiones (GitHub Releases)
 
@@ -395,7 +410,9 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | Pruebas añadidas después (letra incrustada)                        | +7         | +6                   | Confirmadas                                            |
 | Ejecución del 4 de noviembre de 2026 (`-c Release`)               | 284        | 57                   | Todas superadas. Compila con 0 errores y 1 advertencia |
 | Pruebas añadidas por la isla flotante                              | +61        | +1                   | `IslandHover` 21, `IslandPlacement` 10, `IslandVisibility` 7, `ModalTracker` 6, `TimeText` 9, `TargetAtFraction` 8; `ShowIsland` en los ajustes |
-| Última ejecución confirmada (5 de noviembre de 2026, `-c Release`) | 345        | 58                   | Todas superadas. Compila con 0 errores y 1 advertencia |
+| Ejecución del 5 de noviembre de 2026 (`-c Release`)                | 345        | 58                   | Todas superadas. Compila con 0 errores y 1 advertencia |
+| Pruebas añadidas por la letra progresiva                           | +137       | +6                   | Relleno, pausas, línea de tiempo, resorte, desplazamiento (incluidos el manual y los saltos largos), atenuación, desenfoque, parser con el formato de prueba, y ajustes retirados que siguen cargando |
+| Última ejecución confirmada (7 de noviembre de 2026, `-c Release`) | 482        | 64                   | Todas superadas. Compila con 0 errores y 1 advertencia. CI del PR #4 en verde en Windows y Ubuntu con el código de M6 (commit `35a0878`). |
 
 La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las propiedades de la isla la desplazaron): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
@@ -405,7 +422,8 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - **Carátula de álbum:** tres pruebas de `CoverEditor.SetManyAsync` (todas las pistas, un fallo que no detiene el resto, imagen inválida) y cuatro de `AlbumScope` (mismo álbum, mismo nombre con otro artista, recopilatorio, álbum desconocido).
 - **Letra incrustada:** siete en Core (texto, acentos y otros alfabetos, BOM, no UTF-8, vacío, demasiado grande, archivo inexistente) y seis en Infrastructure (incrustar, Unicode, sustituir, conservar etiquetas, no alterar los bytes de audio, sin temporales). Las seis usan solo archivos MP3: FLAC y M4A no tienen prueba automática.
 - **Isla flotante:** en Core, las reglas de visibilidad, la colocación en píxeles físicos a 100, 125 y 150 % y con orígenes negativos, la máquina de estados del hover (incluidos volver a entrar mientras se colapsa y las salidas espurias), el contador de selectores, el tiempo restante y el seek por fracción. La ventana se verificó con sondas automáticas en Windows (ver la spec).
-- **No cubierto por pruebas automáticas:** el código de vista (menús, selectores, foco, barra espaciadora y la ventana de la isla). Se prueba a mano o con sondas.
+- **Letra progresiva:** en Core, la duración estimada y el relleno de cada línea, las pausas instrumentales, la línea de tiempo con líneas y pausas, el resorte (convergencia, estabilidad y troceado de fotogramas), el desplazamiento (ancla, cascada, límites del manual y saltos largos), la atenuación y el desenfoque gaussiano. En Infrastructure, que un `settings.json` con los ajustes retirados (`LyricsStyle`, `ReduceMotion`) carga sin copia `.corrupt`. El dibujo se verificó con sondas en Windows (ver la spec).
+- **No cubierto por pruebas automáticas:** el código de vista (menús, selectores, foco, barra espaciadora, la ventana de la isla y el dibujo de la letra progresiva). Se prueba a mano o con sondas.
 
 **CI:** compila y pasa las pruebas en Linux. Eso demuestra el build y la lógica, no que BASS cargue ni que la interfaz funcione allí.
 
@@ -453,6 +471,15 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - Sustituye la letra incrustada anterior sin preguntar y no hay botón para quitarla.
 - Solo se incrusta la letra principal. Los archivos de traducción y pronunciación (`.es.lrc`, `.rom.lrc`) no se incrustan.
 - En FLAC y M4A se confía en el mapeo de TagLib (`LYRICS`, `©lyr`). No se ha probado en esos formatos: las pruebas de `TagLibLyricsWriter` solo usan MP3.
+
+**Letra progresiva**
+
+- Sin sincronía por palabra: el `.lrc` solo da el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada (80 ms por carácter, entre 1 y 8 s, nunca más allá de la línea siguiente). Las precauciones para añadirla después (posición horizontal en `FillTextBlock`, `LyricLine.Words`) están hechas.
+- Texto de derecha a izquierda (árabe, hebreo): el relleno barre siempre de izquierda a derecha. Con tramos LTR y RTL mezclados en una línea, no se ha probado.
+- El arrastre con el dedo o el lápiz no se ha probado en una pantalla táctil.
+- No se ha probado en Linux (compila y pasa las pruebas en CI).
+- `[offset:]` del `.lrc` no se aplica (tampoco en la lista clásica).
+- Solo en el modo inmersivo: el panel lateral sigue con la lista clásica.
 
 **Teclado**
 

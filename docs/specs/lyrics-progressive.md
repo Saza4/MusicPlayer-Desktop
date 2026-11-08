@@ -1,6 +1,6 @@
 # Especificación: Letras progresivas (estilo Apple Music)
 
-Estado: **decisiones confirmadas por el autor (7 de noviembre de 2026); sin código de la función escrito**. Alcance: **solo el modo inmersivo**. El panel lateral no cambia. Ver «Decisiones tomadas» y «Resultado del análisis de `Michael Jackson - Chicago.lrc`».
+Estado: **terminada (M0-M6, 7 de noviembre de 2026)**. El autor aprobó el estilo progresivo: es el único para la letra sincronizada del modo inmersivo. Alcance: **solo el modo inmersivo**; el panel lateral no cambia. Ver «Resultado de M6».
 
 ## Contexto
 
@@ -46,7 +46,7 @@ Dato clave: el `.lrc` solo da el **inicio** de cada línea, no cuándo termina c
 7. **Fundido** superior e inferior de la zona de letra.
 8. **Interacción:** pulsar una línea salta a su marca (como hoy, `SeekToLine`). La rueda del ratón o un gesto pausa el auto-desplazamiento unos segundos y luego retoma.
 9. **Colores solo con recursos del tema** (`ThemeXxxBrush`), sin literales `#RRGGBB` (convención de CLAUDE.md).
-10. **Ajuste temporal `LyricsStyle`** (Clásico / Progresivo) en `AppSettings` (parámetro nuevo al final, por defecto Clásico), con un interruptor en el modo inmersivo para alternar mientras se prueba. Es un mecanismo explícito, no código comentado. Al aprobar el nuevo estilo, se retira el clásico **solo del modo inmersivo** (y con él el ajuste). El `ListBox` clásico permanece: lo usa el panel lateral y las letras `Plain`.
+10. **Ajuste temporal `LyricsStyle`** (Clásico / Progresivo) en `AppSettings` (parámetro nuevo al final, por defecto Clásico), con un interruptor en el modo inmersivo para alternar mientras se prueba. Es un mecanismo explícito, no código comentado. Al aprobar el nuevo estilo, se retira el clásico **solo del modo inmersivo** (y con él el ajuste). El `ListBox` clásico permanece: lo usa el panel lateral y las letras `Plain`. **Cumplido y retirado en M6** (último commit con el interruptor: `cb75cf6`).
 11. ~~**Accesibilidad:** el ajuste «reducir movimiento» del sistema, o una opción propia, desactiva resorte y cascada y deja solo el cambio de opacidad.~~ **Descartado por decisión del autor** (M5). Avalonia 11.2.5 no expone esa preferencia del sistema; se llegó a hacer como opción propia y se retiró entera (ajuste, botón y comportamiento).
 12. **Rendimiento:** con el panel de letra visible y sonando, CPU adicional ≤ ~+5 puntos de un núcleo frente a hoy (medida como en M7 de la isla). Sin letra visible o en pausa, **0 fotogramas extra**.
 13. **Pruebas:** la lógica (relleno, línea activa, resorte, estimación de duración) vive en Core con pruebas; `dotnet build` sin warnings nuevos y todas las pruebas actuales (403) en verde.
@@ -331,7 +331,20 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 - El número de líneas cuesta **~+1,9 puntos** (331 frente a 40, el mismo ritmo); el resto es el ritmo de esfuerzo (un cambio de línea cada 0,7 s, con el resorte siempre en marcha).
 - **Virtualización:** se probó no tocar la transformación de las líneas invisibles (opacidad 0, fuera del panel): +1,9 → +1,8, dentro del ruido, así que se quitó (ver «Casos límite»).
 
-**Pendiente (a mano, autor):** redimensionar la ventana, cambio de pista a mitad de línea, saltos con la barra (cortos y largos), y traducción y pronunciación.
+**A mano (autor): pasa.** Redimensionar la ventana, cambio de pista a mitad de línea, saltos con la barra (cortos y largos), y traducción y pronunciación.
+
+## Resultado de M6
+
+**Decisión del autor:** tras su prueba a mano de M5 (redimensionar, cambio de pista a mitad de línea, saltos cortos y largos, traducción y pronunciación), aprueba el estilo progresivo.
+
+- **Retirado:** el interruptor «Letra progresiva», el ajuste `AppSettings.LyricsStyle` y el enum `LyricsStyle`. **Último commit con el interruptor: `cb75cf6`** (rama `feature/letras-progresivas`); desde ahí se puede recuperar del historial.
+- **Modo inmersivo:** letra sincronizada → siempre la letra progresiva (`ShowProgressiveImmersive = IsSynced`); letra sin tiempos (`Plain`) → la lista clásica (`ShowClassicImmersive = IsAvailable && !IsSynced`); sin letra → el aviso de siempre. El panel lateral no cambió.
+- **Compatibilidad:** un `settings.json` que aún tenga `"LyricsStyle"` (0 o 1), `"ReduceMotion"` o `"reduceMotion"` se carga sin copia `.corrupt` y conserva el resto de ajustes (prueba en Infrastructure, 5 casos). Al guardar de nuevo, las claves desaparecen.
+- **Variables de Debug:** se quitó `MUSICPLAYER_LYRICS_CLOCK` (los fps quedan en `ProgressiveLyricsMetrics.FramesPerSecond`). Quedan `MUSICPLAYER_LYRICS_OVERRIDE`, `MUSICPLAYER_LYRICS_STATS` y `MUSICPLAYER_RENDER_OVERLAY`, documentadas en `CLAUDE.md`.
+- **Comprobado en Release** (sonda): con `"LyricsStyle": 0` en `settings.json`, la letra sincronizada sale progresiva y no hay interruptor; `settings.json` restaurado idéntico.
+- **Pruebas:** 482 en Core y 64 en Infrastructure (546), todas en verde; `dotnet build -c Release` solo con la CS8602 conocida. CI del PR #4 en verde en Windows y Ubuntu con el código de M6 (commit `35a0878`).
+- **Docs:** `README.md`, `docs/reporte-reproductor.md` (sección 4.3.4, pruebas y limitaciones) y `CLAUDE.md`.
+- **Pendiente (a mano, autor):** una canción con letra sin tiempos y otra sin letra en el modo inmersivo.
 
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
 
@@ -342,8 +355,8 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 | M2 | `FillTextBlock` con `FillX`, borde suave **con degradado en el texto (sin `PushOpacityMask`)**, texto en varios renglones y temas. Medida en **Release** e investigación del redibujo de la ventana completa (**hecho**, ver «Resultado de M2») | Capturas en Oscuro, Claro y Medianoche; relleno al 0, 50 y 100 %. CPU en Release frente al clásico |
 | M3 | `ProgressiveLyricsView`: desplazamiento con resorte, cascada, fundido, opacidad y escala por distancia. Reloj parado con la línea completa; 20 fps solo si aún supera el tope (ver «Notas para M3») (**hecho**, ver «Resultado de M3»; 20 fps descartados, se revisan a mano en M5) | Medida de CPU en Release frente al `ListBox` clásico (criterio 12) |
 | M4 | Integración en el modo inmersivo; panel lateral intacto. (El ajuste `LyricsStyle` y su interruptor se adelantaron a M2, ver «Ajuste `LyricsStyle` adelantado».) Pulsar una línea salta a su marca. **Criterio 8:** la rueda del ratón o un gesto pausa el auto-desplazamiento unos segundos y luego retoma. **Revisión del fondo:** el desenfoque de la carátula se calcula fuera del hilo de la interfaz, sobre una versión reducida, y se actualiza al cambiar de pista o al editar la carátula (**hecho**, ver «Resultado de M4»; arrastre táctil sin probar en hardware) | Pulsar línea salta; `Plain` sigue en el `ListBox`; rueda → desplazamiento manual y vuelta al ancla; fondo sin trabajo en el hilo de la interfaz y actualizado tras editar la carátula |
-| M5 | ~~«Reducir movimiento»~~ (descartado, criterio 11). Medida de CPU con rueda, letra larga y saltos largos sin animar (**hecho**, ver «Resultado de M5»; revisión a mano pendiente) | A mano (autor): redimensionar, cambio de pista a mitad de línea, saltos cortos y largos, traducción y pronunciación |
-| M6 | Tras la aprobación: retirar el estilo clásico **solo del modo inmersivo** y el ajuste `LyricsStyle`. Docs (`README`, `reporte-reproductor.md`, esta spec) y `CLAUDE.md` | `dotnet build -c Release` sin warnings nuevos y pruebas en verde; CI en Windows y Ubuntu |
+| M5 | ~~«Reducir movimiento»~~ (descartado, criterio 11). Medida de CPU con rueda, letra larga y saltos largos sin animar (**hecho**, ver «Resultado de M5»; revisión a mano aprobada) | A mano (autor): redimensionar, cambio de pista a mitad de línea, saltos cortos y largos, traducción y pronunciación |
+| M6 | Tras la aprobación: retirar el estilo clásico **solo del modo inmersivo** y el ajuste `LyricsStyle`. Docs (`README`, `reporte-reproductor.md`, esta spec) y `CLAUDE.md` (**hecho**, ver «Resultado de M6») | `dotnet build -c Release` sin warnings nuevos y pruebas en verde; CI en Windows y Ubuntu |
 
 ## Decisiones tomadas (autor, 7 de noviembre de 2026)
 
