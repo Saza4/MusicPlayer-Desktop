@@ -224,6 +224,24 @@ public class LyricsEditorTests : IDisposable
         Assert.Equal("Hola\nMundo", Assert.Single(Assert.Single(writer.Calls).Layers.Extras).Text);
     }
 
+    // Sin marcas, LyricsMerger empareja por posición y solo con el mismo número de líneas: si no, la capa nunca se vería.
+    [Fact]
+    public async Task EmbedWithLayers_PlainMain_SkipsAPlainLayerWithAnotherLineCount()
+    {
+        var writer = new FakeWriter();
+        var same = Translation("es", "Hola\n\nMundo\n");       // las líneas vacías no cuentan, igual que al leer
+        var fewer = Translation("en", "Hello");
+        var more = Pronunciation("Ola\nMundo\nOtra");
+
+        var report = await NewEditor(writer).EmbedAsync(Song, LrcFile("Hello\nWorld"), [same, fewer, more]);
+
+        Assert.Equal([same], report.Embedded);
+        Assert.Equal(
+            [new LyricsLayerSkip(fewer, "no tiene tantas líneas como el original"),
+             new LyricsLayerSkip(more, "no tiene tantas líneas como el original")],
+            report.Skipped);
+    }
+
     // Un principal solo con metadatos se incrusta como hoy, pero sus capas nunca se verían.
     [Fact]
     public async Task EmbedWithLayers_MainWithoutLyrics_SkipsEveryLayer()
@@ -233,7 +251,10 @@ public class LyricsEditorTests : IDisposable
 
         var report = await NewEditor(writer).EmbedAsync(Song, LrcFile("[ti:Solo cabecera]"), [es]);
 
-        Assert.Empty(Assert.Single(writer.Calls).Layers.Extras);
+        // Alcanzable: la validación del principal (desde M1) no exige que el analizador saque letra, y se escribe.
+        var call = Assert.Single(writer.Calls);
+        Assert.Equal("[ti:Solo cabecera]", call.Lyrics);
+        Assert.Empty(call.Layers.Extras);
         Assert.Equal([new LyricsLayerSkip(es, "el original no tiene letra que leer")], report.Skipped);
     }
 
