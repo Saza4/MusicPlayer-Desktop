@@ -23,13 +23,11 @@ public sealed record TimelineEntry(TimelineEntryKind Kind, int LineIndex, TimeSp
 public sealed class LyricsTimeline
 {
     private readonly LyricBlock _block;
-    private readonly IReadOnlyList<InstrumentalGap> _gaps;
     private readonly InstrumentalGap?[] _entryGaps; // la pausa que rellena cada entrada (pausas y líneas vacías)
 
     private LyricsTimeline(LyricBlock block, IReadOnlyList<InstrumentalGap> gaps, List<TimelineEntry> entries)
     {
         _block = block;
-        _gaps = gaps;
         Entries = entries;
 
         _entryGaps = new InstrumentalGap?[entries.Count];

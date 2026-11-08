@@ -39,7 +39,7 @@ public class CoverEditorTests
     private static async Task<(CoverEditor Editor, FakeWriter Writer, Track Track)> SetUp()
     {
         var track = new Track { FilePath = "song.mp3", Title = "T" };
-        var repo = new MemoryRepository { Stored = new LibrarySnapshot(new[] { track }, Array.Empty<string>()) };
+        var repo = new MemoryRepository { Stored = new LibrarySnapshot(new[] { track }) };
         var library = new LibraryService(new LibraryScanner(new NullReader()), repo);
         await library.LoadAsync();
 

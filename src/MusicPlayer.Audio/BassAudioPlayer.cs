@@ -47,11 +47,8 @@ public sealed class BassAudioPlayer : IAudioPlayer
         if (!Bass.Init() && Bass.LastError != Errors.Already)
             throw new InvalidOperationException($"No se pudo inicializar BASS: {Bass.LastError}");
 
-        LoadedPlugins = LoadPlugins();
+        LoadPlugins();
     }
-
-    /// <summary>Plugins cargados con éxito (útil para diagnóstico).</summary>
-    public IReadOnlyList<string> LoadedPlugins { get; }
 
     public CorePlaybackState State => _state;
     public TimeSpan Duration => _current?.Duration ?? TimeSpan.Zero;
@@ -165,15 +162,6 @@ public sealed class BassAudioPlayer : IAudioPlayer
         if (_mixer == 0 || _state != CorePlaybackState.Playing) return;
         if (Bass.ChannelPause(_mixer))
             SetState(CorePlaybackState.Paused);
-    }
-
-    public void Stop()
-    {
-        if (_mixer == 0 || _current is not { } current) return;
-
-        Bass.ChannelPause(_mixer);
-        SeekCore(current, TimeSpan.Zero);
-        SetState(CorePlaybackState.Stopped);
     }
 
     public void Unload()
@@ -297,17 +285,15 @@ public sealed class BassAudioPlayer : IAudioPlayer
         StateChanged?.Invoke(this, state);
     }
 
-    private static List<string> LoadPlugins()
+    private static void LoadPlugins()
     {
-        var loaded = new List<string>();
         foreach (var file in PluginFiles)
         {
             var path = Path.Combine(AppContext.BaseDirectory, file);
             // Un plugin ausente no es fatal: solo se pierde ese formato.
-            if (File.Exists(path) && Bass.PluginLoad(path) != 0)
-                loaded.Add(file);
+            if (File.Exists(path))
+                Bass.PluginLoad(path);
         }
-        return loaded;
     }
 
     public void Dispose()

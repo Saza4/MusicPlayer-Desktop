@@ -155,7 +155,6 @@ public partial class MainWindow : Window
         return false;
     }
 
-    // Controles que usan estas teclas para lo suyo: escribir, abrir una lista desplegable, navegar un menú.
     // ---- Menú de capas del modo inmersivo (docs/specs/lyrics-layers.md, criterios 12-16) ----
 
     // Las opciones se recalculan al abrir: etiquetas según lo que se ve y desactivadas si lo dejarían todo oculto.
@@ -235,6 +234,7 @@ public partial class MainWindow : Window
             FillLayersMenu();
     }
 
+    // Controles que usan estas teclas para lo suyo: escribir, abrir una lista desplegable, navegar un menú.
     private static bool OwnsKeyboard(object? source) =>
         source is TextBox or ComboBox or ComboBoxItem or MenuItem or Avalonia.Controls.ContextMenu;
 

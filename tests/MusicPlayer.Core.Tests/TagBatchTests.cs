@@ -44,7 +44,7 @@ public class TagBatchTests
         var tracks = Enumerable.Range(1, count)
             .Select(i => new Track { FilePath = $"s{i}.mp3", Title = $"T{i}", Artist = "A", Album = "X" })
             .ToArray();
-        var repo = new MemoryRepository { Stored = new LibrarySnapshot(tracks, Array.Empty<string>()) };
+        var repo = new MemoryRepository { Stored = new LibrarySnapshot(tracks) };
         var library = new LibraryService(new LibraryScanner(new NullReader()), repo);
         await library.LoadAsync();
 
