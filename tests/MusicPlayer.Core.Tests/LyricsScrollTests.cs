@@ -104,6 +104,29 @@ public class LyricsScrollTests
         Assert.Equal(350, LyricsScroll.ClampManualOffset([], 20, -80, 1000));
     }
 
+    [Theory]
+    [InlineData(350, 290, 1000, false)]    // avanzar una línea
+    [InlineData(350, -600, 1000, false)]   // salto corto: 950, menos de una pantalla
+    [InlineData(350, -651, 1000, true)]    // más de una pantalla hacia delante
+    [InlineData(-5000, 350, 1000, true)]   // y hacia atrás
+    [InlineData(350, -650, 1000, false)]   // justo una pantalla: se anima
+    [InlineData(350, -5000, 0, false)]     // sin panel medido: nada que decidir
+    public void IsLongJump_MoreThanOneScreen(double current, double target, double viewport, bool expected)
+    {
+        Assert.Equal(expected, LyricsScroll.IsLongJump(current, target, viewport));
+    }
+
+    [Fact]
+    public void IsLongJump_WithMeasuredLines_SeekFarAheadSnaps()
+    {
+        double[] heights = [.. Enumerable.Repeat(40.0, 300)];
+        var start = LyricsScroll.TargetOffset(heights, 20, 0, 600);
+
+        Assert.False(LyricsScroll.IsLongJump(start, LyricsScroll.TargetOffset(heights, 20, 1, 600), 600));
+        Assert.False(LyricsScroll.IsLongJump(start, LyricsScroll.TargetOffset(heights, 20, 10, 600), 600)); // 600 px
+        Assert.True(LyricsScroll.IsLongJump(start, LyricsScroll.TargetOffset(heights, 20, 150, 600), 600));
+    }
+
     [Fact]
     public void CascadeDelay_CustomStepAndMax()
     {

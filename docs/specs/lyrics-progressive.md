@@ -40,14 +40,14 @@ Dato clave: el `.lrc` solo da el **inicio** de cada línea, no cuándo termina c
 1. **Relleno:** la línea activa se rellena de izquierda a derecha según la posición real; en pausa se detiene, y al saltar con la barra o al pulsar una línea el relleno salta al punto correcto.
 2. **Estados de línea:** pasada (tenue), activa (brillante, opacidad 1, escala 1) y futura (tenue). Las inactivas bajan de opacidad y de escala con la distancia a la activa (curva y mínimos en constantes). Las ya cantadas no vuelven a rellenarse.
 3. **Desplazamiento:** la línea activa se ancla a ~35 % de la altura del panel; al cambiar de línea el conjunto se desplaza con resorte sin rebote excesivo y con cascada entre líneas (retardo ≤ 100 ms por línea, tope configurable).
-4. **Saltos:** adelantar, retroceder, cambiar de pista o reanudar tras pausa deja la letra en el estado correcto, sin acumular desfases (el estado no se acumula, se recalcula).
+4. **Saltos:** adelantar, retroceder, cambiar de pista o reanudar tras pausa deja la letra en el estado correcto, sin acumular desfases (el estado no se acumula, se recalcula). Un salto que mueve la letra más de una pantalla se coloca sin animar (M5, decisión del autor); los cortos se animan con el resorte.
 5. **Pausas instrumentales:** se **infieren por hueco**, no por líneas vacías. El parser descarta las líneas en blanco, así que un `.lrc` normal (como `Chicago.lrc`) no trae líneas «♪». Hay pausa cuando una línea termina (duración estimada) y la siguiente empieza más de `InstrumentalGap` después (valor inicial: 8 s, en constantes), y también antes de la primera línea y después de la última. Se muestra «♪» con un indicador discreto de progreso; no rellena texto. Una línea con marca y texto vacío (la forma explícita) se trata igual.
 6. **Traducción y pronunciación:** se mantienen con las mismas opciones de hoy (`LyricsDisplayOptions`). El relleno aplica solo al renglón original; los demás se atenúan según el estado de la línea.
 7. **Fundido** superior e inferior de la zona de letra.
 8. **Interacción:** pulsar una línea salta a su marca (como hoy, `SeekToLine`). La rueda del ratón o un gesto pausa el auto-desplazamiento unos segundos y luego retoma.
 9. **Colores solo con recursos del tema** (`ThemeXxxBrush`), sin literales `#RRGGBB` (convención de CLAUDE.md).
 10. **Ajuste temporal `LyricsStyle`** (Clásico / Progresivo) en `AppSettings` (parámetro nuevo al final, por defecto Clásico), con un interruptor en el modo inmersivo para alternar mientras se prueba. Es un mecanismo explícito, no código comentado. Al aprobar el nuevo estilo, se retira el clásico **solo del modo inmersivo** (y con él el ajuste). El `ListBox` clásico permanece: lo usa el panel lateral y las letras `Plain`.
-11. **Accesibilidad:** el ajuste «reducir movimiento» del sistema, o una opción propia, desactiva resorte y cascada y deja solo el cambio de opacidad.
+11. ~~**Accesibilidad:** el ajuste «reducir movimiento» del sistema, o una opción propia, desactiva resorte y cascada y deja solo el cambio de opacidad.~~ **Descartado por decisión del autor** (M5). Avalonia 11.2.5 no expone esa preferencia del sistema; se llegó a hacer como opción propia y se retiró entera (ajuste, botón y comportamiento).
 12. **Rendimiento:** con el panel de letra visible y sonando, CPU adicional ≤ ~+5 puntos de un núcleo frente a hoy (medida como en M7 de la isla). Sin letra visible o en pausa, **0 fotogramas extra**.
 13. **Pruebas:** la lógica (relleno, línea activa, resorte, estimación de duración) vive en Core con pruebas; `dotnet build` sin warnings nuevos y todas las pruebas actuales (403) en verde.
 14. **Linux:** compila y no depende de Win32.
@@ -99,10 +99,10 @@ Dato clave: el `.lrc` solo da el **inicio** de cada línea, no cuándo termina c
 - Cambio de pista mientras se anima: se cancela todo y la nueva letra empieza desde su estado inicial.
 - Pausa a mitad de línea: el relleno queda congelado; reanudar continúa desde ahí.
 - Seek hacia atrás: las líneas posteriores vuelven a estado «futura» y el desplazamiento retrocede (el Swift no lo hacía).
-- Letra muy larga (más de ~300 líneas): virtualizar el dibujo (solo las líneas visibles ± margen).
+- Letra muy larga (más de ~300 líneas): **medido en M5, no se virtualiza.** Con 331 entradas cambiando de línea cada 0,7 s el dibujo se mantiene a 25-26 fps sin fotogramas retrasados (paso máximo 50-54 ms), y las líneas de más cuestan ~+1,9 puntos de CPU (Debug) frente a 40 al mismo ritmo. Las que quedan fuera del panel tienen opacidad 0 y no se pintan; no actualizar su transformación no ahorró nada medible (+1,8), así que se quitó.
 - Tema claro/oscuro/personalizado en vivo (vista previa del selector): los pinceles se actualizan sin reiniciar.
 - Modo inmersivo siempre oscuro: los pinceles del control son los del modo inmersivo.
-- «Reducir movimiento» activado: ver criterio 11.
+- ~~«Reducir movimiento» activado: ver criterio 11.~~ Descartado por decisión del autor (criterio 11).
 - `[offset:]` del `.lrc`: **el parser lo descarta** como metadato (comprobado) y no se aplica a ninguna letra, tampoco hoy. Queda fuera de alcance; si un `.lrc` lo usa, la letra irá desfasada igual que en el estilo clásico.
 - Cabecera con finales de línea mezclados (`[id: bccjinbd]` con espacio y sin `\r`, el resto con `\r\n`): el parser lo tolera (`Trim` quita el `\r`; `[a-zA-Z]+:` admite el espacio tras los dos puntos). Lo cubre una prueba (hito M1).
 - Líneas en blanco entre estrofas: el parser las descarta; no producen «♪». Ver criterio 5.
@@ -291,6 +291,48 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 - Al editar la carátula de la pista que suena y volver a reproducirla, el fondo cambia.
 - **Arrastre con el dedo o el lápiz: sin probar en hardware táctil** (el autor no tiene pantalla táctil).
 
+## Resultado de M5
+
+**Decisiones del autor para M5:**
+1. «Reducir movimiento» con la preferencia del sistema si Avalonia 11.2.5 la expone y, si no, con una opción propia. Tras verla hecha: **se descarta y se retira por completo** (criterio 11).
+2. Medir otra vez la CPU en Release con desplazamiento y rueda. Con +3,4, los 20 fps **no se aplican**; la constante `ProgressiveLyricsMetrics.FramesPerSecond` se queda como está.
+3. `.lrc` sintético de más de 300 líneas para comprobar que el dibujo sigue fluido. Bien quitar la virtualización que no ahorraba.
+4. **Saltos largos con la barra:** los de más de una pantalla se colocan sin animar, con el cálculo en Core y con prueba.
+
+**«Reducir movimiento» (descartado).** Avalonia 11.2.5 no expone la preferencia: `IPlatformSettings` solo da colores (`GetColorValues`: tema, acento, contraste), tamaños y tiempos de toque y `HotkeyConfiguration`. Se hizo como opción propia (ajuste en `AppSettings` y botón en el inmersivo) y se retiró entera. Como una instancia del autor pudo guardar la clave en `settings.json`, una prueba (Infrastructure, con `"ReduceMotion"` y `"reduceMotion"`) comprueba que ese archivo se carga sin copia `.corrupt` y conserva el resto de ajustes: `System.Text.Json` ignora las claves que no conoce.
+
+**Salto largo:** `LyricsScroll.IsLongJump(actual, objetivo, alto)` es verdadero si el desplazamiento cambia más que el alto del panel (8 pruebas: avance de una línea, salto corto, justo una pantalla, adelante, atrás, sin panel medido y con 300 líneas medidas). `ProgressiveLyricsView` lo comprueba al cambiar la entrada activa, salvo con desplazamiento manual, y coloca sin animar. Comprobado con una ráfaga de capturas en el sintético (salto a 01:45): ningún fotograma intermedio; en la primera captura tras el salto la letra ya está en la pausa «♪». Antes, a los ~2 s del salto aún pasaban las líneas 97-102.
+
+**`.lrc` sintético largo** (en el scratchpad, fuera del repositorio; solo palabras inventadas): 330 líneas más una línea vacía (pausa «♪» de 10 s), una cada 0,6-0,8 s (cabe en una pista de ~4 min, así que es una prueba de esfuerzo con cambios de línea continuos), una larga de dos renglones cada 25, y sus `.es.lrc` y `.rom.lrc` inventados. En Debug, `MUSICPLAYER_LYRICS_OVERRIDE` ahora también carga la traducción y la pronunciación que haya junto al `.lrc` (`<nombre>.es.lrc`, `<nombre>.rom.lrc`).
+
+**Rueda en la sonda:** `WM_MOUSEWHEEL` enviado a la ventana sobre la letra, sin mover el ratón (tres pasos en el segundo 1 y dos en el 6, con la vuelta automática entre medias). Comprobado con capturas: tres pasos desplazan 180 DIPs, la activa sigue destacada y a los 3 s vuelve al ancla. La primera versión giraba hacia arriba al principio de la canción y no movía nada (la primera línea ya está en el tope), así que se invirtió.
+
+**CPU en Release** (método de M0-M3, Chicago, 5 pasadas por variante en la misma sesión; `settings.json` restaurado idéntico):
+
+| Variante | Pasadas | Media | Frente al clásico con rueda |
+|---|---|---|---|
+| Clásico con rueda | 10,1 / 12,8 / 9,5 / 10,1 / 11,6 | 10,8 | — |
+| **Progresivo con rueda** | 16,2 / 12,8 / 15,3 / 13,4 / 13,4 | **14,2** | **+3,4** |
+| Progresivo sin rueda | 12,5 / 11,7 / 11,2 / 13,1 / 13,3 | 12,4 | — (otra entrada) |
+
+- **Criterio 12: cumplido (+3,4 con la misma entrada).** La rueda también cuesta en el clásico (el `ListBox` se desplaza), por eso se compara con la misma entrada. No se midió el clásico sin rueda en esta sesión; frente a las 14 pasadas de M3 (7,6), el progresivo sin rueda daría ~+4,8, dentro del ruido de ±1,5 entre sesiones.
+- Los 20 fps no se aplican (decisión 2).
+
+**Letra larga** (Debug, override; la CPU de Debug no es comparable con la de Release):
+
+| Prueba | CPU | Fotogramas |
+|---|---|---|
+| Chicago, con rueda | 12,7 | 19-21 fps de media en ventanas de 5 s (el reloj se para entre líneas; paso máximo ~1 s) |
+| Sintético de 331, con rueda | 21,3 | **25-26 fps sostenidos, paso máximo 50-54 ms**, desvío medio 0,2 ms |
+| Sintético de 331, sin rueda | 17,7 / 16,2 (dos sesiones) | — |
+| Sus 40 primeras líneas, mismo ritmo, sin rueda | 15,8 / 14,4 | — |
+
+- **El dibujo se mantiene fluido** con 331 entradas cambiando de línea cada 0,7 s: ningún fotograma se retrasa.
+- El número de líneas cuesta **~+1,9 puntos** (331 frente a 40, el mismo ritmo); el resto es el ritmo de esfuerzo (un cambio de línea cada 0,7 s, con el resorte siempre en marcha).
+- **Virtualización:** se probó no tocar la transformación de las líneas invisibles (opacidad 0, fuera del panel): +1,9 → +1,8, dentro del ruido, así que se quitó (ver «Casos límite»).
+
+**Pendiente (a mano, autor):** redimensionar la ventana, cambio de pista a mitad de línea, saltos con la barra (cortos y largos), y traducción y pronunciación.
+
 ## Hitos (cada uno compila, pasa pruebas y se puede comprobar solo)
 
 | # | Hito | Verificación |
@@ -300,7 +342,7 @@ En una sesión anterior de 4 pasadas el degradado dio 12,5 / 12,6 / 13,3 / 22,2 
 | M2 | `FillTextBlock` con `FillX`, borde suave **con degradado en el texto (sin `PushOpacityMask`)**, texto en varios renglones y temas. Medida en **Release** e investigación del redibujo de la ventana completa (**hecho**, ver «Resultado de M2») | Capturas en Oscuro, Claro y Medianoche; relleno al 0, 50 y 100 %. CPU en Release frente al clásico |
 | M3 | `ProgressiveLyricsView`: desplazamiento con resorte, cascada, fundido, opacidad y escala por distancia. Reloj parado con la línea completa; 20 fps solo si aún supera el tope (ver «Notas para M3») (**hecho**, ver «Resultado de M3»; 20 fps descartados, se revisan a mano en M5) | Medida de CPU en Release frente al `ListBox` clásico (criterio 12) |
 | M4 | Integración en el modo inmersivo; panel lateral intacto. (El ajuste `LyricsStyle` y su interruptor se adelantaron a M2, ver «Ajuste `LyricsStyle` adelantado».) Pulsar una línea salta a su marca. **Criterio 8:** la rueda del ratón o un gesto pausa el auto-desplazamiento unos segundos y luego retoma. **Revisión del fondo:** el desenfoque de la carátula se calcula fuera del hilo de la interfaz, sobre una versión reducida, y se actualiza al cambiar de pista o al editar la carátula (**hecho**, ver «Resultado de M4»; arrastre táctil sin probar en hardware) | Pulsar línea salta; `Plain` sigue en el `ListBox`; rueda → desplazamiento manual y vuelta al ancla; fondo sin trabajo en el hilo de la interfaz y actualizado tras editar la carátula |
-| M5 | «Reducir movimiento» y revisión a mano | A mano (autor): sensación frente al vídeo de referencia |
+| M5 | ~~«Reducir movimiento»~~ (descartado, criterio 11). Medida de CPU con rueda, letra larga y saltos largos sin animar (**hecho**, ver «Resultado de M5»; revisión a mano pendiente) | A mano (autor): redimensionar, cambio de pista a mitad de línea, saltos cortos y largos, traducción y pronunciación |
 | M6 | Tras la aprobación: retirar el estilo clásico **solo del modo inmersivo** y el ajuste `LyricsStyle`. Docs (`README`, `reporte-reproductor.md`, esta spec) y `CLAUDE.md` | `dotnet build -c Release` sin warnings nuevos y pruebas en verde; CI en Windows y Ubuntu |
 
 ## Decisiones tomadas (autor, 7 de noviembre de 2026)

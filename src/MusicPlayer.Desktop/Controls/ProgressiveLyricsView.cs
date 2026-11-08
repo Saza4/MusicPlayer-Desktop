@@ -22,6 +22,7 @@ namespace MusicPlayer.Desktop.Controls;
 /// <remarks>
 /// El reloj de fotogramas solo corre mientras hace falta: relleno a medias con la pista sonando, o algún resorte en
 /// movimiento. Si no, se para y se despierta con el inicio de la siguiente entrada (o con un cambio del modelo).
+/// Un salto de más de una pantalla se coloca sin animar (M5, <see cref="LyricsScroll.IsLongJump"/>).
 /// Interacción (M4): pulsar una línea salta a su marca; la rueda o arrastrar con el dedo desplazan a mano, y tras
 /// <see cref="ProgressiveLyricsMetrics.ManualScrollHold"/> sin tocar nada vuelve el desplazamiento automático.
 /// </remarks>
@@ -221,8 +222,13 @@ public sealed class ProgressiveLyricsView : Panel
         var active = timeline.ActiveEntryAt(position);
         if (active >= _items.Count) active = _items.Count - 1;
 
-        if (active != _active) OnActiveChanged(active, now);
+        var changed = active != _active;
+        if (changed) OnActiveChanged(active, now);
         _target = _manual ?? LyricsScroll.TargetOffset(_heights, M.LineSpacing, active, _viewport, M.Anchor);
+
+        // Salto de más de una pantalla (con la barra, por ejemplo): se coloca sin animar.
+        if (changed && _manual is null && LyricsScroll.IsLongJump(_items[Math.Max(active, 0)].Offset, _target, _viewport))
+            _snap = true;
 
         if (_snap)
         {

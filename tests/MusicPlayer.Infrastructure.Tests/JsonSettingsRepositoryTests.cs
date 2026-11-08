@@ -83,6 +83,38 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.True(loaded.Shuffle);
     }
 
+    [Theory]
+    [InlineData("ReduceMotion")] // como lo escribía la app en las pruebas de M5 (ajuste ya retirado)
+    [InlineData("reduceMotion")]
+    public async Task Load_WithRetiredReduceMotionKey_LoadsEverythingElse(string key)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        await File.WriteAllTextAsync(FilePath, $$"""
+            {
+              "Volume": 0.4,
+              "ShowTranslation": true,
+              "LastTrackId": "7cc26186-a955-49fa-8e61-d524233eeee9",
+              "Shuffle": true,
+              "ThemeId": "negro-puro",
+              "ShowIsland": false,
+              "LyricsStyle": 1,
+              "{{key}}": true
+            }
+            """);
+
+        var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
+
+        Assert.False(File.Exists(FilePath + ".corrupt")); // la clave desconocida no lo daña
+        Assert.True(File.Exists(FilePath));
+        Assert.Equal(0.4, loaded.Volume);
+        Assert.True(loaded.ShowTranslation);
+        Assert.Equal(Guid.Parse("7cc26186-a955-49fa-8e61-d524233eeee9"), loaded.LastTrackId);
+        Assert.True(loaded.Shuffle);
+        Assert.Equal("negro-puro", loaded.ThemeId);
+        Assert.False(loaded.ShowIsland);
+        Assert.Equal(LyricsStyle.Progressive, loaded.LyricsStyle);
+    }
+
     [Fact]
     public async Task SaveThenLoad_KeepsTheLyricsStyle()
     {

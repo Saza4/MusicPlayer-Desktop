@@ -56,6 +56,13 @@ public static class LyricsScroll
     }
 
     /// <summary>
+    /// Un salto (con la barra, por ejemplo) que mueve la letra más de una pantalla se coloca sin animar: con el
+    /// resorte se verían pasar todas las líneas intermedias. Los cambios normales y los saltos cortos se animan.
+    /// </summary>
+    public static bool IsLongJump(double currentOffset, double targetOffset, double viewportHeight) =>
+        viewportHeight > 0 && Math.Abs(targetOffset - currentOffset) > viewportHeight;
+
+    /// <summary>
     /// Retardo con que empieza a moverse cada línea al cambiar la línea activa. Al avanzar una línea, las de
     /// debajo de la nueva activa se retrasan más cuanto más lejos están; al retroceder una, las de encima. Un salto
     /// de más de una línea (seek, cambio de pista) mueve todo a la vez, para que llegue cuanto antes.

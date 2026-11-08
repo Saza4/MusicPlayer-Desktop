@@ -137,8 +137,23 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
             var block = await provider.GetLyricsAsync(track, cts.Token);
 #if DEBUG
             // Pruebas de la letra progresiva con un .lrc sintético, sin letra real ni tocar la biblioteca.
+            // Si junto a él hay «.es.lrc» o «.rom.lrc», se añaden como traducción y pronunciación.
             if (Environment.GetEnvironmentVariable("MUSICPLAYER_LYRICS_OVERRIDE") is { Length: > 0 } overridePath)
-                block = new LrcLyricParser().Parse(await System.IO.File.ReadAllTextAsync(overridePath, cts.Token));
+            {
+                var parser = new LrcLyricParser();
+                async Task<LyricBlock?> Companion(string suffix)
+                {
+                    var path = System.IO.Path.ChangeExtension(overridePath, suffix);
+                    return System.IO.File.Exists(path)
+                        ? parser.Parse(await System.IO.File.ReadAllTextAsync(path, cts.Token))
+                        : null;
+                }
+                block = parser.Parse(await System.IO.File.ReadAllTextAsync(overridePath, cts.Token));
+                var translation = await Companion(".es.lrc");
+                var pronunciation = await Companion(".rom.lrc");
+                if (translation is not null || pronunciation is not null)
+                    block = LyricsMerger.Merge(block, translation, pronunciation);
+            }
 #endif
             if (!cts.IsCancellationRequested)
                 SetBlock(block);
