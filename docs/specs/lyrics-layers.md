@@ -1,6 +1,6 @@
 # Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
 
-Estado: **aprobada (7 de noviembre de 2026); M0 a M6 hechos; M7 (incrustar una capa con selector desde el inmersivo, criterio 12b enmendado) en curso**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+Estado: **aprobada (7 de noviembre de 2026), terminada: M0 a M7 hechos (M7: incrustar una capa con selector desde el inmersivo, criterio 12b enmendado)**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Fusionada en `main` con el PR #5 (rama `feature/capas-letra`).
 
 ## Contexto
 
