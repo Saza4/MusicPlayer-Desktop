@@ -12,7 +12,8 @@ namespace MusicPlayer.Infrastructure;
 /// <item>Traducción: una sola, elegida por idioma entre hermanas e incrustadas juntas (la del sistema; si no, la del
 /// mismo idioma; si no, la primera alfabética). Dentro del mismo código, el hermano gana a la incrustada.</item>
 /// </list>
-/// Un hermano que no se puede leer o no da letra cede su sitio a la incrustada del mismo tipo y código.
+/// Un hermano que no se puede leer, no da letra o da otro tipo que el original (texto sin marcas con un original
+/// sincronizado, que <see cref="LyricsMerger"/> descartaría) cede su sitio a la incrustada del mismo tipo y código.
 /// </summary>
 /// <param name="systemLanguage">Código corto del sistema (TwoLetterISOLanguageName): vale como sufijo por compatibilidad.</param>
 /// <param name="systemCulture">Nombre de la cultura («es-MX»), para elegir la traducción. Por defecto, el código corto.</param>
@@ -36,8 +37,8 @@ public sealed class CompanionLyricsProvider(
                     .Concat(layers.Where(l => l.Kind == LyricsLayerKind.Translation).Select(l => l.Language!)),
             _culture);
 
-        var translation = code is null ? null : await LayerAsync(LyricsLayerKind.Translation, code, siblings, layers, ct);
-        var pronunciation = await LayerAsync(LyricsLayerKind.Pronunciation, null, siblings, layers, ct);
+        var translation = code is null ? null : await LayerAsync(original.Kind, LyricsLayerKind.Translation, code, siblings, layers, ct);
+        var pronunciation = await LayerAsync(original.Kind, LyricsLayerKind.Pronunciation, null, siblings, layers, ct);
 
         return translation is null && pronunciation is null
             ? original
@@ -45,15 +46,18 @@ public sealed class CompanionLyricsProvider(
     }
 
     private async Task<LyricBlock?> LayerAsync(
-        LyricsLayerKind kind, string? code, IReadOnlyList<LyricsLayerSource> siblings, IReadOnlyList<LyricsLayer> layers,
+        LyricsKind originalKind, LyricsLayerKind kind, string? code,
+        IReadOnlyList<LyricsLayerSource> siblings, IReadOnlyList<LyricsLayer> layers,
         CancellationToken ct)
     {
         var sibling = siblings.FirstOrDefault(s => s.Kind == kind && Same(s.Language, code));
-        if (sibling is not null && await ReadAsync(sibling.Path, ct) is { IsAvailable: true } fromFile)
+        if (sibling is not null && await ReadAsync(sibling.Path, ct) is { IsAvailable: true } fromFile && fromFile.Kind == originalKind)
             return fromFile;
 
         var layer = layers.FirstOrDefault(l => l.Kind == kind && Same(l.Language, code));
-        return layer is not null && parser.Parse(layer.Text) is { IsAvailable: true } fromTag ? fromTag : null;
+        return layer is not null && parser.Parse(layer.Text) is { IsAvailable: true } fromTag && fromTag.Kind == originalKind
+            ? fromTag
+            : null;
     }
 
     private async Task<LyricBlock?> ReadAsync(string path, CancellationToken ct)

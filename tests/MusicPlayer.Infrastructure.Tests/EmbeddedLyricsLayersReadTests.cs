@@ -151,6 +151,33 @@ public class EmbeddedLyricsLayersReadTests : IDisposable
         Assert.Equal("Rom incrustada", block.Lines[0].Romanization);
     }
 
+    // Texto sin marcas con un original sincronizado: LyricsMerger lo descartaría, así que tampoco gana a la incrustada.
+    [Theory, MemberData(nameof(Formats))]
+    public async Task ASiblingOfAnotherKind_FallsBackToTheEmbeddedOne(string format)
+    {
+        var path = NewFile(format);
+        Embed(path, Tr("es", "[00:01.00]Hola incrustada"));
+        Sibling("song.es.lrc", "texto sin marcas de tiempo");
+
+        Assert.Equal("Hola incrustada", (await ReadAsync(path)).Lines[0].Translation);
+    }
+
+    // Coherencia con la principal: un «song.lrc» vacío o solo con metadatos cae a la letra incrustada (CompositeLyricsProvider).
+    [Theory]
+    [InlineData("")]
+    [InlineData("[ar:Artista]\n[ti:Título]")]
+    public async Task AMainLrcWithoutLyrics_FallsBackToTheEmbeddedMain(string content)
+    {
+        var path = NewFile("mp3");
+        Embed(path, Tr("es", "[00:01.00]Hola"));
+        Sibling("song.lrc", content);
+
+        var block = await ReadAsync(path);
+
+        Assert.Equal("Hello", block.Lines[0].Text);
+        Assert.Equal("Hola", block.Lines[0].Translation);
+    }
+
     // La principal del hermano «song.lrc» y las capas incrustadas se combinan igual.
     [Theory, MemberData(nameof(Formats))]
     public async Task MainFromTheLrcFile_LayersFromTheAudio(string format)

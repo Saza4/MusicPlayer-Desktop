@@ -224,3 +224,8 @@ Todo en Core, con pruebas (569 en Core, +87):
   - Varias traducciones incrustadas: la del sistema, la del mismo idioma (`pt-AO` → `pt-BR` antes que `pt-PT`) y, si no, la primera alfabética. Mezcla de hermanas e incrustadas: se elige primero el idioma (una `es` incrustada gana a una `en` hermana con el sistema en español).
   - Hermano vacío: se usa la incrustada. Archivo dañado, inexistente o WAV: el lector da vacío y las capas hermanas se siguen mostrando.
   - **Carátula (pedido del autor):** poner y quitar la carátula con `TagLibCoverArtWriter`, y aplicarla a un álbum de tres pistas (MP3, FLAC y M4A) con `CoverEditor.SetManyAsync`, conservan la principal y las capas.
+
+**Ajustes tras M3 (revisión del autor):**
+- **Coherencia con la principal, comprobada:** un `cancion.lrc` vacío, solo con espacios o con metadatos (`[ar:…]`), o que no se puede leer, da `LyricBlock.Empty` y `CompositeLyricsProvider` cae a la letra incrustada. Las capas hacen lo mismo. Prueba: `AMainLrcWithoutLyrics_FallsBackToTheEmbeddedMain`.
+- **Hermano de otro tipo:** `LrcLyricParser` toma como `Plain` cualquier texto sin marcas, así que un hermano «mal formado» casi siempre da letra, pero `Plain`. Con un original `Synced`, `LyricsMerger` lo descartaba y la incrustada tampoco se usaba. Ahora una capa (hermana o incrustada) solo cuenta si es del mismo tipo que el original; si no, cede su sitio. La principal no tiene con qué compararse: un `cancion.lrc` con texto sin marcas se sigue mostrando como letra `Plain`, igual que hoy.
+- Pruebas: Infrastructure 151 (+5).
