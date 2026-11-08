@@ -21,7 +21,7 @@ public class CompanionLyricsProviderTests : IDisposable
     private LyricBlock Original() => _parser.Parse("[00:01.00]Hello\n[00:03.00]World");
 
     private CompanionLyricsProvider NewProvider(LyricBlock inner, string language = "es", string? culture = null) =>
-        new(new FixedProvider(inner), _parser, language, culture);
+        new(new FixedProvider(inner), _parser, new TagLibLyricsLayerReader(), language, culture);
 
     private Task Write(string name, string content) =>
         File.WriteAllTextAsync(Path.Combine(_dir, name), content);

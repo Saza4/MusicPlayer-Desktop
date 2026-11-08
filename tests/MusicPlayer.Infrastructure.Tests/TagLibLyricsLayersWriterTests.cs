@@ -36,6 +36,13 @@ public class TagLibLyricsLayersWriterTests : IDisposable
         return TagLibLyricsLayerFields.Read(file).OrderBy(l => l.Kind == LyricsLayerKind.Translation).ThenBy(l => l.Language, StringComparer.Ordinal).ToList();
     }
 
+    // PNG de 1×1 píxel.
+    private static readonly byte[] Png = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+
+    private static Task<byte[]?> ReadCover(string path) =>
+        new EmbeddedCoverArtProvider().GetCoverAsync(new Track { FilePath = path, Title = "x" });
+
     private static string? ReadMain(string path)
     {
         using var file = TagLib.File.Create(path);
@@ -188,6 +195,49 @@ public class TagLibLyricsLayersWriterTests : IDisposable
 
         Assert.Equal(Main, ReadMain(path));
         Assert.Equal([Rom("[00:01.00]Rom"), Tr("pt-BR", "[00:01.00]Olá")], ReadLayers(path));
+    }
+
+    // Pedido del autor (M3): poner y quitar la carátula (TagLibCoverArtWriter, vía CoverEditor) conserva las capas.
+    [Theory, MemberData(nameof(Formats))]
+    public async Task SettingAndRemovingTheCover_KeepsTheLayers(string format)
+    {
+        var path = NewFile(format);
+        _writer.Write(path, new LyricsLayers(Main, [Tr("pt-BR", "[00:01.00]Olá"), Rom("[00:01.00]Rom")]));
+        var cover = new TagLibCoverArtWriter();
+
+        cover.Write(path, Png);
+        Assert.Equal(Png, await ReadCover(path));
+        Assert.Equal(Main, ReadMain(path));
+        Assert.Equal([Rom("[00:01.00]Rom"), Tr("pt-BR", "[00:01.00]Olá")], ReadLayers(path));
+
+        cover.Write(path, null);
+        Assert.Null(await ReadCover(path));
+        Assert.Equal(Main, ReadMain(path));
+        Assert.Equal([Rom("[00:01.00]Rom"), Tr("pt-BR", "[00:01.00]Olá")], ReadLayers(path));
+    }
+
+    // Pedido del autor (M3): aplicar una carátula a todo un álbum (CoverEditor.SetManyAsync) conserva las capas de cada pista.
+    [Fact]
+    public async Task ApplyingACoverToAWholeAlbum_KeepsTheLayersOfEveryTrack()
+    {
+        var paths = Formats.Select(f => NewFile((string)f[0])).ToList();
+        foreach (var p in paths)
+            _writer.Write(p, new LyricsLayers(Main, [Tr("es", "[00:01.00]Hola " + Path.GetExtension(p)), Rom("[00:01.00]Rom")]));
+        var library = new LibraryService(
+            new LibraryScanner(new TagLibTrackMetadataReader()),
+            new JsonLibraryRepository(Path.Combine(_dir, "sin-usar", "library.json")));
+        var tracks = paths.Select(p => new Track { FilePath = p, Title = Path.GetFileName(p), Album = "Álbum" }).ToList();
+
+        var result = await new CoverEditor(new TagLibCoverArtWriter(), library).SetManyAsync(tracks, Png);
+
+        Assert.Equal(3, result.Written);
+        Assert.Empty(result.Errors);
+        foreach (var p in paths)
+        {
+            Assert.Equal(Png, await ReadCover(p));
+            Assert.Equal(Main, ReadMain(p));
+            Assert.Equal([Rom("[00:01.00]Rom"), Tr("es", "[00:01.00]Hola " + Path.GetExtension(p))], ReadLayers(p));
+        }
     }
 
     // Pedido del autor (c): una capa de exactamente 1 MB (UTF-8, el límite) se escribe y se relee.

@@ -33,7 +33,7 @@ public static class CompositionRoot
         services.AddSingleton<ISettingsRepository>(_ => new JsonSettingsRepository(AppPaths.Settings));
         services.AddSingleton<SettingsService>();
 
-        // Letras: .lrc primero, USLT de respaldo, y encima traducción/pronunciación.
+        // Letras: .lrc primero, USLT de respaldo, y encima traducción/pronunciación (hermanas o incrustadas).
         services.AddSingleton<ILyricParser, LrcLyricParser>();
         services.AddSingleton<ILyricsProvider>(sp =>
         {
@@ -44,7 +44,7 @@ public static class CompositionRoot
                 new EmbeddedLyricsProvider(parser)
             });
             return new CompanionLyricsProvider(
-                baseProvider, parser,
+                baseProvider, parser, new TagLibLyricsLayerReader(),
                 CultureInfo.CurrentUICulture.TwoLetterISOLanguageName, CultureInfo.CurrentUICulture.Name);
         });
 

@@ -5,14 +5,20 @@ using MusicPlayer.Core.Services;
 namespace MusicPlayer.Infrastructure;
 
 /// <summary>
-/// Añade a la letra de otro proveedor la traducción («cancion.es.lrc») y la pronunciación («cancion.rom.lrc») que haya
-/// junto al audio. Si hay varias traducciones, se muestra una: la del idioma del sistema o, si no, la primera por
-/// orden alfabético (docs/specs/lyrics-layers.md, criterio 10).
+/// Añade a la letra de otro proveedor la traducción y la pronunciación, de los archivos hermanos («cancion.es.lrc»,
+/// «cancion.rom.lrc») o de las capas incrustadas en el audio (docs/specs/lyrics-layers.md, criterios 8-10):
+/// <list type="bullet">
+/// <item>Pronunciación: el hermano gana a la incrustada.</item>
+/// <item>Traducción: una sola, elegida por idioma entre hermanas e incrustadas juntas (la del sistema; si no, la del
+/// mismo idioma; si no, la primera alfabética). Dentro del mismo código, el hermano gana a la incrustada.</item>
+/// </list>
+/// Un hermano que no se puede leer o no da letra cede su sitio a la incrustada del mismo tipo y código.
 /// </summary>
 /// <param name="systemLanguage">Código corto del sistema (TwoLetterISOLanguageName): vale como sufijo por compatibilidad.</param>
 /// <param name="systemCulture">Nombre de la cultura («es-MX»), para elegir la traducción. Por defecto, el código corto.</param>
 public sealed class CompanionLyricsProvider(
-    ILyricsProvider inner, ILyricParser parser, string systemLanguage, string? systemCulture = null) : ILyricsProvider
+    ILyricsProvider inner, ILyricParser parser, ILyricsLayerReader embedded,
+    string systemLanguage, string? systemCulture = null) : ILyricsProvider
 {
     private readonly string _culture = systemCulture ?? systemLanguage;
 
@@ -23,27 +29,44 @@ public sealed class CompanionLyricsProvider(
             return original;
 
         var siblings = LyricsSiblingFiles.Find(track.FilePath, systemLanguage);
-        var code = LyricsLanguage.Pick(
-            siblings.Where(s => s.Kind == LyricsLayerKind.Translation).Select(s => s.Language!), _culture);
+        var layers = await Task.Run(() => embedded.Read(track.FilePath), ct);
 
-        var translation = await ReadAsync(siblings.FirstOrDefault(s => s.Kind == LyricsLayerKind.Translation && s.Language == code), ct);
-        var pronunciation = await ReadAsync(siblings.FirstOrDefault(s => s.Kind == LyricsLayerKind.Pronunciation), ct);
+        var code = LyricsLanguage.Pick(
+            siblings.Where(s => s.Kind == LyricsLayerKind.Translation).Select(s => s.Language!)
+                    .Concat(layers.Where(l => l.Kind == LyricsLayerKind.Translation).Select(l => l.Language!)),
+            _culture);
+
+        var translation = code is null ? null : await LayerAsync(LyricsLayerKind.Translation, code, siblings, layers, ct);
+        var pronunciation = await LayerAsync(LyricsLayerKind.Pronunciation, null, siblings, layers, ct);
 
         return translation is null && pronunciation is null
             ? original
             : LyricsMerger.Merge(original, translation, pronunciation);
     }
 
-    private async Task<LyricBlock?> ReadAsync(LyricsLayerSource? source, CancellationToken ct)
+    private async Task<LyricBlock?> LayerAsync(
+        LyricsLayerKind kind, string? code, IReadOnlyList<LyricsLayerSource> siblings, IReadOnlyList<LyricsLayer> layers,
+        CancellationToken ct)
     {
-        if (source is null) return null;
+        var sibling = siblings.FirstOrDefault(s => s.Kind == kind && Same(s.Language, code));
+        if (sibling is not null && await ReadAsync(sibling.Path, ct) is { IsAvailable: true } fromFile)
+            return fromFile;
+
+        var layer = layers.FirstOrDefault(l => l.Kind == kind && Same(l.Language, code));
+        return layer is not null && parser.Parse(layer.Text) is { IsAvailable: true } fromTag ? fromTag : null;
+    }
+
+    private async Task<LyricBlock?> ReadAsync(string path, CancellationToken ct)
+    {
         try
         {
-            return parser.Parse(await File.ReadAllTextAsync(source.Path, ct));
+            return parser.Parse(await File.ReadAllTextAsync(path, ct));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }
     }
+
+    private static bool Same(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 }

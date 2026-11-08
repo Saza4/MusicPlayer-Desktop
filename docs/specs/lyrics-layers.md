@@ -1,6 +1,6 @@
 # Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
 
-Estado: **aprobada (7 de noviembre de 2026), en curso: M0, M1 y M2 hechos**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+Estado: **aprobada (7 de noviembre de 2026), en curso: M0, M1, M2 y M3 hechos**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
 
 ## Contexto
 
@@ -159,7 +159,7 @@ Así, ningún nombre que hoy se muestra deja de mostrarse. Una prueba lo fija pa
 | M0 | (**hecho**, ver «Resultado del spike») Spike de TagLib 2.3.0: escribir y leer TXXX, Vorbis y `----` con texto multilínea y Unicode, ~1 MB y reabriendo el archivo. Archivos de prueba FLAC/M4A (P6). Resultado anotado en la spec; la spec entra en el commit. | Pruebas del spike en Infrastructure |
 | M1 | (**hecho**, ver «Resultado de M1») Core: modelo de capas (`LyricsLayers`: principal, traducciones por código, pronunciación), regla de nombres de hermanos (`<nombre>.<código>.lrc`) y de campos, elección de traducción. `LyricsEditor` valida por capa y devuelve un resumen (incrustado y saltado con su motivo). | Pruebas Core con un escritor falso |
 | M2 | (**hecho**, ver «Resultado de M2») Infrastructure (escritura): `ILyricsWriter` con capas, `TagLibLyricsWriter` por formato, reemplazo solo de las capas con fuente, verificación de todas. | MP3, FLAC y M4A: escribe, reemplaza sin duplicar, conserva etiquetas y audio, no deja temporales, falla sin tocar el original. Además (pedido por el autor): nombres con guion (`LYRICS_TRANSLATION_PT-BR`, `LYRICS_TRANSLATION_ZH-HANS`) en TXXX, Vorbis y `----`, con la mayúscula normalizada de vuelta (`pt-BR`, `zh-Hans`); borrar la principal (`Tag.Lyrics = null`) no toca las capas en FLAC y M4A; el editor de etiquetas y «Limpiar etiquetas» (ambos con `TagLibTrackTagWriter`) conservan las capas en los tres formatos; una capa de exactamente 1 MB se escribe y se relee en los tres |
-| M3 | Infrastructure (lectura): lector de capas incrustadas; `CompanionLyricsProvider` con prioridad por capa (hermano > incrustado) y elección de traducción. | Pruebas: solo incrustado, solo hermano, ambos, varias traducciones |
+| M3 | (**hecho**, ver «Resultado de M3») Infrastructure (lectura): lector de capas incrustadas y prioridad por capa en `CompanionLyricsProvider` (hermano > incrustado; la traducción se elige por idioma entre hermanas e incrustadas juntas). La lectura de hermanos con elección por idioma ya estaba hecha (ajustes tras M1, antes de M2). | Pruebas en MP3, FLAC y M4A: solo incrustado, solo hermano, ambos, varias traducciones. Además (pedido por el autor): poner y quitar la carátula, y aplicarla a todo un álbum (`CoverEditor.SetManyAsync`), conservan las capas en los tres formatos |
 | M4 | Desktop A: `EmbedLyricsViewModel` busca los hermanos (junto al audio o al elegido), aviso en la línea de estado. | A mano (autor), **en tres copias** (MP3, FLAC y M4A), no en archivos reales: la escritura no se puede deshacer. Incrustar y abrir cada copia sin los hermanos |
 | M5 | Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
 | M6 | Docs en commit aparte: README (limitación, y qué pasa con las capas al «Convertir formato» con ffmpeg: lo comprueba el autor a mano una vez), `reporte-reproductor.md`, spec, CLAUDE.md (número de pruebas). Push, PR y CI verde en Windows y Ubuntu. | CI |
@@ -210,3 +210,17 @@ Todo en Core, con pruebas (569 en Core, +87):
   - **(c)** Una capa de **exactamente 1 MB** (1 048 576 bytes en UTF-8) se escribe y se relee.
   - Se conservan las etiquetas de texto y el audio, y no quedan temporales. Un archivo dañado falla sin tocar el original.
   - En FLAC, TagLib da todo el archivo como «invariante», así que la prueba compara el STREAMINFO y un marco de audio inventado al final del FLAC de prueba.
+
+## Resultado de M3
+
+- **`ILyricsLayerReader`** (Core) y **`TagLibLyricsLayerReader`** (Infrastructure, con `TagLibLyricsLayerFields.Read`): devuelve las capas incrustadas con el código normalizado. Vacío en formatos sin capas (WAV, OGG…), si el archivo no existe o está dañado; nunca lanza por el archivo.
+- **`CompanionLyricsProvider`** recibe el lector (registrado en `CompositionRoot`) y elige cada capa:
+  - **Pronunciación:** el hermano y, si no, la incrustada (criterio 9).
+  - **Traducción:** `LyricsLanguage.Pick` sobre los códigos de hermanas e incrustadas juntos; con el código elegido, el hermano y, si no, la incrustada (criterio 10).
+  - **Hermano sin letra:** un hermano que no se puede leer o no da letra (vacío o mal formado) cede su sitio a la incrustada del mismo tipo y código, en lugar de dejar la capa vacía.
+  - La principal puede venir de `cancion.lrc` y las capas del audio, o al revés: cada capa se resuelve por separado.
+- **Pruebas** (Infrastructure: 146, +32; Core: 577, sin cambios), con archivos escritos por `TagLibLyricsWriter` y la misma cadena de proveedores que `CompositionRoot`, en MP3, FLAC y M4A:
+  - Solo incrustado (criterio 8, también la principal incrustada), solo hermano y ambos (gana el hermano); cada capa de un sitio distinto; principal de `cancion.lrc` con capas del audio; sin capas, el original tal cual.
+  - Varias traducciones incrustadas: la del sistema, la del mismo idioma (`pt-AO` → `pt-BR` antes que `pt-PT`) y, si no, la primera alfabética. Mezcla de hermanas e incrustadas: se elige primero el idioma (una `es` incrustada gana a una `en` hermana con el sistema en español).
+  - Hermano vacío: se usa la incrustada. Archivo dañado, inexistente o WAV: el lector da vacío y las capas hermanas se siguen mostrando.
+  - **Carátula (pedido del autor):** poner y quitar la carátula con `TagLibCoverArtWriter`, y aplicarla a un álbum de tres pistas (MP3, FLAC y M4A) con `CoverEditor.SetManyAsync`, conservan la principal y las capas.
