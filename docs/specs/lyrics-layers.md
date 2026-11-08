@@ -42,6 +42,7 @@ Lo que ya existe y se reutiliza:
 5. **Validación por capa:** la misma de hoy (UTF-8 estricto, ≤ 1 MB por capa, no vacía).
    - Principal inválido: se cancela todo y no se escribe nada.
    - Capa secundaria inválida: se salta y se avisa.
+   - **Capa de otro tipo que el principal** (añadido tras M4, a petición del autor): se salta y se avisa. Con un principal sincronizado, una capa sin marcas de tiempo se salta con «no tiene marcas de tiempo como el original»; con un principal sin marcas, una sincronizada, con «tiene marcas de tiempo y el original no»; con un principal sin letra (solo metadatos), todas, con «el original no tiene letra que leer». **Por qué:** al leer, `LyricsMerger` ignora una capa de otro tipo que el original; incrustarla dejaría en el archivo un campo muerto y la línea de estado diría que se incrustó algo que nunca se verá. El tipo se compara con el del principal que se está incrustando, en `LyricsEditor` (Core).
 6. **Hermano sin principal:** sin `.lrc` principal no se incrusta. Si se elige el principal con el selector, las capas se toman junto al archivo elegido (`elegido.es.lrc`), no junto al audio. **En la práctica, con el selector casi solo se incrusta el principal**: rara vez hay capas junto a un `.lrc` elegido de otra carpeta.
 7. **Línea de estado:** resume lo incrustado y lo saltado. Ejemplo: «Letra de "X" incrustada: original, traducción (es) y pronunciación · saltada: traducción (en), no está en UTF-8».
 
@@ -104,7 +105,7 @@ Lo que ya existe y se reutiliza:
   - Al leer, `LyricsMerger` empareja por marca (±300 ms); las líneas sin pareja quedan sin capa.
 - **Hermano vacío, mal formado o no UTF-8:** se salta, se avisa y lo demás se incrusta.
   - «Mal formado» significa que no da letra al analizarlo.
-  - Con un tipo distinto del principal (Plain frente a Synced), `LyricsMerger` ya lo ignora al leer.
+  - Con un tipo distinto del principal (Plain frente a Synced) se salta al incrustar (criterio 5), porque `LyricsMerger` lo ignoraría al leer. Si ya está incrustada (por otro programa), al leer cede su sitio a otra capa del mismo código (ver «Ajustes tras M3»).
 - **Solo traducción o solo pronunciación:** se incrusta la que haya, y el menú solo muestra esa opción.
 - **Reincrustar:** sin duplicados.
   - Una capa sin hermano conserva la incrustada, aunque el principal haya cambiado.
@@ -236,4 +237,6 @@ Todo en Core, con pruebas (569 en Core, +87):
 - **`EmbedLyricsViewModel`**: busca las capas junto al principal (`cancion.lrc` junto al audio o el archivo elegido con el selector, criterio 6), llama a `LyricsEditor.EmbedAsync(pista, principal, capas)` y pone en la línea de estado `LyricsEmbedReport.Describe`. Sin capas, el texto es el de siempre.
 - **`LyricsEmbedReport.Describe`** ordena por su cuenta: traducciones por código y luego la pronunciación, en lo incrustado y en lo saltado. Antes seguía el orden de llegada, y `FindSiblings` da primero la pronunciación («original, pronunciación y traducción (es)», al revés que el criterio 7).
 - **Pruebas** (Infrastructure: 158, +7; Core: 578, +1). `EmbedLyricsRoundTripTests`, en MP3, FLAC y M4A, hace sin la interfaz lo que hará el autor a mano: buscar los hermanos, incrustar, borrarlos y leer con la cadena de `CompositionRoot` (las capas salen del audio); un hermano no UTF-8 y otro vacío se saltan con su motivo en la línea de estado; con un principal elegido en otra carpeta, las capas se toman junto a él.
-- **Para la prueba a mano 3 (hermano inválido):** se salta un hermano vacío, solo con metadatos, que no esté en UTF-8 o que pese más de 1 MB. Un hermano con texto sin marcas de tiempo **no** se salta: da letra `Plain` y se incrusta tal cual (spec, «Casos límite»); al leer se ignora porque el original es sincronizado.
+- **Para la prueba a mano 3 (hermano inválido):** se salta un hermano vacío, solo con metadatos, que no esté en UTF-8, que pese más de 1 MB o, tras el ajuste de abajo, con texto sin marcas de tiempo junto a un principal sincronizado.
+
+**Ajuste tras M4 (pedido por el autor):** `LyricsEditor` compara el tipo de cada capa con el del principal y salta las de otro tipo con su motivo (criterio 5). Pruebas en Core (581, +3): principal sincronizado con una traducción y una pronunciación sin marcas (se saltan y la línea de estado lo dice), principal sin marcas con una capa sin marcas (se incrusta) y otra sincronizada (se salta), y principal solo con metadatos (se saltan todas).

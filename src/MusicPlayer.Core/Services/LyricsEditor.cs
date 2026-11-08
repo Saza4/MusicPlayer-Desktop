@@ -20,6 +20,8 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
     /// <summary>
     /// Incrusta la letra principal y sus capas en una sola escritura (docs/specs/lyrics-layers.md, criterios 1 y 5).
     /// Si el principal no vale, lanza y no escribe nada. Una capa que no vale se salta y queda en el resultado.
+    /// También se salta una capa de otro tipo que el principal (sin marcas con un principal sincronizado, o al revés):
+    /// al leer, LyricsMerger la ignoraría y quedaría un campo que nunca se ve (criterio 5).
     /// </summary>
     public async Task<LyricsEmbedReport> EmbedAsync(
         Track track, string lyricsPath, IReadOnlyList<LyricsLayerSource> layers, CancellationToken ct = default)
@@ -34,6 +36,7 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
             _ => throw new ArgumentException("El archivo de letra está vacío.")
         };
 
+        var mainKind = parser.Parse(main).Kind;
         var extras = new List<LyricsLayer>();
         var embedded = new List<LyricsLayerSource>();
         var skipped = new List<LyricsLayerSkip>();
@@ -47,8 +50,19 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
             }
 
             var (text, error) = await ReadAsync(source.Path, ct);
-            if (text is not null && !parser.Parse(text).IsAvailable)
-                error = ReadError.NoLyrics;
+            if (text is not null)
+            {
+                var block = parser.Parse(text);
+                if (!block.IsAvailable)
+                    error = ReadError.NoLyrics;
+                else if (block.Kind != mainKind)
+                    error = mainKind switch
+                    {
+                        LyricsKind.Synced => ReadError.NotSynced,
+                        LyricsKind.Plain => ReadError.Synced,
+                        _ => ReadError.MainWithoutLyrics
+                    };
+            }
 
             if (error is { } e)
             {
@@ -63,7 +77,7 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
         return new LyricsEmbedReport(embedded, skipped);
     }
 
-    private enum ReadError { Missing, TooBig, NotUtf8, Empty, NoLyrics }
+    private enum ReadError { Missing, TooBig, NotUtf8, Empty, NoLyrics, NotSynced, Synced, MainWithoutLyrics }
 
     private static string Describe(ReadError error) => error switch
     {
@@ -71,6 +85,9 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
         ReadError.TooBig => "pesa más de 1 MB",
         ReadError.NotUtf8 => "no está en UTF-8",
         ReadError.Empty => "está vacía",
+        ReadError.NotSynced => "no tiene marcas de tiempo como el original",
+        ReadError.Synced => "tiene marcas de tiempo y el original no",
+        ReadError.MainWithoutLyrics => "el original no tiene letra que leer",
         _ => "no tiene letra que leer"
     };
 

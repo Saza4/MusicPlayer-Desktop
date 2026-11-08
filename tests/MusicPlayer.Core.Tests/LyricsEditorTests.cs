@@ -186,6 +186,57 @@ public class LyricsEditorTests : IDisposable
             report.Skipped);
     }
 
+    // Criterio 5: una capa de otro tipo que el principal se ignoraría al leer (LyricsMerger), así que no se incrusta.
+    [Fact]
+    public async Task EmbedWithLayers_SyncedMain_SkipsALayerWithoutTimestamps()
+    {
+        var writer = new FakeWriter();
+        var es = Translation("es", "[00:01.00]Hola traducida");
+        var plain = Translation("en", "Hello\nWorld");
+        var rom = Pronunciation("Ola\nMundo");
+
+        var report = await NewEditor(writer).EmbedAsync(Song, LrcFile(Main), [es, plain, rom]);
+
+        Assert.Equal([new LyricsLayer(LyricsLayerKind.Translation, "es", "[00:01.00]Hola traducida")],
+            Assert.Single(writer.Calls).Layers.Extras);
+        Assert.Equal([es], report.Embedded);
+        Assert.Equal(
+            [new LyricsLayerSkip(plain, "no tiene marcas de tiempo como el original"),
+             new LyricsLayerSkip(rom, "no tiene marcas de tiempo como el original")],
+            report.Skipped);
+        Assert.Equal(
+            "Letra de \"T\" incrustada desde song.lrc: original y traducción (es) · saltadas: " +
+            "traducción (en), no tiene marcas de tiempo como el original; pronunciación, no tiene marcas de tiempo como el original",
+            report.Describe("T", "song.lrc"));
+    }
+
+    [Fact]
+    public async Task EmbedWithLayers_PlainMain_KeepsPlainLayersAndSkipsSyncedOnes()
+    {
+        var writer = new FakeWriter();
+        var plain = Translation("es", "Hola\nMundo");
+        var synced = Translation("en", "[00:01.00]Hello");
+
+        var report = await NewEditor(writer).EmbedAsync(Song, LrcFile("Hello\nWorld"), [plain, synced]);
+
+        Assert.Equal([plain], report.Embedded);
+        Assert.Equal([new LyricsLayerSkip(synced, "tiene marcas de tiempo y el original no")], report.Skipped);
+        Assert.Equal("Hola\nMundo", Assert.Single(Assert.Single(writer.Calls).Layers.Extras).Text);
+    }
+
+    // Un principal solo con metadatos se incrusta como hoy, pero sus capas nunca se verían.
+    [Fact]
+    public async Task EmbedWithLayers_MainWithoutLyrics_SkipsEveryLayer()
+    {
+        var writer = new FakeWriter();
+        var es = Translation("es", "[00:01.00]Hola");
+
+        var report = await NewEditor(writer).EmbedAsync(Song, LrcFile("[ti:Solo cabecera]"), [es]);
+
+        Assert.Empty(Assert.Single(writer.Calls).Layers.Extras);
+        Assert.Equal([new LyricsLayerSkip(es, "el original no tiene letra que leer")], report.Skipped);
+    }
+
     [Fact]
     public async Task EmbedWithLayers_ALayerOfExactly1MB_IsAccepted()
     {
