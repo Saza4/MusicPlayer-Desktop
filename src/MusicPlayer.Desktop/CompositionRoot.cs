@@ -44,7 +44,8 @@ public static class CompositionRoot
                 new EmbeddedLyricsProvider(parser)
             });
             return new CompanionLyricsProvider(
-                baseProvider, parser, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+                baseProvider, parser,
+                CultureInfo.CurrentUICulture.TwoLetterISOLanguageName, CultureInfo.CurrentUICulture.Name);
         });
 
         // Carátulas: la caché es un solo objeto visto como proveedor y como "invalidable".

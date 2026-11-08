@@ -21,7 +21,7 @@ Lo que ya existe y se reutiliza:
 **Cambio A: incrustar**
 1. «Incrustar letra (.lrc)…» incrusta en **una sola escritura atómica** (`SafeFileEdit`) el principal y las capas que existan junto a él.
    - Capas que cuentan: `<nombre>.<código>.lrc` como traducción y `<nombre>.rom.lrc` como pronunciación.
-   - **Código de idioma válido:** un código ISO 639-1 real (lista fija en Core, sin depender de las culturas del sistema), con una subetiqueta opcional de región (`pt-BR`, dos letras) o de escritura (`zh-Hans`, cuatro letras). Se normaliza: idioma en minúsculas, región en mayúsculas y escritura con mayúscula inicial. `.alt.lrc`, `.mix.lrc` o `.rom.lrc` no son traducciones (`alt` y `mix` solo están en ISO 639-3; `rom` es la pronunciación).
+   - **Código de idioma válido:** un código ISO 639-1 real (lista fija en Core, sin depender de las culturas del sistema), con una subetiqueta opcional de región (`pt-BR`, dos letras, o `es-419`, tres cifras de la ONU) o de escritura (`zh-Hans`, cuatro letras). Se normaliza: idioma en minúsculas, región en mayúsculas y escritura con mayúscula inicial. `.alt.lrc`, `.mix.lrc` o `.rom.lrc` no son traducciones (`alt` y `mix` solo están en ISO 639-3; `rom` es la pronunciación).
    - **Los códigos de tres letras no cuentan como traducción nueva.** Única excepción, por compatibilidad: el código de idioma del propio sistema, que es lo que se lee hoy (ver «Compatibilidad con los nombres de hoy»).
    - Los hermanos no se borran ni se modifican; se comprueba con un hash en la prueba.
 2. **Dónde se guarda cada capa:**
@@ -112,7 +112,7 @@ Lo que ya existe y se reutiliza:
 - **Letra `Plain`:** sin botón y sin cambios en el inmersivo, que sigue con el render clásico.
 - **Cambio de pista con el menú abierto:** el menú se cierra al cambiar las capas disponibles. Si queda abierto, sus opciones se recalculan y nunca actúa sobre una capa que ya no existe.
 - **Espacio con el menú abierto:** el menú recibe las teclas (criterio 16).
-- **Códigos con región o escritura** (`pt-BR`, `zh-Hans`): valen como traducción si el idioma es ISO 639-1; `pt-BR` y `pt` son traducciones distintas. Un código cuya subetiqueta no tenga esa forma (`es-latino`) no cuenta.
+- **Códigos con región o escritura** (`pt-BR`, `zh-Hans`): valen como traducción si el idioma es ISO 639-1; `pt-BR` y `pt` son traducciones distintas. `es-419` (Latinoamérica, región numérica) también vale. Un código cuya subetiqueta no tenga esa forma (`es-latino`, `es-41`) no cuenta.
 - **Códigos que no son idiomas** (`.alt.lrc`, `.mix.lrc`, `.live.lrc`): se ignoran.
 - **`settings.json` anterior:** carga igual.
 - **Varias traducciones** (`.es.lrc` y `.en.lrc`): se incrustan todas y se muestra una (criterio 10).
@@ -183,7 +183,13 @@ Con TagLibSharp 2.3.0, primero en el scratchpad y luego como pruebas (`TagLibLyr
 
 Todo en Core, con pruebas (569 en Core, +87):
 - **`LyricsLayers.cs`** (modelos): `LyricsLayerKind`, `LyricsLayerSource` (tipo, código y ruta; `Label` para la línea de estado), `LyricsLayer` (texto validado), `LyricsLayers` (principal y capas de una escritura), `LyricsLayerSkip` y `LyricsEmbedReport` con `Describe`, que da el texto de la línea de estado (sin capas, el mismo de hoy).
-- **`LyricsLanguage`**: lista fija ISO 639-1 (183 códigos), `Normalize` (región de dos letras o escritura de cuatro; `es-419` y `es-latino` no valen), `FromSuffix` (con la excepción de compatibilidad del código del sistema), `FromField` (lee lo que se escribió, incluido un código del sistema de tres letras), `Pick` (criterio 10) e `IsSystemLanguage` (si la etiqueta del menú lleva código).
+- **`LyricsLanguage`**: lista fija ISO 639-1 (183 códigos), `Normalize` (región de dos letras o de tres cifras, o escritura de cuatro letras; `es-latino` no vale; `es-419` se añadió después de M1, a petición del autor), `FromSuffix` (con la excepción de compatibilidad del código del sistema), `FromField` (lee lo que se escribió, incluido un código del sistema de tres letras), `Pick` (criterio 10) e `IsSystemLanguage` (si la etiqueta del menú lleva código).
 - **`LyricsLayerNames`**: `FieldName` en mayúsculas, `TryParseField` sin distinguir mayúsculas y con el código normalizado, `FindSiblings` (prefijo exacto del nombre sin extensión, sin distinguir mayúsculas; ignora `.alt`, `.mix`, `.live`, `.fil` ajeno al sistema, `.es-latino` y los nombres con más puntos).
 - **`LyricsEditor`** recibe ahora también `ILyricParser` y tiene `EmbedAsync(pista, principal, capas)`: valida cada capa por separado (UTF-8 estricto, ≤ 1 MB, no vacía, y que el analizador saque letra), salta las inválidas con su motivo y escribe todo en **una sola llamada** a `ILyricsWriter`. El principal inválido lanza como hoy y no escribe nada. Una capa de exactamente 1 MB se acepta. `EmbedAsync(pista, principal)` sigue igual, sin capas.
 - **`ILyricsWriter.Write(ruta, LyricsLayers)`**: firma nueva. Hasta M2, `TagLibLyricsWriter` escribe solo el principal y lanza `NotSupportedException` si llegan capas (nadie las pasa todavía), en lugar de perderlas sin avisar.
+
+**Ajustes tras M1 (pedidos por el autor):**
+- **`es-419`:** se acepta una región numérica de tres cifras (regiones de la ONU). Siguen sin valer `es-latino`, `es-41`, `alt`, `mix` y `xx`.
+- **Linux:** la lectura de hermanos y la incrustación usan **el mismo buscador**, `LyricsSiblingFiles.Find` (Infrastructure). Recorre la carpeta con `MatchCasing.CaseInsensitive` (en Linux el patrón `*.lrc` distingue mayúsculas por defecto) y compara los nombres con `LyricsLayerNames.FindSiblings`, sin distinguir mayúsculas. No hay ninguna consulta por nombre exacto.
+- **Parte de M3 adelantada:** `CompanionLyricsProvider` ya usa ese buscador y elige la traducción con `LyricsLanguage.Pick`, con la cultura del sistema (`CultureInfo.CurrentUICulture.Name`). Pruebas: otro idioma, varias traducciones, `es-ES` frente a `es-419`, `.ES.lrc` y `SONG.ROM.LRC`, `.fil.lrc` con el sistema en `fil`, y `.fil`, `.alt` y `.mix` ignorados. Falta la lectura de lo incrustado (M3).
+- **El principal no cambia:** `cancion.lrc` se sigue buscando por nombre exacto (`Path.ChangeExtension`), igual en la lectura (`LrcFileLyricsProvider`) y en la incrustación (`EmbedLyricsViewModel`). Las dos partes ven lo mismo; en Linux, `cancion.LRC` no cuenta como principal, igual que hoy.

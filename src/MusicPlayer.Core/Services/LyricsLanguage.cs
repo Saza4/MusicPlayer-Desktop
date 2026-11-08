@@ -22,8 +22,9 @@ public static class LyricsLanguage
     public static int KnownLanguageCount => Iso6391.Count;
 
     /// <summary>
-    /// Normaliza un código ISO 639-1 con región («pt-BR», dos letras) o escritura («zh-Hans», cuatro letras)
-    /// opcionales: idioma en minúsculas, región en mayúsculas y escritura con mayúscula inicial. Null si no lo es.
+    /// Normaliza un código ISO 639-1 con región («pt-BR», dos letras; «es-419», tres cifras de la ONU) o escritura
+    /// («zh-Hans», cuatro letras) opcionales: idioma en minúsculas, región en mayúsculas y escritura con mayúscula
+    /// inicial. Null si no lo es.
     /// </summary>
     public static string? Normalize(string? raw)
     {
@@ -36,6 +37,7 @@ public static class LyricsLanguage
         if (parts.Length == 1) return language;
 
         var sub = parts[1];
+        if (sub.Length == 3 && sub.All(char.IsAsciiDigit)) return $"{language}-{sub}";
         if (!sub.All(char.IsAsciiLetter)) return null;
         return sub.Length switch
         {

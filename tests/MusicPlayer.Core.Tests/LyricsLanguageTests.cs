@@ -17,6 +17,8 @@ public class LyricsLanguageTests
     [InlineData("zh-Hans", "zh-Hans")]
     [InlineData("ZH-HANS", "zh-Hans")]
     [InlineData("zh-hant", "zh-Hant")]
+    [InlineData("es-419", "es-419")]   // región numérica de la ONU (Latinoamérica)
+    [InlineData("ES-419", "es-419")]
     public void Normalize_ValidCodes(string raw, string expected) => Assert.Equal(expected, LyricsLanguage.Normalize(raw));
 
     [Theory]
@@ -29,7 +31,9 @@ public class LyricsLanguageTests
     [InlineData("iv")]        // la cultura invariante de .NET no es ISO 639-1
     [InlineData("fil")]       // tres letras: no cuenta como traducción nueva
     [InlineData("es-latino")] // subetiqueta que no es región ni escritura
-    [InlineData("es-419")]    // región numérica: no se admite
+    [InlineData("es-41")]     // región numérica: solo de tres cifras
+    [InlineData("es-4190")]
+    [InlineData("es-41a")]
     [InlineData("zh-Hans-CN")]
     [InlineData("es-")]
     public void Normalize_RejectsWhatIsNotIso6391(string raw) => Assert.Null(LyricsLanguage.Normalize(raw));
@@ -58,6 +62,7 @@ public class LyricsLanguageTests
     [InlineData("ES", "es")]
     [InlineData("PT-BR", "pt-BR")]
     [InlineData("ZH-HANS", "zh-Hans")]
+    [InlineData("ES-419", "es-419")]
     [InlineData("FIL", "fil")] // se escribió como código del sistema
     public void FromField_NormalizesTheUppercaseName(string raw, string expected) =>
         Assert.Equal(expected, LyricsLanguage.FromField(raw));
@@ -74,6 +79,8 @@ public class LyricsLanguageTests
     [InlineData("pt", "pt-BR", "en,pt,pt-PT")]          // 2. mismo idioma: sin subetiqueta primero
     [InlineData("pt-BR", "pt-AO", "en,pt-PT,pt-BR")]    //    y luego alfabético
     [InlineData("es", "es-MX", "en,es,fr")]
+    [InlineData("es-419", "es-MX", "en,es-ES,es-419")]   // mismo idioma, sin «es»: alfabético (las cifras van antes)
+    [InlineData("es-419", "es-419", "es,es-419")]
     [InlineData("es-ES", "es-MX", "en,es-ES")]
     [InlineData("en", "es-MX", "fr,en")]                // 3. si no, el primero alfabético
     [InlineData("de", "", "fr,en,de")]                  // sin cultura
