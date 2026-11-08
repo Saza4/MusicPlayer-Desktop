@@ -248,14 +248,4 @@ public class LyricsTimingTests
         Assert.Equal(0.5, gap.Progress(S(11)), 6);
         Assert.Null(LyricsTiming.GapAt(gaps, S(20))); // el final es de la línea siguiente
     }
-
-    // ---- LyricLine.Words (preparación para la sincronía por palabra) ----
-
-    [Fact]
-    public void LyricLine_Words_DefaultsToNull_AndPositionalCallsStillWork()
-    {
-        var line = new LyricLine(S(1), "Hola", "ola", "Hello");
-
-        Assert.Null(line.Words);
-    }
 }

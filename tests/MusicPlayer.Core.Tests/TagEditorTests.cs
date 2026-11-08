@@ -43,7 +43,7 @@ public class TagEditorTests
         var track = new Track { FilePath = "song.mp3", Title = "Old", Artist = "A", Album = "X" };
         var repo = new MemoryRepository
         {
-            Stored = new LibrarySnapshot(new[] { track }, Array.Empty<string>())
+            Stored = new LibrarySnapshot(new[] { track })
         };
         var library = new LibraryService(new LibraryScanner(new NullReader()), repo);
         await library.LoadAsync();

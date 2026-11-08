@@ -42,47 +42,44 @@ public class LibraryServiceTests : IDisposable
         new(new LibraryScanner(new FakeReader()), repo);
 
     [Fact]
-    public async Task AddFolderAsync_PersistsTracksAndFolder()
+    public async Task ScanFolderAsync_PersistsTracks()
     {
         Touch("a/one.mp3");
         var repo = new InMemoryRepository();
 
-        var snapshot = await NewService(repo).AddFolderAsync(Path.Combine(_root, "a"));
+        var snapshot = (await NewService(repo).ScanFolderAsync(Path.Combine(_root, "a"))).Snapshot;
 
         Assert.Single(snapshot.Tracks);
-        Assert.Single(snapshot.Folders);
         Assert.Equal(1, repo.SaveCount);
         Assert.Same(snapshot, repo.Stored);
     }
 
     [Fact]
-    public async Task AddFolderAsync_Rescan_PreservesTrackIdAndDoesNotDuplicate()
+    public async Task ScanFolderAsync_Rescan_PreservesTrackIdAndDoesNotDuplicate()
     {
         Touch("a/one.mp3");
         var service = NewService(new InMemoryRepository());
         var folder = Path.Combine(_root, "a");
 
-        var first = await service.AddFolderAsync(folder);
-        var second = await service.AddFolderAsync(folder);
+        var first = (await service.ScanFolderAsync(folder)).Snapshot;
+        var second = (await service.ScanFolderAsync(folder)).Snapshot;
 
         Assert.Single(second.Tracks);
-        Assert.Single(second.Folders);
         Assert.Equal(first.Tracks[0].Id, second.Tracks[0].Id);
         Assert.Equal(first.Tracks[0].AddedAt, second.Tracks[0].AddedAt);
     }
 
     [Fact]
-    public async Task AddFolderAsync_TwoFolders_MergesBoth()
+    public async Task ScanFolderAsync_TwoFolders_MergesBoth()
     {
         Touch("a/one.mp3");
         Touch("b/two.mp3");
         var service = NewService(new InMemoryRepository());
 
-        await service.AddFolderAsync(Path.Combine(_root, "a"));
-        var snapshot = await service.AddFolderAsync(Path.Combine(_root, "b"));
+        await service.ScanFolderAsync(Path.Combine(_root, "a"));
+        var snapshot = (await service.ScanFolderAsync(Path.Combine(_root, "b"))).Snapshot;
 
         Assert.Equal(2, snapshot.Tracks.Count);
-        Assert.Equal(2, snapshot.Folders.Count);
     }
 
     [Fact]
@@ -97,8 +94,7 @@ public class LibraryServiceTests : IDisposable
                 {
                 new Track { FilePath = keep, Title = "keep" },
                 new Track { FilePath = gone, Title = "gone" }
-                },
-                Array.Empty<string>())
+                })
         };
         var service = NewService(repo);
         await service.LoadAsync();
@@ -116,7 +112,7 @@ public class LibraryServiceTests : IDisposable
         Touch("a/keep.mp3");
         var doomed = Touch("a/gone.mp3");
         var service = NewService(new InMemoryRepository());
-        await service.AddFolderAsync(Path.Combine(_root, "a"));
+        await service.ScanFolderAsync(Path.Combine(_root, "a"));
 
         File.Delete(doomed);
         var missing = await service.FindMissingAsync();
@@ -129,7 +125,7 @@ public class LibraryServiceTests : IDisposable
     {
         Touch("a/one.mp3");
         var service = NewService(new InMemoryRepository());
-        await service.AddFolderAsync(Path.Combine(_root, "a"));
+        await service.ScanFolderAsync(Path.Combine(_root, "a"));
 
         Assert.Empty(await service.FindMissingAsync());
     }
@@ -140,7 +136,7 @@ public class LibraryServiceTests : IDisposable
         Touch("a/one.mp3");
         var repo = new InMemoryRepository();
         var service = NewService(repo);
-        await service.AddFolderAsync(Path.Combine(_root, "a")); // un guardado
+        await service.ScanFolderAsync(Path.Combine(_root, "a")); // un guardado
 
         var result = await service.PruneMissingAsync();
 
@@ -156,7 +152,7 @@ public class LibraryServiceTests : IDisposable
         Touch("a/two.mp3");
         var repo = new InMemoryRepository();
         var service = NewService(repo);
-        var snapshot = await service.AddFolderAsync(Path.Combine(_root, "a"));
+        var snapshot = (await service.ScanFolderAsync(Path.Combine(_root, "a"))).Snapshot;
         var target = snapshot.Tracks.Single(t => t.Title == "one");
 
         var result = await service.RemoveTracksAsync(new[] { target.Id }, deleteFiles: false);
@@ -173,7 +169,7 @@ public class LibraryServiceTests : IDisposable
     {
         var file = Touch("a/one.mp3");
         var service = NewService(new InMemoryRepository());
-        var snapshot = await service.AddFolderAsync(Path.Combine(_root, "a"));
+        var snapshot = (await service.ScanFolderAsync(Path.Combine(_root, "a"))).Snapshot;
 
         var result = await service.RemoveTracksAsync(new[] { snapshot.Tracks[0].Id }, deleteFiles: true);
 
@@ -187,13 +183,13 @@ public class LibraryServiceTests : IDisposable
         Touch("a/one.mp3");
         var repo = new InMemoryRepository();
         var service = NewService(repo);
-        await service.AddFolderAsync(Path.Combine(_root, "a"));
+        await service.ScanFolderAsync(Path.Combine(_root, "a"));
 
         var result = await service.RemoveTracksAsync(new[] { Guid.NewGuid() }, deleteFiles: true);
 
         Assert.Single(result.Snapshot.Tracks);
         Assert.Empty(result.Removed);
-        Assert.Equal(1, repo.SaveCount); // solo el guardado de AddFolderAsync
+        Assert.Equal(1, repo.SaveCount); // solo el guardado de ScanFolderAsync
     }
 
     [Fact]
@@ -201,7 +197,7 @@ public class LibraryServiceTests : IDisposable
     {
         var original = Touch("a/song.mp3");
         var service = NewService(new InMemoryRepository());
-        var first = await service.AddFolderAsync(Path.Combine(_root, "a"));
+        var first = (await service.ScanFolderAsync(Path.Combine(_root, "a"))).Snapshot;
 
         var moved = Path.Combine(_root, "b", "song.mp3");
         Directory.CreateDirectory(Path.GetDirectoryName(moved)!);
@@ -221,7 +217,7 @@ public class LibraryServiceTests : IDisposable
     {
         Touch("a/song.mp3");
         var service = NewService(new InMemoryRepository());
-        await service.AddFolderAsync(Path.Combine(_root, "a"));
+        await service.ScanFolderAsync(Path.Combine(_root, "a"));
 
         Touch("b/song.mp3"); // el original sigue existiendo
         var result = await service.ScanFolderAsync(Path.Combine(_root, "b"));
@@ -236,8 +232,8 @@ public class LibraryServiceTests : IDisposable
         var first = Touch("a/song.mp3");
         var second = Touch("c/song.mp3");
         var service = NewService(new InMemoryRepository());
-        await service.AddFolderAsync(Path.Combine(_root, "a"));
-        await service.AddFolderAsync(Path.Combine(_root, "c"));
+        await service.ScanFolderAsync(Path.Combine(_root, "a"));
+        await service.ScanFolderAsync(Path.Combine(_root, "c"));
 
         File.Delete(first);
         File.Delete(second);

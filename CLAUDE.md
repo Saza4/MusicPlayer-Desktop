@@ -8,7 +8,7 @@ Reproductor de música local en C# / .NET 8 / Avalonia 11. El detalle de funcion
 
 ```bash
 dotnet build                                   # compila la solución (hoy: 0 errores, 1 advertencia CS8602 conocida)
-dotnet test                                    # 641 pruebas en Core y 173 en Infrastructure
+dotnet test                                    # 640 pruebas en Core y 173 en Infrastructure
 dotnet test tests/MusicPlayer.Core.Tests --filter "FullyQualifiedName~PlayQueueTests"   # una clase
 dotnet test tests/MusicPlayer.Core.Tests --filter "FullyQualifiedName~PlayQueueTests.Sequential_PlaysInOrderAndStopsAtTheEnd"  # un test
 dotnet run --project src/MusicPlayer.Desktop   # ejecuta la app (necesita los binarios de BASS en src/MusicPlayer.Audio/native/)
@@ -27,6 +27,8 @@ Los fps (30 pedidos, ~24 reales), las medidas y los tiempos están en `Progressi
 
 Capas de letra (traducción y pronunciación incrustadas; spec en `docs/specs/lyrics-layers.md`). **Excepción a la regla de no subir audio:** `tests/MusicPlayer.Infrastructure.Tests/Fixtures/silencio.m4a` (0,1 s de silencio generado con ffmpeg, sin derechos), porque un M4A no se arma a mano en la prueba. El MP3 y el FLAC de prueba se generan en código (`TestAudio`). No añadas otros archivos de audio.
 
+Capturas de la app para verificar cambios visuales (Windows): `AppPaths` usa `Environment.GetFolderPath(ApplicationData)`, así que cambiar la variable `APPDATA` del proceso **no** redirige los datos; la app abre los `settings.json`, `library.json` y temas reales del usuario. Para probar otro tema hay que cambiar `ThemeId` en el `settings.json` real, con copia de seguridad previa y restaurándolo al terminar (comprobar el hash). Las teclas sintéticas (`SendKeys`, `keybd_event`) no movían el foco: para ver `:focus-visible` se enfoca el control por código con `Focus(NavigationMethod.Tab)` en un cambio temporal que no se sube.
+
 ## Arquitectura
 
 `Desktop` (Avalonia + CommunityToolkit.Mvvm) → `Audio` (ManagedBass) e `Infrastructure` (TagLibSharp, JSON, ffmpeg) → `Core` (modelos, interfaces y lógica sin paquetes externos). La lógica testeable va en Core: no hay pruebas de Desktop ni de Audio.
@@ -37,6 +39,7 @@ Capas de letra (traducción y pronunciación incrustadas; spec en `docs/specs/ly
 - **DI solo en `src/MusicPlayer.Desktop/CompositionRoot.cs`** (singletons, `ValidateOnBuild`): todo servicio o ViewModel nuevo se registra ahí.
 - **Escritura atómica:** los JSON de usuario se guardan con `AtomicJson` (temporal `.tmp` y `File.Move`; si el JSON está dañado queda como `.corrupt`). Excepción: `JsonLibraryRepository` tiene su propia versión de ese mismo patrón y no usa `AtomicJson`; un repositorio JSON nuevo debe usar `AtomicJson`. Los archivos de audio se editan solo con `SafeFileEdit.Run` (copia temporal, editar, verificar y `File.Replace`).
 - **Colores solo con recursos del tema:** no escribas literales de color (`#RRGGBB`) en el XAML de la interfaz. Usa los pinceles `ThemeXxxBrush` de `Themes/ThemeBrushes.axaml` (los colores los fija `ThemeService`). Excepciones deliberadas: los grises de los botones de icono y el bloque del modo inmersivo.
+- **Botones de acción (spec en `docs/specs/action-buttons.md`):** los botones de la barra superior y el «+» de COLECCIONES usan `Classes="action"` (`action only` para solo icono) de `Themes/ActionButtonStyles.axaml`. Es opt-in: no toques los `ButtonBackground*` globales de `FluentOverrides.axaml`, que dan el aspecto de los demás botones. Un botón nuevo de ese tipo lleva `ToolTip.Tip` y `AutomationProperties.Name`, y su texto va en un `TextBlock.label` para que el modo `compact` (barra superior por debajo de 1100 px, en `MainWindow.axaml.cs`) pueda ocultarlo. El anillo de foco usa `ThemeFocusRingBrush`, no el acento, porque solo el texto tiene 3:1 garantizado contra el fondo.
 - **Liberar el archivo antes de escribirlo o borrarlo (Windows):** el reproductor debe soltarlo con `PrepareNext(null)` y, si es la pista que suena, con `Unload()` (vía `ClearCurrentTrack`). Los editores lo piden con su evento `Saving`, que `MainViewModel` conecta a `OnTagsSaving`; una herramienta nueva que escriba en audio debe seguir ese camino.
 - **Selectores y diálogos dentro de `ModalTracker.Begin()`:** todo selector nativo o ventana de diálogo nueva se abre dentro de `using (_modals.Begin())`. Así la isla flotante no aparece encima mientras la ventana principal está desactivada por el diálogo.
 - **Win32 solo tras `OperatingSystem.IsWindows()`:** las llamadas nativas (`NonActivatingWindow`, `WindowNative`) van detrás de esa guarda, con `[SupportedOSPlatform("windows")]`, para que el CI de Ubuntu compile y Linux arranque.

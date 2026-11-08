@@ -9,7 +9,7 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
     private const int CurrentVersion = 1;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    internal sealed record LibraryFile(int Version, List<string>? Folders, List<TrackRecord>? Tracks);
+    internal sealed record LibraryFile(int Version, List<TrackRecord>? Tracks);
 
     internal sealed record TrackRecord(
         Guid Id, string FilePath, string Title, string Artist, string Album,
@@ -43,7 +43,7 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
                 AlbumArtist = r.AlbumArtist ?? ""
             }).ToList();
 
-            return new LibrarySnapshot(tracks, file.Folders ?? new());
+            return new LibrarySnapshot(tracks);
         }
         catch (JsonException)
         {
@@ -60,7 +60,6 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
 
         var file = new LibraryFile(
             CurrentVersion,
-            snapshot.Folders.ToList(),
             snapshot.Tracks.Select(t => new TrackRecord(
                 t.Id, t.FilePath, t.Title, t.Artist, t.Album, t.Year,
                 t.Genre, t.TrackNumber, t.Duration.Ticks, t.AddedAt, t.DiscNumber, t.AlbumArtist)).ToList());

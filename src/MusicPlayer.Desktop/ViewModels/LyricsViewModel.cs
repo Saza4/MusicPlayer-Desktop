@@ -17,7 +17,6 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     : ObservableObject
 {
     private LyricBlock _block = LyricBlock.Empty;
-    private Track? _track;
     private TimeSpan? _trackDuration;
     private CancellationTokenSource? _cts;
     private bool _restoring;
@@ -149,7 +148,6 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
 
-        _track = track;
         _trackDuration = track.Duration > TimeSpan.Zero ? track.Duration : null;
         SetBlock(LyricBlock.Empty);
 
@@ -255,7 +253,6 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     public void Clear()
     {
         _cts?.Cancel(); // evita que una carga en curso reponga la letra
-        _track = null;
         SetBlock(LyricBlock.Empty);
     }
 }

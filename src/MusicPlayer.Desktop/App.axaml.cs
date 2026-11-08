@@ -22,9 +22,6 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Si tu plantilla incluye esta llamada, consérvala aquí arriba:
-            // DisableAvaloniaDataAnnotationValidation();
-
             var services = CompositionRoot.Build();
             var viewModel = services.GetRequiredService<MainViewModel>();
 

@@ -15,10 +15,6 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         return _current;
     }
 
-    public async Task<LibrarySnapshot> AddFolderAsync(
-    string folder, IProgress<int>? progress = null, CancellationToken ct = default) =>
-    (await ScanFolderAsync(folder, progress, ct)).Snapshot;
-
     public async Task<AddFolderResult> ScanFolderAsync(
         string folder, IProgress<int>? progress = null, CancellationToken ct = default)
     {
@@ -49,11 +45,7 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             relocated++;
         }
 
-        var folders = _current.Folders.Contains(folder, StringComparer.OrdinalIgnoreCase)
-            ? _current.Folders
-            : _current.Folders.Append(folder).ToList();
-
-        _current = new LibrarySnapshot(TrackSorter.Sort(byPath.Values), folders);
+        _current = new LibrarySnapshot(TrackSorter.Sort(byPath.Values));
         await repository.SaveAsync(_current, ct);
         return new AddFolderResult(_current, relocated);
     }

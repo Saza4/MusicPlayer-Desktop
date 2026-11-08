@@ -14,7 +14,6 @@ public interface IAudioPlayer : IDisposable
     void Load(string filePath);
     void Play();
     void Pause();
-    void Stop();
 
     /// <summary>Detiene y libera el archivo actual (necesario para poder borrarlo en Windows).</summary>
     void Unload();

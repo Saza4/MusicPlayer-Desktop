@@ -1,6 +1,6 @@
 # Especificación: Letras progresivas (estilo Apple Music)
 
-Estado: **terminada (M0-M6, 7 de noviembre de 2026)**. El autor aprobó el estilo progresivo: es el único para la letra sincronizada del modo inmersivo. Alcance: **solo el modo inmersivo**; el panel lateral no cambia. Ver «Resultado de M6».
+Estado: **terminada (M0-M6, 7 de noviembre de 2026)**. El autor aprobó el estilo progresivo: es el único para la letra sincronizada del modo inmersivo. Alcance: **solo el modo inmersivo**; el panel lateral no cambia. Ver «Resultado de M6». *Nota del 8 de noviembre de 2026:* `LyricLine.Words` y `LyricWord`, que esta spec reservaba para la sincronía por palabra (RNF-5), se quitaron por no tener ningún uso; la precaución de `FillTextBlock` (progreso como posición horizontal) se conserva.
 
 ## Contexto
 

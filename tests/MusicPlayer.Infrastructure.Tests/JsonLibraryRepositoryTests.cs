@@ -9,7 +9,7 @@ public class JsonLibraryRepositoryTests : IDisposable
     private string FilePath => Path.Combine(_dir, "nested", "library.json");
 
     [Fact]
-    public async Task SaveThenLoad_RoundTripsTracksAndFolders()
+    public async Task SaveThenLoad_RoundTripsTracks()
     {
         var track = new Track
         {
@@ -26,7 +26,7 @@ public class JsonLibraryRepositoryTests : IDisposable
         };
 
         await new JsonLibraryRepository(FilePath)
-            .SaveAsync(new LibrarySnapshot(new[] { track }, new[] { @"C:\Music" }));
+            .SaveAsync(new LibrarySnapshot(new[] { track }));
 
         var loaded = await new JsonLibraryRepository(FilePath).LoadAsync();
 
@@ -39,7 +39,6 @@ public class JsonLibraryRepositoryTests : IDisposable
         Assert.Equal(track.AddedAt, t.AddedAt);
         Assert.Equal(2u, t.DiscNumber);
         Assert.Equal("Various Artists", t.AlbumArtist);
-        Assert.Equal(new[] { @"C:\Music" }, loaded.Folders);
     }
 
     [Fact]
@@ -48,7 +47,6 @@ public class JsonLibraryRepositoryTests : IDisposable
         var loaded = await new JsonLibraryRepository(FilePath).LoadAsync();
 
         Assert.Empty(loaded.Tracks);
-        Assert.Empty(loaded.Folders);
     }
 
     [Fact]
@@ -69,7 +67,7 @@ public class JsonLibraryRepositoryTests : IDisposable
     {
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         await File.WriteAllTextAsync(FilePath, $$"""
-            {"Version":1,"Folders":[],"Tracks":[{"Id":"{{Guid.NewGuid()}}","FilePath":"a.mp3","Title":"t",
+            {"Version":1,"Folders":["C:\\Music"],"Tracks":[{"Id":"{{Guid.NewGuid()}}","FilePath":"a.mp3","Title":"t",
             "Artist":"a","Album":"b","Year":0,"Genre":null,"TrackNumber":1,"DurationTicks":0,
             "AddedAt":"2026-01-01T00:00:00+00:00"}]}
             """);
