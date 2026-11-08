@@ -489,8 +489,9 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - Solo UTF-8, de hasta 1 MB.
 - Sustituye la letra incrustada anterior sin preguntar y no hay botón para quitarla.
 - La traducción y la pronunciación incrustadas (`LYRICS_TRANSLATION_<CÓDIGO>`, `LYRICS_PRONUNCIATION`) solo las muestra esta app; otros reproductores ven solo la principal. En WAV, OGG u Opus solo se incrusta la principal.
-- Hace falta el `cancion.lrc` principal para incrustar; con solo `.es.lrc` y `.rom.lrc` no se incrusta nada, y sin letra principal el botón de capas del inmersivo no aparece.
-- Incrustar desde el inmersivo descarga la pista para escribir y la vuelve a cargar en el mismo punto: se nota un corte breve.
+- Con el clic derecho («Incrustar letra (.lrc)…») hace falta la letra principal: con solo `.es.lrc` y `.rom.lrc` no se incrusta nada. Desde el inmersivo, «Incrustar traducción…» e «Incrustar pronunciación…» eligen el archivo con el selector y no necesitan `cancion.lrc` ni hermanos, pero sí que la pista ya tenga letra sincronizada (sin ella, el botón de capas del inmersivo no aparece y la capa no se vería).
+- Incrustar desde el inmersivo descarga la pista para escribir y la vuelve a cargar en el mismo punto: se nota un corte breve, también si la capa elegida no vale y no se escribe nada.
+- Si un `cancion.es.lrc` sigue junto al audio, el hermano gana al incrustado al leer: la capa nueva no se ve hasta quitarlo.
 - Elegir entre varias traducciones no se puede desde la interfaz: se muestra la del idioma del sistema o la primera alfabética.
 - El texto del panel lateral «no tiene archivos .lrc de traducción ni de pronunciación» no tiene en cuenta las capas incrustadas.
 - **Convertir formato** (ffmpeg, comprobado el 8 de noviembre de 2026 de MP3 y M4A a MP3, M4A y FLAC): la letra principal solo sobrevive de M4A a M4A o a FLAC (de MP3, o hacia MP3, ffmpeg la deja en un campo de texto suelto que no es la letra); la traducción y la pronunciación se conservan hacia MP3 y FLAC y se pierden hacia M4A. Sin la principal, las capas tampoco se ven. Si vas a convertir, conserva los `.lrc` o vuelve a incrustar después.
