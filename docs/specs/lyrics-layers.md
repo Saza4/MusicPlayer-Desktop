@@ -1,6 +1,6 @@
 # Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
 
-Estado: **aprobada (7 de noviembre de 2026), terminada: M0 a M6 hechos**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+Estado: **aprobada (7 de noviembre de 2026); M0 a M6 hechos; M7 (incrustar una capa con selector desde el inmersivo, criterio 12b enmendado) en curso**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
 
 ## Contexto
 
@@ -43,7 +43,7 @@ Lo que ya existe y se reutiliza:
    - Principal inválido: se cancela todo y no se escribe nada.
    - Capa secundaria inválida: se salta y se avisa.
    - **Capa de otro tipo que el principal** (añadido tras M4, a petición del autor): se salta y se avisa. Con un principal sincronizado, una capa sin marcas de tiempo se salta con «no tiene marcas de tiempo como el original»; con un principal sin marcas, una sincronizada, con «tiene marcas de tiempo y el original no»; con un principal sin letra (solo metadatos, que se sigue incrustando porque la validación del principal no la analiza), todas, con «el original no tiene letra que leer». Si los dos son sin marcas, se salta la capa con otro número de líneas, con «no tiene tantas líneas como el original», porque `LyricsMerger` empareja por posición y solo con el mismo número; con el mismo número sí se ve en el panel lateral y se incrusta. **Por qué:** al leer, `LyricsMerger` ignora una capa de otro tipo que el original; incrustarla dejaría en el archivo un campo muerto y la línea de estado diría que se incrustó algo que nunca se verá. El tipo se compara con el del principal que se está incrustando, en `LyricsEditor` (Core).
-6. **Hermano sin principal:** sin `.lrc` principal no se incrusta. Si se elige el principal con el selector, las capas se toman junto al archivo elegido (`elegido.es.lrc`), no junto al audio. **En la práctica, con el selector casi solo se incrusta el principal**: rara vez hay capas junto a un `.lrc` elegido de otra carpeta.
+6. **Hermano sin principal (solo «Incrustar letra (.lrc)…» del clic derecho; el inmersivo ya no usa hermanos, ver 12b):** sin `.lrc` principal no se incrusta. Si se elige el principal con el selector, las capas se toman junto al archivo elegido (`elegido.es.lrc`), no junto al audio. **En la práctica, con el selector casi solo se incrusta el principal**: rara vez hay capas junto a un `.lrc` elegido de otra carpeta.
 7. **Línea de estado:** resume lo incrustado y lo saltado. Ejemplo: «Letra de "X" incrustada: original, traducción (es) y pronunciación · saltada: traducción (en), no está en UTF-8».
 
 **Lectura**
@@ -61,11 +61,16 @@ Lo que ya existe y se reutiliza:
 **Cambio B: botón en el inmersivo**
 
 12. Un botón con icono vectorial de burbuja con caracteres (distinto del de comillas) abre un `MenuFlyout`.
-    - Solo se muestra con letra **sincronizada** y al menos una capa disponible, sea hermana o incrustada.
-12b. **Incrustar desde el inmersivo** (añadido tras M5, a petición del autor: la petición original incluía incrustar desde el modo inmersivo y se perdió al escribir el criterio 12). Al final del mismo menú, tras un separador, «Incrustar letras en el archivo». Reutiliza `EmbedLyricsViewModel`, la misma escritura y la misma línea de estado que el clic derecho (criterios 1-7), sin lógica nueva de incrustado.
-    - **Reproducción:** escribir descarga la pista y cierra el inmersivo (`OnTagsSaving` → `ClearCurrentTrack`, para liberar el archivo en Windows). Después se vuelve a cargar la misma pista en el mismo punto, se reabre el inmersivo y sigue sonando si sonaba (o queda en pausa si lo estaba). Se nota un corte breve. También se reanuda si la escritura falla, porque el archivo ya se soltó.
-    - **Sin principal:** sin `cancion.lrc` junto al audio, la opción se ve desactivada y dice qué falta: «Incrustar letras en el archivo (falta cancion.lrc)». Desde el inmersivo no se abre el selector de archivos; si el principal desaparece entre abrir el menú y pulsar, la línea de estado lo dice y no se escribe nada.
-    - La etiqueta y el desactivado viven en Core (`LyricsLayerMenu.EmbedOption`), con prueba.
+    - Se muestra con letra **sincronizada**, **aunque aún no haya ninguna capa** (enmendado en M7, para poder incrustar la primera).
+    - **Aspecto (M7, a petición del autor):** el menú no es una caja negra plana: vidrio oscuro translúcido con esquinas redondeadas (14), borde fino, filas con esquinas redondeadas y velo blanco al pasar el cursor o pulsar, y texto blanco, el mismo lenguaje que los botones del inmersivo (principios de `docs/diseño.md`: simplicidad, constancia y oficio). Siempre oscuro con cualquier tema, como el propio inmersivo. Estilos en `App.axaml` (clase `immersive` de `MenuFlyoutPresenter`, que `MainWindow.FillLayersMenu` añade a `FlyoutPresenterClasses`) y pinceles `ThemeImmersiveMenu*` en `Themes/ThemeBrushes.axaml` (fijos, como los de la isla).
+12b. **Incrustar una capa desde el inmersivo, con selector (enmendado en M7; sustituye a la opción «Incrustar letras en el archivo», que tomaba los hermanos y exigía `cancion.lrc`).** Al final del mismo menú, tras un separador si hay filas de mostrar u ocultar, dos acciones: «Incrustar traducción…» e «Incrustar pronunciación…». Cada una abre el selector nativo (`ILyricsPickerService`, dentro de `ModalTracker.Begin()`) para elegir un `.lrc` en cualquier carpeta y lo incrusta como capa de la pista actual, **sin reescribir la letra principal** y sin depender de hermanos.
+    - **Una sola escritura atómica** (`SafeFileEdit`) de esa capa, con verificación; la misma validación por capa que el criterio 5 (UTF-8 estricto, ≤ 1 MB, no vacía) y el mismo tipo que la letra principal cargada (con letra sincronizada, la capa debe tener marcas de tiempo). Una capa inválida se rechaza con su motivo en la línea de estado y el archivo de audio no se toca.
+    - **Idioma de la traducción:** el código sale del nombre del archivo elegido (`algo.en.lrc` → `en`, `algo.pt-BR.lrc` → `pt-BR`, con la misma regla que los hermanos). Si el nombre no trae un idioma válido (`traduccion.lrc`, o `.rom`, `.alt`, `.mix`, `.live`), se usa el idioma de la interfaz del sistema y la línea de estado lo dice. La pronunciación no lleva idioma.
+    - **Reproducción:** el selector se abre **antes** de soltar el archivo, así que cancelarlo no corta la música. Al elegir, escribir descarga la pista y cierra el inmersivo (`OnTagsSaving` → `ClearCurrentTrack`, para liberar el archivo en Windows). Después se vuelve a cargar la misma pista en el mismo punto, se reabre el inmersivo y sigue sonando si sonaba (o queda en pausa si lo estaba). Se nota un corte breve. También se reanuda si la escritura falla, porque el archivo ya se soltó.
+    - **Línea de estado:** `Traducción (es) de "X" incrustada desde Y.es.lrc` o `No se incrustó la pronunciación de "X": no está en UTF-8`.
+    - **Formato sin capas** (WAV, OGG, Opus, WMA): no se escribe nada y se avisa.
+    - **Hermano presente:** si `cancion.es.lrc` sigue junto al audio, el hermano gana al incrustado al leer (criterios 9 y 10), así que la capa nueva no se vería hasta quitarlo. Queda como limitación.
+    - La lógica (validación, idioma del nombre, etiquetas y mensajes) vive en Core, con pruebas.
 13. **Opciones del menú:**
     - «Mostrar/Ocultar traducción», «Mostrar/Ocultar pronunciación» y «Mostrar/Ocultar original». Cada una solo aparece si su capa existe (el original, siempre que haya alguna otra).
     - **Las etiquetas siguen el estado resuelto por `Resolve()`**, no la preferencia guardada: si `HideOriginal` está activo pero el original se ve porque no queda otra capa visible, la etiqueta dice «Ocultar original».
@@ -101,6 +106,7 @@ Lo que ya existe y se reutiliza:
   - «Pronunciación en texto grande» en el menú del inmersivo.
   - Borrar capas incrustadas.
   - Formatos distintos de MP3, FLAC y M4A (OGG, Opus, WMA): solo el principal, como hoy, con aviso.
+- Del hito M7 (incrustar una capa con selector): elegir varios archivos a la vez, pedir el idioma en un cuadro, incrustar sin letra principal, y letras sin tiempos (`Plain`) en el inmersivo.
 
 ## Casos límite
 - **Hermano sin principal:** no se incrusta nada y la línea de estado lo dice. Con el selector, ver P3.
@@ -130,7 +136,8 @@ Lo que ya existe y se reutiliza:
 1. El principal va en su campo estándar. Traducción y pronunciación van en TXXX, Vorbis y átomo libre. Antes, un spike. Si M4A no es fiable, primero MP3 y FLAC, con M4A como limitación.
 2. Se guarda el código del archivo (`es`). Se muestra una traducción: la del sistema o la primera alfabética. La pronunciación no lleva idioma.
 3. «Ocultar original» **ya existe** (`LyricsDisplayOptions.HideOriginal`) y se reutiliza. No se puede ocultar todo. Con el original oculto, se rellena la primera capa visible.
-4. Sin diálogo: se incrusta todo lo que haya, en una sola escritura. Reincrustar reemplaza solo las capas con fuente. Un hermano sin principal no se incrusta. La línea de estado resume.
+4. Sin diálogo: se incrusta todo lo que haya, en una sola escritura. Reincrustar reemplaza solo las capas con fuente. Un hermano sin principal no se incrusta. La línea de estado resume. (Esto rige para el clic derecho de la lista. Desde el inmersivo, ver la decisión 6.)
+6. **(M7, a petición del autor)** Desde el inmersivo, ya no se incrustan los hermanos: dos acciones con selector incrustan una capa cada una, desde cualquier carpeta, sin reescribir la principal. El idioma de la traducción sale del nombre del archivo y, si no lo trae, del idioma del sistema (con aviso). La opción anterior «Incrustar letras en el archivo» se retira. El menú sigue siendo de capas: se ve con letra sincronizada, haya o no capas.
 5. 1 MB por capa. Principal inválido: se cancela. Secundaria inválida: se salta y se avisa.
 
 ## Compatibilidad con los nombres de hoy
@@ -295,6 +302,13 @@ En copias sintéticas (tono de 60 s y letra inventada, con `.lrc`, `.es.lrc` y `
 - **Con los `.lrc` movidos a otra carpeta:** la letra, la traducción y la pronunciación siguen saliendo, ahora desde el archivo: **ok** (autor).
 - **Copia de solo lectura:** el archivo quedó idéntico (mismo tamaño y fecha, sin campos).
 - **Sin `.lrc` principal:** no hay letra que mostrar, así que el botón de capas no aparece (criterio 12). La opción «(falta el .lrc)» se ve con una canción ya incrustada y sin `.lrc` al lado.
+
+## Resultado de M7 (incrustar una capa con selector desde el inmersivo, 8 de noviembre de 2026)
+
+- **Código:** `ILyricsWriter.WriteLayers` y `TagLibLyricsWriter` (solo capas, sin `Tag.Lyrics`), `LyricsEditor.EmbedLayerAsync` (comparte `ValidateLayerAsync` con `EmbedAsync`), `LyricsEmbedReport.DescribeLayer`, `LyricsLanguage.FromFileName`, `LyricsLayerMenu` (`IsButtonVisible(isSynced)`, etiquetas nuevas; se retiran `EmbedOption`, `EmbedLabel` y `LyricsEmbedMenuItem`), `EmbedLyricsViewModel.EmbedLayerAsync`, `MainViewModel.EmbedLayerInImmersiveAsync`, `LyricsViewModel.CurrentBlock` y `MainWindow.FillLayersMenu`. `EmbedLyricsViewModel.EmbedAsync` pierde el parámetro `allowPicker`, que ya nadie usaba.
+- **Pruebas:** Core 641 (+29) e Infrastructure 173 (+14); todas superadas con `dotnet test -c Release`. Compila con 0 errores y la advertencia CS8602 conocida.
+- **Detalle de diseño:** la posición de la pista se anota al elegir el archivo y no al abrir el selector, porque la música sigue sonando mientras se elige. Si la capa no vale, la pista se descarga y se recarga igualmente (la validación ocurre dentro del editor, tras `Saving`): se nota el mismo corte breve aunque no se escriba nada.
+- **Prueba a mano y aprobación (autor, 8 de noviembre de 2026):** el autor probó las dos acciones en la app («funcionando a la perfección») y aprobó el resultado, incluido el aspecto del menú, con la opacidad del fondo en 0,10 (`ThemeImmersiveMenuBackgroundBrush`). No detalló el resultado formato por formato (MP3, FLAC, M4A) ni cada caso de la lista siguiente, que era lo que se pensaba mirar: el botón aparece sin capas; el selector abre y cancelar no corta la música; la traducción elegida de otra carpeta se ve tras mover el `.lrc`; el aviso del idioma del sistema con un archivo sin idioma en el nombre; el rechazo de un archivo no UTF-8 o sin marcas; Espacio y Enter sobre las dos opciones nuevas.
 
 ## Resultado de M6
 

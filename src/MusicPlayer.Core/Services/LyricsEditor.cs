@@ -51,23 +51,7 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
                 continue;
             }
 
-            var (text, error) = await ReadAsync(source.Path, ct);
-            if (text is not null)
-            {
-                var block = parser.Parse(text);
-                if (!block.IsAvailable)
-                    error = ReadError.NoLyrics;
-                else if (block.Kind != mainKind)
-                    error = mainKind switch
-                    {
-                        LyricsKind.Synced => ReadError.NotSynced,
-                        LyricsKind.Plain => ReadError.Synced,
-                        _ => ReadError.MainWithoutLyrics
-                    };
-                else if (mainKind == LyricsKind.Plain && block.Lines.Count != mainBlock.Lines.Count)
-                    error = ReadError.OtherLineCount;
-            }
-
+            var (text, error) = await ValidateLayerAsync(source, mainKind, mainBlock.Lines.Count, ct);
             if (error is { } e)
             {
                 skipped.Add(new LyricsLayerSkip(source, Describe(e)));
@@ -79,6 +63,50 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
 
         await Task.Run(() => writer.Write(track.FilePath, new LyricsLayers(main, extras)), ct);
         return new LyricsEmbedReport(embedded, skipped);
+    }
+
+    /// <summary>
+    /// Incrusta <b>una sola capa</b> elegida por el usuario (de cualquier carpeta) sin reescribir la letra principal
+    /// (docs/specs/lyrics-layers.md, criterio 12b). La valida igual que las capas de <see cref="EmbedAsync(Track, string, IReadOnlyList{LyricsLayerSource}, CancellationToken)"/>
+    /// contra la letra principal ya cargada. Si el formato no guarda capas o la capa no vale, no escribe nada y la
+    /// devuelve en <see cref="LyricsEmbedReport.Skipped"/> con su motivo.
+    /// </summary>
+    /// <param name="main">Letra principal de la pista, tal como se ve (su tipo y, si no tiene marcas, su número de líneas).</param>
+    public async Task<LyricsEmbedReport> EmbedLayerAsync(
+        Track track, LyricsLayerSource source, LyricBlock main, CancellationToken ct = default)
+    {
+        if (!writer.SupportsLayers(track.FilePath))
+            return new LyricsEmbedReport([], [new LyricsLayerSkip(source, "este formato no la guarda")]);
+
+        var (text, error) = await ValidateLayerAsync(source, main.Kind, main.Lines.Count, ct);
+        if (error is { } e)
+            return new LyricsEmbedReport([], [new LyricsLayerSkip(source, Describe(e))]);
+
+        await Task.Run(() => writer.WriteLayers(track.FilePath, [new LyricsLayer(source.Kind, source.Language, text!)]), ct);
+        return new LyricsEmbedReport([source], []);
+    }
+
+    // Lee la capa y comprueba que valga junto a la principal (criterio 5). Compartido por las dos formas de incrustar.
+    private async Task<(string? Text, ReadError? Error)> ValidateLayerAsync(
+        LyricsLayerSource source, LyricsKind mainKind, int mainLineCount, CancellationToken ct)
+    {
+        var (text, error) = await ReadAsync(source.Path, ct);
+        if (text is not null)
+        {
+            var block = parser.Parse(text);
+            if (!block.IsAvailable)
+                error = ReadError.NoLyrics;
+            else if (block.Kind != mainKind)
+                error = mainKind switch
+                {
+                    LyricsKind.Synced => ReadError.NotSynced,
+                    LyricsKind.Plain => ReadError.Synced,
+                    _ => ReadError.MainWithoutLyrics
+                };
+            else if (mainKind == LyricsKind.Plain && block.Lines.Count != mainLineCount)
+                error = ReadError.OtherLineCount;
+        }
+        return (text, error);
     }
 
     private enum ReadError { Missing, TooBig, NotUtf8, Empty, NoLyrics, NotSynced, Synced, MainWithoutLyrics, OtherLineCount }

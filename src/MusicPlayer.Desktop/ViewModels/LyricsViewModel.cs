@@ -58,11 +58,11 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
 
     // Lo que la canción actual tiene disponible.
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasExtras), nameof(ShowLayersButton))]
+    [NotifyPropertyChangedFor(nameof(HasExtras))]
     private bool _hasTranslation;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasExtras), nameof(ShowLayersButton))]
+    [NotifyPropertyChangedFor(nameof(HasExtras))]
     private bool _hasPronunciation;
 
     /// <summary>Código de la traducción mostrada («en»), para la etiqueta del menú de capas.</summary>
@@ -79,8 +79,14 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
 
     public bool HasExtras => HasTranslation || HasPronunciation;
 
-    /// <summary>Botón de capas del modo inmersivo (docs/specs/lyrics-layers.md, criterio 12).</summary>
-    public bool ShowLayersButton => LyricsLayerMenu.IsButtonVisible(IsSynced, HasTranslation, HasPronunciation);
+    /// <summary>
+    /// Botón de capas del modo inmersivo (docs/specs/lyrics-layers.md, criterio 12): con letra sincronizada, haya o no
+    /// capas, porque su menú también incrusta la primera.
+    /// </summary>
+    public bool ShowLayersButton => LyricsLayerMenu.IsButtonVisible(IsSynced);
+
+    /// <summary>La letra principal cargada, con la que se valida una capa nueva (criterio 12b).</summary>
+    public LyricBlock CurrentBlock => _block;
 
     /// <summary>Opciones del menú de capas con el estado de ahora (criterio 13). Se recalculan cada vez.</summary>
     public IReadOnlyList<LyricsLayerMenuItem> LayerMenu() =>
@@ -99,17 +105,6 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         ShowTranslation = item.Result.ShowTranslation;
         ShowPronunciation = item.Result.ShowPronunciation;
         HideOriginal = item.Result.HideOriginal;
-    }
-
-    /// <summary>
-    /// «Incrustar letras en el archivo» del menú de capas (criterio 12b): desactivada, con lo que falta, si no está
-    /// el .lrc principal junto al audio.
-    /// </summary>
-    public LyricsEmbedMenuItem EmbedMenuOption()
-    {
-        if (_track is null) return new(LyricsLayerMenu.EmbedLabel, false, "No hay canción");
-        var main = System.IO.Path.ChangeExtension(_track.FilePath, ".lrc");
-        return LyricsLayerMenu.EmbedOption(System.IO.Path.GetFileName(main), System.IO.File.Exists(main));
     }
 
     private LyricsDisplayOptions CurrentOptions() =>

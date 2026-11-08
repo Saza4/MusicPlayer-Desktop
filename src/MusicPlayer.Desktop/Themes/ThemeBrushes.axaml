@@ -2,7 +2,7 @@
     <!--
         Pinceles semánticos de la interfaz. Cada uno sale de un color del tema (ThemeXxx, definidos en App.axaml
         y reemplazados por ThemeService al cambiar de tema). No escribas literales de color en el XAML: usa estos.
-
+        
         Los velos translúcidos son el color "overlay" del tema con una opacidad fija. La opacidad es el alfa que
         tenían los literales originales (n/255), así que en el tema Oscuro el aspecto es idéntico al de siempre.
     -->
@@ -88,5 +88,36 @@
     <SolidColorBrush
         x:Key="ThemeIslandPlaceholderBrush"
         Opacity="0.1333333333"
+        Color="#FFFFFF" />
+
+    <!--
+        Menú de capas del modo inmersivo (clase «immersive» de MenuFlyoutPresenter en App.axaml). Como el propio modo
+        inmersivo, es siempre oscuro y con texto blanco, con cualquier tema: vidrio oscuro translúcido, borde fino y
+        velos blancos para pasar el cursor y pulsar.
+    -->
+    <SolidColorBrush
+        x:Key="ThemeImmersiveMenuBackgroundBrush"
+        Opacity="0.10"
+        Color="#141414" />
+    <SolidColorBrush
+        x:Key="ThemeImmersiveMenuBorderBrush"
+        Opacity="0.14"
+        Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ThemeImmersiveMenuTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeImmersiveMenuDisabledTextBrush"
+        Opacity="0.4"
+        Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeImmersiveMenuHoverBrush"
+        Opacity="0.12"
+        Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeImmersiveMenuPressedBrush"
+        Opacity="0.18"
+        Color="#FFFFFF" />
+    <SolidColorBrush
+        x:Key="ThemeImmersiveMenuSeparatorBrush"
+        Opacity="0.12"
         Color="#FFFFFF" />
 </ResourceDictionary>

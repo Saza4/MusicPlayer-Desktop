@@ -19,12 +19,14 @@ public class LyricsLayerMenuTests
     // ---- Botón (criterio 12) ----
 
     [Theory]
-    [InlineData(true, true, false, true)]
-    [InlineData(true, false, true, true)]
-    [InlineData(true, false, false, false)]   // sincronizada pero sin capas
-    [InlineData(false, true, true, false)]    // Plain: sin botón
-    public void Button_OnlyWithSyncedLyricsAndALayer(bool synced, bool hasT, bool hasP, bool visible) =>
-        Assert.Equal(visible, LyricsLayerMenu.IsButtonVisible(synced, hasT, hasP));
+    [InlineData(true, true)]     // sincronizada: con o sin capas, para poder incrustar la primera (criterio 12b)
+    [InlineData(false, false)]   // Plain o sin letra: sin botón
+    public void Button_OnlyWithSyncedLyrics(bool synced, bool visible) =>
+        Assert.Equal(visible, LyricsLayerMenu.IsButtonVisible(synced));
+
+    [Fact]
+    public void WithoutLayers_TheMenuHasNoToggleRows_SoTheEmbedActionsAreTheWholeMenu() =>
+        Assert.Empty(Build(Opts(), hasT: false, hasP: false));
 
     // ---- Opciones y orden (criterio 13) ----
 
@@ -152,16 +154,14 @@ public class LyricsLayerMenuTests
     // ---- Incrustar desde el menú (criterio 12b) ----
 
     [Fact]
-    public void EmbedOption_WithTheMainNextToTheAudio_IsEnabled() =>
-        Assert.Equal(new LyricsEmbedMenuItem("Incrustar letras en el archivo", true,
-                "Incrusta cancion.lrc y sus capas en el archivo de audio"),
-            LyricsLayerMenu.EmbedOption("cancion.lrc", mainExists: true));
-
-    [Fact]
-    public void EmbedOption_WithoutTheMain_IsDisabledAndSaysWhatIsMissing() =>
-        Assert.Equal(new LyricsEmbedMenuItem("Incrustar letras en el archivo (falta el .lrc)", false,
-                "Falta tema.en vivo.lrc junto a la canción"),
-            LyricsLayerMenu.EmbedOption("tema.en vivo.lrc", mainExists: false));
+    public void EmbedLabels_AreShortAndAskForAFile()
+    {
+        Assert.Equal("Incrustar traducción…", LyricsLayerMenu.EmbedTranslationLabel);
+        Assert.Equal("Incrustar pronunciación…", LyricsLayerMenu.EmbedPronunciationLabel);
+        // Una etiqueta larga ensanchó el menú hasta salirse de la pantalla (623 px con un nombre real).
+        Assert.True(LyricsLayerMenu.EmbedTranslationLabel.Length <= 30);
+        Assert.True(LyricsLayerMenu.EmbedPronunciationLabel.Length <= 30);
+    }
 
     // ---- Relleno (criterio 17) ----
 

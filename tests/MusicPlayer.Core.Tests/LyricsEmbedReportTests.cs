@@ -31,6 +31,33 @@ public class LyricsEmbedReportTests
         Assert.Equal("Letra de \"X\" incrustada desde song.lrc: original y traducción (es) · saltada: traducción (en), no está en UTF-8",
             new LyricsEmbedReport([Es], [new LyricsLayerSkip(En, "no está en UTF-8")]).Describe("X", "song.lrc"));
 
+    // ---- Una sola capa (criterio 12b) ----
+
+    [Fact]
+    public void OneLayer_Translation_SaysWhatEnteredAndWhere() =>
+        Assert.Equal("Traducción (es) de \"X\" incrustada desde y.es.lrc",
+            new LyricsEmbedReport([Es], []).DescribeLayer("X", "y.es.lrc"));
+
+    [Fact]
+    public void OneLayer_Pronunciation() =>
+        Assert.Equal("Pronunciación de \"X\" incrustada desde y.rom.lrc",
+            new LyricsEmbedReport([Rom], []).DescribeLayer("X", "y.rom.lrc"));
+
+    [Fact]
+    public void OneLayer_LanguageFromTheSystem_SaysSo() =>
+        Assert.Equal("Traducción (es) de \"X\" incrustada desde y.lrc · el nombre del archivo no indica el idioma: se usó el del sistema (es)",
+            new LyricsEmbedReport([Es], []).DescribeLayer("X", "y.lrc", languageFromSystem: true));
+
+    [Fact]
+    public void OneLayer_APronunciation_NeverMentionsTheLanguage() =>
+        Assert.Equal("Pronunciación de \"X\" incrustada desde y.lrc",
+            new LyricsEmbedReport([Rom], []).DescribeLayer("X", "y.lrc", languageFromSystem: true));
+
+    [Fact]
+    public void OneLayer_Skipped_SaysWhyAndThatNothingWasEmbedded() =>
+        Assert.Equal("No se incrustó la pronunciación de \"X\": no está en UTF-8",
+            new LyricsEmbedReport([], [new LyricsLayerSkip(Rom, "no está en UTF-8")]).DescribeLayer("X", "y.lrc"));
+
     [Fact]
     public void SeveralSkipped() =>
         Assert.Equal("Letra de \"X\" incrustada desde song.lrc · saltadas: traducción (en), está vacía; pronunciación, pesa más de 1 MB",

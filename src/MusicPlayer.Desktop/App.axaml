@@ -44,6 +44,40 @@
             <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderStrongBrush}" />
         </Style>
+        <!--
+            Menú de capas del modo inmersivo (MainWindow.FillLayersMenu le pone la clase «immersive»): en lugar de una
+            caja negra plana, vidrio oscuro con esquinas redondeadas y filas con velo blanco, como los botones del
+            inmersivo. Siempre oscuro, con texto blanco: el inmersivo lo es con cualquier tema.
+        -->
+        <Style Selector="MenuFlyoutPresenter.immersive">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeImmersiveMenuTextBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ThemeImmersiveMenuBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeImmersiveMenuBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="MinWidth" Value="232" />
+        </Style>
+        <Style Selector="MenuFlyoutPresenter.immersive MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeImmersiveMenuTextBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="MenuFlyoutPresenter.immersive MenuItem:selected /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource ThemeImmersiveMenuHoverBrush}" />
+        </Style>
+        <Style Selector="MenuFlyoutPresenter.immersive MenuItem:pressed /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource ThemeImmersiveMenuPressedBrush}" />
+        </Style>
+        <Style Selector="MenuFlyoutPresenter.immersive MenuItem:disabled">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeImmersiveMenuDisabledTextBrush}" />
+        </Style>
+        <Style Selector="MenuFlyoutPresenter.immersive Separator">
+            <Setter Property="Background" Value="{DynamicResource ThemeImmersiveMenuSeparatorBrush}" />
+            <Setter Property="Margin" Value="10,5" />
+        </Style>
         <Style Selector="ContextMenu">
             <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderStrongBrush}" />

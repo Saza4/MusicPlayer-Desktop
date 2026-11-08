@@ -295,6 +295,78 @@ public class TagLibLyricsLayersWriterTests : IDisposable
     public void SupportsLayers_OnlyMp3FlacAndM4a(string name, bool expected) =>
         Assert.Equal(expected, _writer.SupportsLayers(name));
 
+    // ---- Solo capas, sin reescribir la letra principal (docs/specs/lyrics-layers.md, criterio 12b) ----
+
+    [Theory, MemberData(nameof(Formats))]
+    public void WriteLayers_OnlyLayers_LeavesTheMainAndTheAudioUntouched(string format)
+    {
+        var path = NewFile(format);
+        _writer.Write(path, LyricsLayers.MainOnly(Main));
+        var audio = AudioBytes(path);
+        var es = Tr("es", "[00:01.00]Traducción inventada\r\n[00:03.00]Otra");
+        var rom = Rom("[00:01.00]Pronunciación\r\n[00:03.00]Otra");
+
+        _writer.WriteLayers(path, [es, rom]);
+
+        Assert.Equal(Main, ReadMain(path));
+        Assert.Equal([rom, es], ReadLayers(path));
+        Assert.Equal(audio, AudioBytes(path));
+    }
+
+    [Theory, MemberData(nameof(Formats))]
+    public void WriteLayers_OneAtATime_KeepsTheOthers_AndTheSameCodeIsReplacedNotDuplicated(string format)
+    {
+        var path = NewFile(format);
+        _writer.Write(path, LyricsLayers.MainOnly(Main));
+
+        _writer.WriteLayers(path, [Tr("es", "[00:01.00]uno")]);
+        _writer.WriteLayers(path, [Rom("[00:01.00]dos")]);
+        _writer.WriteLayers(path, [Tr("es", "[00:01.00]tres")]);
+
+        Assert.Equal([Rom("[00:01.00]dos"), Tr("es", "[00:01.00]tres")], ReadLayers(path));
+        Assert.Single(RawNames(path), n => n == "LYRICS_TRANSLATION_ES");
+        Assert.Equal(Main, ReadMain(path));
+    }
+
+    [Theory, MemberData(nameof(Formats))]
+    public void WriteLayers_ATranslationOfAnotherLanguage_LivesNextToTheExistingOne(string format)
+    {
+        var path = NewFile(format);
+        _writer.WriteLayers(path, [Tr("es", "[00:01.00]hola")]);
+
+        _writer.WriteLayers(path, [Tr("en", "[00:01.00]hello")]);
+
+        Assert.Equal([Tr("en", "[00:01.00]hello"), Tr("es", "[00:01.00]hola")], ReadLayers(path));
+    }
+
+    [Theory, MemberData(nameof(Formats))]
+    public void WriteLayers_InAFileWithoutAMain_DoesNotCreateOne(string format)
+    {
+        var path = NewFile(format);
+
+        _writer.WriteLayers(path, [Rom("[00:01.00]solo pronunciación")]);
+
+        Assert.True(string.IsNullOrEmpty(ReadMain(path)));
+        Assert.Equal([Rom("[00:01.00]solo pronunciación")], ReadLayers(path));
+    }
+
+    [Fact]
+    public void WriteLayers_OnAnUnsupportedFormat_Throws() =>
+        Assert.Throws<NotSupportedException>(() =>
+            _writer.WriteLayers(Path.Combine(_dir, "song.wav"), [Tr("es", "[00:01.00]Uno")]));
+
+    [Fact]
+    public void WriteLayers_ACorruptFile_FailsWithoutTouchingTheOriginal()
+    {
+        var path = Path.Combine(_dir, "roto.mp3");
+        File.WriteAllBytes(path, [1, 2, 3, 4, 5]);
+
+        Assert.ThrowsAny<Exception>(() => _writer.WriteLayers(path, [Tr("es", "[00:01.00]Uno")]));
+
+        Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, File.ReadAllBytes(path));
+        Assert.Equal([path], Directory.GetFiles(_dir, "roto*").Concat(Directory.GetFiles(_dir, "~*")));
+    }
+
     [Fact]
     public void Write_LayersOnAnUnsupportedFormat_Throws() =>
         Assert.Throws<NotSupportedException>(() =>

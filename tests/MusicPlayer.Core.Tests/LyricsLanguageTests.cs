@@ -7,6 +7,31 @@ public class LyricsLanguageTests
     [Fact]
     public void TheListHasEveryIso6391Code() => Assert.Equal(183, LyricsLanguage.KnownLanguageCount);
 
+    // ---- Idioma de un archivo elegido a mano (docs/specs/lyrics-layers.md, criterio 12b) ----
+
+    [Theory]
+    [InlineData(@"C:\letras\Chicago.es.lrc", "es", "es")]
+    [InlineData(@"C:\letras\Chicago.EN.LRC", "en", "es")]
+    [InlineData("/home/u/x.pt-BR.lrc", "pt-BR", "es")]
+    [InlineData("x.zh-hans.lrc", "zh-Hans", "es")]
+    [InlineData("tema.en vivo.es.lrc", "es", "es")]       // el nombre lleva un punto: manda el último segmento
+    [InlineData("x.fil.lrc", "fil", "fil")]               // por compatibilidad vale el código del sistema aunque sea de tres letras
+    public void FromFileName_TakesTheLanguageFromTheLastSegmentOfTheName(string path, string expected, string system) =>
+        Assert.Equal(expected, LyricsLanguage.FromFileName(path, system));
+
+    [Theory]
+    [InlineData("traduccion.lrc")]       // sin idioma
+    [InlineData("Chicago.rom.lrc")]      // la pronunciación no es una traducción
+    [InlineData("Chicago.alt.lrc")]
+    [InlineData("Chicago.mix.lrc")]
+    [InlineData("Chicago.live.lrc")]
+    [InlineData("tema.en vivo.lrc")]     // un punto en el nombre no es un idioma
+    [InlineData("x.es-latino.lrc")]
+    [InlineData("x.fil.lrc")]            // tres letras que no son el idioma del sistema (aquí «es»)
+    [InlineData("")]
+    public void FromFileName_WithoutAValidLanguage_IsNullSoTheCallerUsesTheSystemOne(string path) =>
+        Assert.Null(LyricsLanguage.FromFileName(path, "es"));
+
     [Theory]
     [InlineData("es", "es")]
     [InlineData("ES", "es")]

@@ -65,6 +65,18 @@ public static class LyricsLanguage
     }
 
     /// <summary>
+    /// Código de traducción que indica el nombre de un archivo elegido a mano («es» en «cualquier.es.lrc», «pt-BR» en
+    /// «x.pt-BR.lrc»), con la misma regla que los hermanos (<see cref="FromSuffix"/>). Null si el nombre no trae un
+    /// idioma válido («traduccion.lrc», «x.rom.lrc», «x.alt.lrc»); quien llama usa entonces el idioma del sistema.
+    /// </summary>
+    public static string? FromFileName(string path, string systemLanguage)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        var dot = name.LastIndexOf('.');
+        return dot < 0 ? null : FromSuffix(name[(dot + 1)..], systemLanguage);
+    }
+
+    /// <summary>
     /// Código de traducción leído de un campo incrustado: lo que <see cref="Normalize"/> acepta o, por la misma
     /// compatibilidad, un código de dos o tres letras (se escribió como código del sistema).
     /// </summary>

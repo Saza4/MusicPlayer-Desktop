@@ -46,6 +46,26 @@ public sealed record LyricsEmbedReport(IReadOnlyList<LyricsLayerSource> Embedded
         return text;
     }
 
+    /// <summary>
+    /// Resumen para la línea de estado al incrustar <b>una sola capa</b> (criterio 12b):
+    /// «Traducción (es) de "X" incrustada desde y.es.lrc» o «No se incrustó la pronunciación de "X": no está en UTF-8».
+    /// </summary>
+    /// <param name="languageFromSystem">True si el nombre del archivo no traía el idioma y se usó el del sistema: se avisa.</param>
+    public string DescribeLayer(string title, string fileName, bool languageFromSystem = false)
+    {
+        if (Embedded.Count > 0)
+        {
+            var label = Embedded[0].Label;
+            var text = $"{char.ToUpperInvariant(label[0])}{label[1..]} de \"{title}\" incrustada desde {fileName}";
+            return languageFromSystem && Embedded[0].Kind == LyricsLayerKind.Translation
+                ? text + $" · el nombre del archivo no indica el idioma: se usó el del sistema ({Embedded[0].Language})"
+                : text;
+        }
+
+        var skip = Skipped[0];
+        return $"No se incrustó la {skip.Source.Label} de \"{title}\": {skip.Reason}";
+    }
+
     private static IEnumerable<T> InOrder<T>(IEnumerable<T> items, Func<T, LyricsLayerSource> source) =>
         items.OrderBy(i => source(i).Kind == LyricsLayerKind.Pronunciation)
              .ThenBy(i => source(i).Language, StringComparer.Ordinal);

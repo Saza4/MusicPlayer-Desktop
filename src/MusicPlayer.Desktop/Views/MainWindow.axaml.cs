@@ -10,6 +10,8 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using MusicPlayer.Core.Models;
+using MusicPlayer.Core.Services;
 using MusicPlayer.Infrastructure;
 using MusicPlayer.Desktop.ViewModels;
 
@@ -174,11 +176,16 @@ public partial class MainWindow : Window
 
     // El menú nunca está vacío al abrirse: en Avalonia 11.2.5, un MenuFlyout vacío se abre sin nada a la vista aunque
     // se llene en Opening (comprobado con una reproducción mínima). Por eso se llena, con el menú cerrado, cada vez
-    // que cambian las capas o las preferencias, y otra vez al abrir. El botón solo se ve si hay capas, así que entonces
-    // hay opciones. Con el menú abierto no se rellena: borraría la opción recién pulsada y el menú no se cerraría.
+    // que cambian las capas o las preferencias, y otra vez al abrir. Siempre hay opciones: las dos de incrustar van
+    // al final aunque no haya capas. Con el menú abierto no se rellena: borraría la opción recién pulsada y el menú
+    // no se cerraría.
     private void FillLayersMenu()
     {
         if (LayersButton.Flyout is not MenuFlyout menu || DataContext is not MainViewModel vm) return;
+
+        // Aspecto del inmersivo (vidrio oscuro, ver App.axaml): una sola vez, el presentador se reutiliza.
+        if (!menu.FlyoutPresenterClasses.Contains("immersive"))
+            menu.FlyoutPresenterClasses.Add("immersive");
 
         menu.Items.Clear();
         foreach (var option in vm.Lyrics.LayerMenu())
@@ -189,14 +196,17 @@ public partial class MainWindow : Window
             menu.Items.Add(item);
         }
 
-        // Criterio 12b: incrustar desde aquí, sin selector; desactivada si falta el .lrc principal.
-        var embedOption = vm.Lyrics.EmbedMenuOption();
-        var embed = new MenuItem { Header = embedOption.Label, IsEnabled = embedOption.IsEnabled };
-        ToolTip.SetTip(embed, embedOption.ToolTip);
-        ToolTip.SetShowOnDisabled(embed, true);
-        embed.Click += (_, _) => _ = vm.EmbedLyricsInImmersiveAsync();
-        menu.Items.Add(new Separator());
-        menu.Items.Add(embed);
+        // Criterio 12b: dos acciones que abren el selector para incrustar una capa de cualquier carpeta.
+        if (menu.Items.Count > 0) menu.Items.Add(new Separator());
+        menu.Items.Add(EmbedItem(vm, LyricsLayerMenu.EmbedTranslationLabel, LyricsLayerKind.Translation));
+        menu.Items.Add(EmbedItem(vm, LyricsLayerMenu.EmbedPronunciationLabel, LyricsLayerKind.Pronunciation));
+    }
+
+    private static MenuItem EmbedItem(MainViewModel vm, string label, LyricsLayerKind kind)
+    {
+        var item = new MenuItem { Header = label };
+        item.Click += (_, _) => _ = vm.EmbedLayerInImmersiveAsync(kind);
+        return item;
     }
 
     // Otra pista (o la misma sin capas): el menú abierto se cierra en lugar de quedar con opciones viejas.

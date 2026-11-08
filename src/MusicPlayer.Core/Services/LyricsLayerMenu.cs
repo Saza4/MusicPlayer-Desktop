@@ -9,9 +9,6 @@ public enum LyricsRow { Original, Pronunciation, Translation }
 /// Una opción del menú: su etiqueta («Ocultar traducción (en)»), si se puede pulsar y las preferencias que deja al
 /// pulsarla.
 /// </summary>
-/// <summary>«Incrustar letras en el archivo»: etiqueta, si se puede pulsar y la descripción emergente.</summary>
-public sealed record LyricsEmbedMenuItem(string Label, bool IsEnabled, string ToolTip);
-
 public sealed record LyricsLayerMenuItem(LyricsRow Row, string Label, bool IsEnabled, LyricsDisplayOptions Result);
 
 /// <summary>
@@ -20,9 +17,11 @@ public sealed record LyricsLayerMenuItem(LyricsRow Row, string Label, bool IsEna
 /// </summary>
 public static class LyricsLayerMenu
 {
-    /// <summary>Criterio 12: el botón solo se ve con letra sincronizada y al menos una capa.</summary>
-    public static bool IsButtonVisible(bool isSynced, bool hasTranslation, bool hasPronunciation) =>
-        isSynced && (hasTranslation || hasPronunciation);
+    /// <summary>
+    /// Criterio 12: el botón se ve con letra sincronizada, haya o no capas: las dos acciones de incrustar (12b) sirven
+    /// precisamente para añadir la primera.
+    /// </summary>
+    public static bool IsButtonVisible(bool isSynced) => isSynced;
 
     /// <summary>
     /// Opciones del menú en orden: traducción, pronunciación y original (cada una solo si su capa existe; el original,
@@ -66,19 +65,12 @@ public static class LyricsLayerMenu
     private static bool LeavesSomethingVisible(LyricsDisplayOptions o, bool hasTranslation, bool hasPronunciation) =>
         !o.HideOriginal || (o.ShowTranslation && hasTranslation) || (o.ShowPronunciation && hasPronunciation);
 
-    /// <summary>Etiqueta de «Incrustar letras en el archivo» en el menú (criterio 12b).</summary>
-    public const string EmbedLabel = "Incrustar letras en el archivo";
-
     /// <summary>
-    /// Opción de incrustar del menú (criterio 12b): sin el principal junto al audio no se incrusta nada (criterio 6),
-    /// así que se ve desactivada y dice qué falta. El nombre del archivo va en la descripción emergente y no en la
-    /// etiqueta: un nombre largo ensanchaba el menú hasta salirse de la pantalla. Sin selector de archivos.
+    /// Etiquetas de las dos acciones de incrustar del final del menú (criterio 12b). Cortas a propósito: una etiqueta
+    /// larga ensanchó el menú hasta salirse de la pantalla. Cada una abre el selector de archivos.
     /// </summary>
-    /// <param name="mainFileName">Nombre del principal que se busca («cancion.lrc»).</param>
-    public static LyricsEmbedMenuItem EmbedOption(string mainFileName, bool mainExists) =>
-        mainExists
-            ? new(EmbedLabel, true, $"Incrusta {mainFileName} y sus capas en el archivo de audio")
-            : new($"{EmbedLabel} (falta el .lrc)", false, $"Falta {mainFileName} junto a la canción");
+    public const string EmbedTranslationLabel = "Incrustar traducción…";
+    public const string EmbedPronunciationLabel = "Incrustar pronunciación…";
 
     /// <summary>
     /// Renglón que se rellena en la línea activa (criterio 17): el original si se ve; si no, la primera capa visible

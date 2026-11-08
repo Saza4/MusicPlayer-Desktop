@@ -643,17 +643,25 @@ public partial class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// «Incrustar letras en el archivo» desde el menú de capas del inmersivo (docs/specs/lyrics-layers.md, criterio
-    /// 12b). Escribir pasa por <see cref="OnTagsSaving"/>, que descarga la pista y cierra el inmersivo: después se
-    /// vuelve a cargar en el mismo punto, se reabre el inmersivo y sigue sonando si sonaba. Sin selector de archivos.
+    /// «Incrustar traducción…» e «Incrustar pronunciación…» del menú de capas del inmersivo (docs/specs/lyrics-layers.md,
+    /// criterio 12b): abre el selector y, al elegir, escribe solo esa capa. Escribir pasa por <see cref="OnTagsSaving"/>,
+    /// que descarga la pista y cierra el inmersivo: después se vuelve a cargar en el mismo punto, se reabre el
+    /// inmersivo y sigue sonando si sonaba. Cancelar el selector no toca la reproducción.
     /// </summary>
-    public async Task EmbedLyricsInImmersiveAsync()
+    public async Task EmbedLayerInImmersiveAsync(LyricsLayerKind kind)
     {
         if (CurrentTrack is not { } item) return;
-        var position = _player.CurrentTime;
-        var wasPlaying = _player.State == PlaybackState.Playing;
 
-        if (await EmbedLyrics.EmbedAsync(item.Track, allowPicker: false) && CurrentTrack is null)
+        // La posición se anota al elegir el archivo, no al abrir el selector: mientras se elige, la música sigue.
+        var position = TimeSpan.Zero;
+        var wasPlaying = false;
+        void Note()
+        {
+            position = _player.CurrentTime;
+            wasPlaying = _player.State == PlaybackState.Playing;
+        }
+
+        if (await EmbedLyrics.EmbedLayerAsync(item.Track, kind, Lyrics.CurrentBlock, Note) && CurrentTrack is null)
             ResumePlayback(item, position, wasPlaying);
     }
 

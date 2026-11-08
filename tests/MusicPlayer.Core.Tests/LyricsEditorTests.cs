@@ -14,6 +14,8 @@ public class LyricsEditorTests : IDisposable
     {
         public List<(string Path, string Lyrics, LyricsLayers Layers)> Calls { get; } = new();
         public void Write(string filePath, LyricsLayers layers) => Calls.Add((filePath, layers.Main, layers));
+        public List<(string Path, IReadOnlyList<LyricsLayer> Layers)> LayerCalls { get; } = new();
+        public void WriteLayers(string filePath, IReadOnlyList<LyricsLayer> layers) => LayerCalls.Add((filePath, layers));
         public bool Layers { get; init; } = true;
         public bool SupportsLayers(string filePath) => Layers;
     }
@@ -37,6 +39,157 @@ public class LyricsEditorTests : IDisposable
 
     private LyricsLayerSource Pronunciation(string text) =>
         new(LyricsLayerKind.Pronunciation, null, LrcFile(text, name: "song.rom.lrc"));
+
+    // ---- Una sola capa elegida con el selector (criterio 12b) ----
+
+    private static readonly LyricBlock SyncedMain = new LrcLyricParser().Parse(Main);
+
+    private LyricsLayerSource Picked(LyricsLayerKind kind, string? language, string text, string name = "elegida.lrc") =>
+        new(kind, language, LrcFile(text, name: name));
+
+    [Fact]
+    public async Task EmbedLayer_ATranslation_WritesOnlyThatLayerAndNeverTheMain()
+    {
+        var writer = new FakeWriter();
+        var layer = Picked(LyricsLayerKind.Translation, "en", "[00:01.00]Hello\r\n[00:02.50]World");
+
+        var report = await NewEditor(writer).EmbedLayerAsync(Song, layer, SyncedMain);
+
+        Assert.Empty(writer.Calls);
+        var call = Assert.Single(writer.LayerCalls);
+        Assert.Equal("song.mp3", call.Path);
+        var written = Assert.Single(call.Layers);
+        Assert.Equal(new LyricsLayer(LyricsLayerKind.Translation, "en", "[00:01.00]Hello\r\n[00:02.50]World"), written);
+        Assert.Equal([layer], report.Embedded);
+        Assert.Empty(report.Skipped);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_APronunciation_WritesItWithoutLanguage()
+    {
+        var writer = new FakeWriter();
+
+        await NewEditor(writer).EmbedLayerAsync(
+            Song, Picked(LyricsLayerKind.Pronunciation, null, "[00:01.00]Ora\r\n[00:02.50]Mundo"), SyncedMain);
+
+        var written = Assert.Single(Assert.Single(writer.LayerCalls).Layers);
+        Assert.Equal(LyricsLayerKind.Pronunciation, written.Kind);
+        Assert.Null(written.Language);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_Utf8WithBom_DropsTheBom()
+    {
+        var writer = new FakeWriter();
+        var source = new LyricsLayerSource(LyricsLayerKind.Translation, "es", LrcFile("[00:01.00]Hola", bom: true, name: "b.lrc"));
+
+        await NewEditor(writer).EmbedLayerAsync(Song, source, SyncedMain);
+
+        Assert.Equal("[00:01.00]Hola", Assert.Single(Assert.Single(writer.LayerCalls).Layers).Text);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_WithoutTimestampsOnASyncedMain_IsSkippedWithItsReasonAndWritesNothing()
+    {
+        var writer = new FakeWriter();
+        var layer = Picked(LyricsLayerKind.Translation, "es", "Hola\r\nMundo");
+
+        var report = await NewEditor(writer).EmbedLayerAsync(Song, layer, SyncedMain);
+
+        Assert.Empty(report.Embedded);
+        var skip = Assert.Single(report.Skipped);
+        Assert.Equal("no tiene marcas de tiempo como el original", skip.Reason);
+        Assert.Empty(writer.LayerCalls);
+        Assert.Empty(writer.Calls);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_NotUtf8_IsSkippedAndWritesNothing()
+    {
+        var writer = new FakeWriter();
+        var source = new LyricsLayerSource(LyricsLayerKind.Translation, "es", LrcFile(new byte[] { 0x4C, 0xE9, 0x6F }, "l1.lrc"));
+
+        var report = await NewEditor(writer).EmbedLayerAsync(Song, source, SyncedMain);
+
+        Assert.Equal("no está en UTF-8", Assert.Single(report.Skipped).Reason);
+        Assert.Empty(writer.LayerCalls);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_Empty_IsSkippedAndWritesNothing()
+    {
+        var writer = new FakeWriter();
+
+        var report = await NewEditor(writer).EmbedLayerAsync(
+            Song, Picked(LyricsLayerKind.Translation, "es", "  \r\n "), SyncedMain);
+
+        Assert.Equal("está vacía", Assert.Single(report.Skipped).Reason);
+        Assert.Empty(writer.LayerCalls);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_TooBig_IsSkippedAndWritesNothing()
+    {
+        var writer = new FakeWriter();
+        var source = Picked(LyricsLayerKind.Translation, "es", new string('a', (int)LyricsEditor.MaxBytes + 1));
+
+        var report = await NewEditor(writer).EmbedLayerAsync(Song, source, SyncedMain);
+
+        Assert.Equal("pesa más de 1 MB", Assert.Single(report.Skipped).Reason);
+        Assert.Empty(writer.LayerCalls);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_MissingFile_IsSkippedAndWritesNothing()
+    {
+        var writer = new FakeWriter();
+        var source = new LyricsLayerSource(LyricsLayerKind.Translation, "es", Path.Combine(_dir, "no-existe.lrc"));
+
+        var report = await NewEditor(writer).EmbedLayerAsync(Song, source, SyncedMain);
+
+        Assert.Equal("no se encontró", Assert.Single(report.Skipped).Reason);
+        Assert.Empty(writer.LayerCalls);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_FormatWithoutLayers_IsSkippedAndWritesNothing()
+    {
+        var writer = new FakeWriter { Layers = false };
+
+        var report = await NewEditor(writer).EmbedLayerAsync(
+            Song, Picked(LyricsLayerKind.Translation, "es", "[00:01.00]Hola"), SyncedMain);
+
+        Assert.Equal("este formato no la guarda", Assert.Single(report.Skipped).Reason);
+        Assert.Empty(writer.LayerCalls);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_MainWithoutLyrics_IsSkippedAndWritesNothing()
+    {
+        var writer = new FakeWriter();
+
+        var report = await NewEditor(writer).EmbedLayerAsync(
+            Song, Picked(LyricsLayerKind.Translation, "es", "[00:01.00]Hola"), LyricBlock.Empty);
+
+        Assert.Equal("el original no tiene letra que leer", Assert.Single(report.Skipped).Reason);
+        Assert.Empty(writer.LayerCalls);
+    }
+
+    [Fact]
+    public async Task EmbedLayer_PlainMain_NeedsTheSameNumberOfLines()
+    {
+        var writer = new FakeWriter();
+        var plainMain = new LrcLyricParser().Parse("Hola\r\nMundo");
+        var same = Picked(LyricsLayerKind.Translation, "en", "Hello\r\nWorld", "same.lrc");
+        var other = Picked(LyricsLayerKind.Translation, "fr", "Bonjour", "other.lrc");
+
+        var ok = await NewEditor(writer).EmbedLayerAsync(Song, same, plainMain);
+        var bad = await NewEditor(writer).EmbedLayerAsync(Song, other, plainMain);
+
+        Assert.Single(ok.Embedded);
+        Assert.Equal("no tiene tantas líneas como el original", Assert.Single(bad.Skipped).Reason);
+        Assert.Single(writer.LayerCalls);
+    }
 
     [Fact]
     public async Task Embed_WritesTheFileTextToTheTrack()
