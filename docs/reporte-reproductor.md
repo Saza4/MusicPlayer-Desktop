@@ -1,7 +1,7 @@
 # MusicPlayer-Desktop — Documento maestro y reporte de novedades
 
 > Reproductor de música local, ligero y multiplataforma. **C# · .NET 8 · Avalonia UI 11**.
-> Estado a **8 de noviembre de 2026** · última release: **v1.3.0** (la letra progresiva, PR #4, las capas de letra, PR #5, y los botones de acción, PR #6, ya están fusionados en `main`, pero aún sin release).
+> Estado a **8 de noviembre de 2026** · última release publicada: **v1.3.0**. **v1.4.0** (letra progresiva, capas de letra, botones de acción y limpieza de código) está preparada como borrador en GitHub, pendiente de que el autor la publique.
 
 Este documento reúne en un solo lugar: la visión y la especificación del proyecto, el reporte de todo lo implementado durante el desarrollo, el historial de versiones tal como se publicó en GitHub Releases, las decisiones de diseño, las limitaciones conocidas y la hoja de ruta. Al final, como anexos, se conserva la especificación original y el prompt maestro.
 
@@ -161,10 +161,10 @@ Reglas finas del código que no aparecen en otras secciones (verificadas contra 
 | 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | v1.3.0 |
 | 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | v1.3.0 |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
-| 14  | Letra progresiva en el modo inmersivo (estilo Apple Music) | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | Sin release (fusionada en `main`, PR #4) |
-| 15  | Capas de letra: traducción y pronunciación incrustadas, y menú de capas en el inmersivo | Core, Infrastructure, Desktop | Hecho: pruebas en MP3, FLAC y M4A, comprobado en la app por UI Automation y probado a mano por el autor en copias | Sin release (fusionada en `main`, PR #5) |
-| 16  | Botones de acción: estilo tonal con icono en la barra superior y en el «+» de COLECCIONES | Desktop                       | Hecho: capturas en Windows (Oscuro, Claro y un tema de usuario, a 640, 960 y 1200 px), hover y foco; CI del PR #6 en verde. Sin probar: `Tab` real, pressed y deshabilitado | Sin release (fusionada en `main`, PR #6) |
-| 17  | Limpieza de código sin uso (`IAudioPlayer.Stop`, `LyricLine.Words`, `LibrarySnapshot.Folders`, `ViewLocator`…) | Core, Audio, Infrastructure, Desktop | Hecho: build sin errores, 640 + 173 pruebas, la app arranca igual | Sin release (PR #7) |
+| 14  | Letra progresiva en el modo inmersivo (estilo Apple Music) | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | v1.4.0 (PR #4) |
+| 15  | Capas de letra: traducción y pronunciación incrustadas, y menú de capas en el inmersivo | Core, Infrastructure, Desktop | Hecho: pruebas en MP3, FLAC y M4A, comprobado en la app por UI Automation y probado a mano por el autor en copias | v1.4.0 (PR #5) |
+| 16  | Botones de acción: estilo tonal con icono en la barra superior y en el «+» de COLECCIONES | Desktop                       | Hecho: capturas en Windows (Oscuro, Claro y un tema de usuario, a 640, 960 y 1200 px), hover y foco; CI del PR #6 en verde. Sin probar: `Tab` real, pressed y deshabilitado | v1.4.0 (PR #6) |
+| 17  | Limpieza de código sin uso (`IAudioPlayer.Stop`, `LyricLine.Words`, `LibrarySnapshot.Folders`, `ViewLocator`…) | Core, Audio, Infrastructure, Desktop | Hecho: build sin errores, 640 + 173 pruebas, la app arranca igual | v1.4.0 (PR #7) |
 
 ### 4.2 Novedades de la serie v1.1.0
 
@@ -276,7 +276,7 @@ Especificación, decisiones y resultados medidos de cada hito: `docs/specs/dynam
 - **Selectores:** `ModalTracker` cuenta los selectores nativos abiertos (carpeta, imagen y letra) para que la isla no aparezca encima mientras desactivan la ventana principal.
 - **Verificación:** sondas automáticas en Windows para posición, foco, clics a través, saltos durante la animación (0 en ~2 500 muestras), comandos, seek, CPU, monitores, temas, modo inmersivo y carátula ausente. A mano: hover y bordes con la Lupa, foco con el Bloc de notas, primer plano al pulsar el título y escala de la pantalla principal. Modo de depuración: en Debug, `MUSICPLAYER_ISLAND_FORCE=1` la muestra con la ventana principal activa.
 
-### 4.3.4 Letra progresiva en el modo inmersivo (sin release)
+### 4.3.4 Letra progresiva en el modo inmersivo (v1.4.0)
 
 Especificación, decisiones y medidas de cada hito (M0-M6): `docs/specs/lyrics-progressive.md`.
 
@@ -289,7 +289,7 @@ Especificación, decisiones y medidas de cada hito (M0-M6): `docs/specs/lyrics-p
 - **Ajustes:** ninguno. El interruptor temporal Clásico/Progresivo y su ajuste `LyricsStyle` se retiraron al aprobarse el estilo (último commit con ellos: `cb75cf6`). Un `settings.json` que aún los tenga carga igual.
 - **Verificación:** sondas en Windows (CPU por pasadas, ráfagas de capturas, rueda enviada como mensaje, `settings.json` restaurado idéntico por hash) y prueba a mano del autor: relleno, saltos cortos y largos, rueda, pulsar una línea, cambio de pista a mitad de línea, redimensionar, traducción y pronunciación, y el fondo tras editar la carátula. Sin probar: arrastre en pantalla táctil y Linux.
 
-### 4.3.5 Capas de letra (sin release)
+### 4.3.5 Capas de letra (v1.4.0)
 
 Especificación, decisiones y resultado de cada hito (M0-M7): `docs/specs/lyrics-layers.md`.
 
@@ -301,7 +301,7 @@ Especificación, decisiones y resultado de cada hito (M0-M7): `docs/specs/lyrics
 - **Incrustar una capa con selector (M7):** al final del menú, «Incrustar traducción…» e «Incrustar pronunciación…» (sustituyen a «Incrustar letras en el archivo», que tomaba los hermanos y exigía `cancion.lrc`). Cada una abre el selector nativo (dentro de `ModalTracker`) para elegir un `.lrc` de cualquier carpeta y escribe solo esa capa (`ILyricsWriter.WriteLayers`, `LyricsEditor.EmbedLayerAsync`), sin reescribir la letra principal. La valida contra la letra cargada (UTF-8, 1 MB, con marcas de tiempo si la principal las tiene) y, si no vale, no toca el archivo y dice por qué. **Idioma de la traducción:** el del nombre del archivo (`LyricsLanguage.FromFileName`: `algo.en.lrc`, `x.pt-BR.lrc`); si no lo trae (`traduccion.lrc`, `.rom`, `.alt`), el del sistema, y la línea de estado lo avisa. **Reproducción:** el selector se abre antes de soltar el archivo, así que cancelar no corta la música; al elegir, la pista se descarga, se escribe y vuelve a cargarse en el punto en que estaba y sigue sonando si sonaba. Limitación: un hermano `cancion.es.lrc` aún junto al audio gana al leer, así que la capa incrustada no se vería hasta quitarlo.
 - **Verificación:** pruebas en MP3, FLAC y M4A (escritura, lectura, prioridad, conservación de las capas al editar etiquetas, limpiar etiquetas y poner, quitar o aplicar a un álbum la carátula); la app, comprobada por UI Automation y capturas en Windows; y prueba a mano del autor en copias (incrustar en los tres formatos y leer la letra con los `.lrc` movidos).
 
-### 4.3.6 Botones de acción (PR #6, sin release)
+### 4.3.6 Botones de acción (PR #6, v1.4.0)
 
 Especificación, decisiones y resultado de cada hito (M0-M6): `docs/specs/action-buttons.md`.
 
@@ -312,7 +312,7 @@ Especificación, decisiones y resultado de cada hito (M0-M6): `docs/specs/action
 - **Ventana estrecha:** por debajo de 1100 px de ancho, `MainWindow.axaml.cs` pone la clase `compact` a la barra superior y los botones quedan solo con icono (el texto sigue en `ToolTip` y `AutomationProperties.Name`). Con texto, la fila no cabe: a 640 px ya se solapaba con el cuadro de búsqueda antes de este cambio, y a 960 px el texto de estado quedaba sin sitio.
 - **Verificación:** `dotnet build` (mismo aviso CS8602), 641 + 173 pruebas en verde y capturas de la ventana en Windows con los temas Oscuro, Claro y uno de usuario, a 640, 960 y 1200 px, además de hover y foco. El recorrido con `Tab` real no se pudo automatizar (las teclas sintéticas no movían el foco); el foco se comprobó enfocando el botón por código con `NavigationMethod.Tab`, un cambio temporal ya revertido.
 
-### 4.3.7 Limpieza de código sin uso (PR #7, sin release)
+### 4.3.7 Limpieza de código sin uso (PR #7, v1.4.0)
 
 Se quitó lo que ningún camino de la app ejecutaba. Cada pieza se comprobó con búsquedas en `src` y `tests`, y con el analizador de .NET (`dotnet format style --diagnostics IDE0051 IDE0052 IDE0060`).
 
@@ -485,6 +485,92 @@ No actúan al escribir en un cuadro de texto ni dentro de menús y listas desple
 
 SHA-256: `FE5640786A3E63AC2B70F806FF4CBB6229AC5E7DEF7D10DBEB7EC8D4AD8ABE6C`
 
+### MusicPlayer-Desktop v1.4.0
+
+_Fuente del texto: `docs/notas-de-version/v1.4.0.md` (spec: `docs/specs/release-v1.4.0.md`). Borrador preparado el 8 de noviembre de 2026; la publica el autor._
+
+Tres novedades: una **letra progresiva** en el modo inmersivo (estilo Apple Music), **traducción y pronunciación incrustadas** en el propio archivo de audio, y **botones de acción con icono** en la barra superior.
+
+#### Letra progresiva (modo inmersivo)
+
+- En el modo inmersivo, la letra sincronizada se muestra completa con la línea activa a un 35 % del alto, y se **rellena de izquierda a derecha** según la posición real de la pista.
+- Las demás líneas se atenúan y encogen un poco con la distancia, y las de los bordes se funden. Al cambiar de línea, todo se desplaza con un resorte y en cascada.
+- Las pausas instrumentales de 8 s o más muestran «♪», que se rellena con su avance.
+- Pulsar una línea (o «♪») salta a ella. La rueda del ratón o un gesto desplazan a mano, y a los 3 s sin tocar nada la letra vuelve a su sitio.
+- Cuesta poco: reloj propio a 30 fotogramas por segundo pedidos (~24 reales) que solo corre mientras hay algo que mover; en pausa, 0 fotogramas. La carátula del fondo se desenfoca una sola vez, fuera del hilo de la interfaz.
+- **No cambia** el panel lateral ni las letras sin tiempos: siguen con la lista de siempre. No hay ajuste para volver al estilo anterior en el inmersivo.
+- **Limitación:** los `.lrc` solo traen el inicio de cada línea, así que no hay sincronía por palabra: el relleno avanza uniforme durante una duración estimada.
+
+#### Traducción y pronunciación incrustadas
+
+- **«Incrustar letra (.lrc)…»** (clic derecho en la lista) guarda ahora también la **traducción** (`cancion.<idioma>.lrc`) y la **pronunciación** (`cancion.rom.lrc`) dentro del audio, en la misma escritura atómica y verificada que la letra principal. Después puedes quitar los `.lrc` de junto a la música.
+- Dónde se guardan: la principal en su campo de siempre (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) y las capas en campos propios (`LYRICS_TRANSLATION_<IDIOMA>` y `LYRICS_PRONUNCIATION`). Así otro reproductor nunca muestra la traducción como letra principal.
+- **Menú de capas en el modo inmersivo:** botón arriba a la derecha (con letra sincronizada) para mostrar u ocultar traducción, pronunciación y original, con las mismas opciones que el panel lateral. Con el original oculto se rellena la primera capa visible.
+- **«Incrustar traducción…» e «Incrustar pronunciación…»**, al final de ese menú: eligen un `.lrc` de cualquier carpeta con el selector de archivos y escriben solo esa capa, sin tocar la letra principal. El idioma sale del nombre del archivo (`algo.en.lrc`); si no lo trae, se usa el del sistema y la línea de estado lo avisa. Cancelar el selector no corta la música; al escribir, la pista se recarga en el mismo punto.
+- Con varias traducciones se muestra la de tu idioma o, si no, la primera por orden alfabético. Cada capa debe ser UTF-8, de hasta 1 MB y del mismo tipo (con o sin tiempos) que la letra principal; si no, se salta y la línea de estado dice por qué.
+- Formatos con capas: **MP3, FLAC y M4A** (en WAV, OGG u Opus solo la principal).
+- **Un `cancion.es.lrc` junto al audio gana al leer** sobre la capa incrustada: quítalo para ver la incrustada.
+- **Al convertir formato con ffmpeg** (comprobado de MP3 y M4A a MP3, M4A y FLAC): la letra principal solo sobrevive de M4A a M4A o a FLAC, y la traducción y la pronunciación se pierden hacia M4A. Si vas a convertir, conserva los `.lrc` o vuelve a incrustar después.
+
+#### Botones de acción
+
+- «Agregar carpeta», «Limpiar etiquetas», «Convertir lo que veo…» y «Tema», y el «+» de COLECCIONES, comparten un estilo propio: píldora tonal con un icono vectorial a la izquierda del texto, con el color del tema.
+- El «+» ahora tiene globo de ayuda y nombre accesible («Nueva playlist»).
+- Con la ventana por debajo de 1100 px de ancho quedan solo con icono; el nombre sigue en el globo al pasar el cursor.
+- El foco con teclado dibuja un anillo visible. Es un cambio solo visual: comandos y comportamiento no cambian, y los demás botones se ven igual.
+
+#### Interno
+
+- Limpieza de código sin uso (`IAudioPlayer.Stop`, `LyricLine.Words`, la lista `Folders` de `library.json`, `ViewLocator` y la referencia a `Avalonia.Diagnostics`). Un `library.json` antiguo con `Folders` se carga igual.
+
+#### Al actualizar
+
+- Tus ajustes, tu biblioteca y tus playlists siguen funcionando sin cambios. No hay ajustes nuevos.
+- La letra progresiva se activa sola en el modo inmersivo con letra sincronizada.
+- Las letras ya incrustadas con la versión anterior se leen igual; solo hay capas nuevas si las incrustas.
+
+#### Requisitos
+
+- Windows x64 y el [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+- El zip incluye las bibliotecas de BASS (`bass.dll`, `bass_aac.dll`, `bassflac.dll` y `bassmix.dll`). BASS es de [Un4seen Developments](https://www.un4seen.com) y es gratuito solo para uso no comercial.
+- `ffmpeg` es opcional y no se incluye: solo hace falta para convertir formatos.
+
+#### Qué se probó y qué no
+
+- **813 pruebas automáticas** (640 en la lógica y 173 en repositorios, proveedores y escritores). Cubren el relleno, las pausas, el resorte, el desplazamiento y la atenuación de la letra progresiva, y la escritura y lectura de capas en MP3, FLAC y M4A. La interfaz y el dibujo de la letra no tienen pruebas automáticas.
+- **Letra progresiva:** medida con sondas en Windows y probada a mano por el autor (relleno, saltos cortos y largos, rueda, pulsar una línea, cambio de pista a mitad de línea, redimensionar, traducción y pronunciación).
+- **Capas:** comprobadas en la app por UI Automation y probadas a mano en copias, incrustando en los tres formatos y leyendo la letra con los `.lrc` movidos.
+- **Botones de acción:** verificados con capturas en Windows (Oscuro, Claro y un tema propio, a 640, 960 y 1200 px), hover y foco. **Sin probar:** recorrido real con `Tab`, estado pulsado y estado deshabilitado.
+- **Sin probar:** arrastre con el dedo o el lápiz en una pantalla táctil, y **Linux** (la app compila y pasa las pruebas en CI, pero el audio y la interfaz no se han probado allí).
+
+#### Verificar la descarga
+
+El zip no está firmado. Antes de ejecutarlo, comprueba que es el publicado aquí:
+
+```powershell
+Get-FileHash .\MusicPlayer-v1.4.0-win-x64.zip -Algorithm SHA256
+```
+
+El resultado debe ser exactamente:
+
+```
+SHA256: 811541779C14A2D45508C97121EDCE76AD8181C0F28825E2F573A72C2C9AE5FC
+```
+
+- Descárgalo solo desde esta página de Releases. GitHub calcula además el `sha256` de cada archivo adjunto, que puedes ver con `gh release view v1.4.0 --json assets`.
+- Windows puede mostrar un aviso de SmartScreen porque el ejecutable no tiene firma digital.
+- Si prefieres no fiarte del binario, compila tú mismo: `git checkout v1.4.0` y las instrucciones del [README](https://github.com/Saza4/MusicPlayer-Desktop#compilar-y-ejecutar). El zip pesa 11,8 MB, muy por debajo del límite de 2 GiB por archivo de GitHub.
+
+#### Descarga
+
+**`MusicPlayer-v1.4.0-win-x64.zip`**: descomprime y ejecuta `win-x64\MusicPlayer.Desktop.exe`.
+
+#### Contribuyentes
+
+@Saza4
+
+**Historial completo:** https://github.com/Saza4/MusicPlayer-Desktop/compare/v1.3.0...v1.4.0
+
 ## 6. Observaciones sobre las notas de release
 
 Puntos para pulir el texto publicado, sin cambiar el código.
@@ -494,6 +580,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 3. **«Pausa mejorada»** no tiene un cambio propio en el código: lo único nuevo en reproducir y pausar es la barra espaciadora (_deducción_: la nota describe ese commit). «Transición suave, inmediata y sin interrupciones» promete más de lo que cambió. **Los estilos globales** sí tienen código (commit `b382184`, sección 4.3). La nota no menciona que la app pasa a tema oscuro fijo.
 4. **v1.1.0** no menciona el botón **Convertir lo que veo…**, que convierte toda la lista visible, ni que los archivos convertidos se agregan a la biblioteca.
 5. **v1.3.0** se escribió para no repetir lo anterior: describe solo lo que el código hace (teclas y botones con su nombre real), avisa de que la isla viene **activada por defecto** también para quien actualiza, tiene un apartado «Al actualizar» y separa lo probado automáticamente, lo probado a mano y lo que no se probó (Linux y el recorrido completo con el tema Claro y con temas propios). Los temas que se ven en las capturas de desarrollo (Papel, Medianoche, etc.) son archivos del autor en `%APPDATA%\MusicPlayer\themes`, no temas de serie, y las notas solo anuncian Sistema, Oscuro y Claro.
+6. **v1.4.0** sigue el mismo criterio que v1.3.0: nombres reales de botones y menús, apartado «Al actualizar» (sin ajustes nuevos; un `.es.lrc` junto al audio gana a la capa incrustada), avisa de lo que se pierde al convertir con ffmpeg y separa lo probado de lo no probado (`Tab` real, pressed y deshabilitado de los botones, táctil y Linux). Añade una sección «Verificar la descarga» con el SHA-256 y avisa de que el zip no está firmado. El texto dice «letra progresiva» sin sincronía por palabra, porque los `.lrc` solo traen el inicio de cada línea.
 
 ## 7. Pruebas y calidad
 
@@ -633,7 +720,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 1. **Integración con el sistema:** SMTC en Windows y MPRIS en Linux.
 2. **Probar en Linux:** omitido por ahora.
-3. **Publicar una release** que incluya la letra progresiva, las capas de letra y los botones de acción (la última, v1.3.0, no los lleva).
+3. **Publicar v1.4.0** (letra progresiva, capas de letra y botones de acción): el borrador está preparado y la publica el autor tras confirmar la licencia de BASS.
 4. **Captura del README:** `docs/screenshot.png` se actualizó el 8 de noviembre de 2026 (barra superior con iconos, biblioteca vacía).
 
 **Deuda menor conocida:** ninguna de las anteriores sigue en pie. El 8 de noviembre de 2026 se quitó el código sin uso (ver 4.3.7). Quedan dos ayudas que solo usan las pruebas: `LyricsLayers.MainOnly` y `LyricsLanguage.KnownLanguageCount`; y un dato que se guarda pero ninguna pantalla muestra, el género (`Track.Genre`).
