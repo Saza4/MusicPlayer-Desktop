@@ -40,6 +40,12 @@
         Opacity="0.1215686275"
         Color="{DynamicResource ThemeOverlay}" />
 
+    <!--
+        Anillo de foco de los botones «action» (ActionButtonStyles.axaml): el color de texto de la variante, con 3:1
+        garantizado contra background y surface (el acento no lo está). No es uno de los nueve colores del tema.
+    -->
+    <SolidColorBrush x:Key="ThemeFocusRingBrush" Color="{DynamicResource SystemBaseHighColor}" />
+
     <!--  Cuadro de búsqueda y listas desplegables  -->
     <SolidColorBrush
         x:Key="TextControlBackground"
