@@ -31,30 +31,14 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     [NotifyPropertyChangedFor(nameof(ShowPanel), nameof(ShowClassicImmersive))]
     private bool _isAvailable;
 
-    // Estilo de la letra en el modo inmersivo (docs/specs/lyrics-progressive.md, criterio 10). Ajuste temporal:
-    // se retira, con el estilo clásico del inmersivo, cuando el autor apruebe el progresivo.
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsProgressiveStyle), nameof(ShowProgressiveImmersive), nameof(ShowClassicImmersive))]
-    private LyricsStyle _style = LyricsStyle.Classic;
+    // Modo inmersivo (docs/specs/lyrics-progressive.md): la letra sincronizada va siempre con el estilo
+    // progresivo; la letra sin tiempos (Plain) sigue en la lista clásica. El panel lateral es siempre la lista.
 
-    /// <summary>Para el interruptor del modo inmersivo.</summary>
-    public bool IsProgressiveStyle
-    {
-        get => Style == LyricsStyle.Progressive;
-        set => Style = value ? LyricsStyle.Progressive : LyricsStyle.Classic;
-    }
+    /// <summary>Modo inmersivo: letra progresiva (letras sincronizadas).</summary>
+    public bool ShowProgressiveImmersive => IsSynced;
 
-    partial void OnStyleChanged(LyricsStyle value)
-    {
-        if (!_restoring)
-            settings.Update(s => s with { LyricsStyle = value });
-    }
-
-    /// <summary>Modo inmersivo: letra progresiva (solo letras sincronizadas).</summary>
-    public bool ShowProgressiveImmersive => Style == LyricsStyle.Progressive && IsSynced;
-
-    /// <summary>Modo inmersivo: lista clásica (letras sin sincronizar, o estilo clásico).</summary>
-    public bool ShowClassicImmersive => IsAvailable && !ShowProgressiveImmersive;
+    /// <summary>Modo inmersivo: lista clásica (letras sin sincronizar).</summary>
+    public bool ShowClassicImmersive => IsAvailable && !IsSynced;
 
     /// <summary>Posición actual del reproductor, para el relleno fotograma a fotograma.</summary>
     public TimeSpan CurrentPosition => player.CurrentTime;
@@ -116,7 +100,6 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
             ShowPronunciation = saved.ShowPronunciation;
             HideOriginal = saved.HideOriginal;
             EmphasizePronunciation = saved.EmphasizePronunciation;
-            Style = saved.LyricsStyle;
         }
         finally
         {

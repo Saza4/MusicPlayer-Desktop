@@ -31,7 +31,7 @@ public sealed class ProgressiveLyricsView : Panel
     public static readonly StyledProperty<LyricsViewModel?> SourceProperty =
         AvaloniaProperty.Register<ProgressiveLyricsView, LyricsViewModel?>(nameof(Source));
 
-    /// <summary>La letra está a la vista (modo inmersivo con el estilo progresivo).</summary>
+    /// <summary>La letra está a la vista (modo inmersivo con letra sincronizada).</summary>
     public static readonly StyledProperty<bool> IsShownProperty =
         AvaloniaProperty.Register<ProgressiveLyricsView, bool>(nameof(IsShown));
 
@@ -70,15 +70,11 @@ public sealed class ProgressiveLyricsView : Panel
         Background = Brushes.Transparent; // la rueda y los gestos cuentan en todo el panel, no solo sobre el texto
         AddHandler(Gestures.TappedEvent, OnTapped);
 
-        var fps = M.FramesPerSecond;
 #if DEBUG
-        if (double.TryParse(Environment.GetEnvironmentVariable("MUSICPLAYER_LYRICS_CLOCK"),
-                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var custom) && custom > 0)
-            fps = custom;
         _stats = ClockStats.FromEnvironment();
 #endif
         // Este constructor arranca el temporizador: se para hasta que haga falta (StartClock).
-        _frames = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / fps), DispatcherPriority.Render, (_, _) => Tick());
+        _frames = new DispatcherTimer(TimeSpan.FromSeconds(1.0 / M.FramesPerSecond), DispatcherPriority.Render, (_, _) => Tick());
         _frames.Stop();
         _wake = new DispatcherTimer(DispatcherPriority.Normal);
         _wake.Tick += (_, _) => { _wake.Stop(); Tick(); };

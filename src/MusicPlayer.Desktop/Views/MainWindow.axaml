@@ -965,16 +965,6 @@
                     ToolTip.Tip="Cerrar">
                     <PathIcon Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 </Button>
-                <!--  Interruptor temporal Clásico/Progresivo (spec de letras progresivas, criterio 10)  -->
-                <ToggleButton
-                    Margin="16"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    AutomationProperties.Name="Letra progresiva"
-                    Content="Letra progresiva"
-                    IsChecked="{Binding Lyrics.IsProgressiveStyle}"
-                    IsVisible="{Binding Lyrics.IsSynced}"
-                    ToolTip.Tip="Alternar entre la letra progresiva y la lista clásica" />
                 <Grid Margin="48,72,48,32" ColumnDefinitions="*,*">
                     <!--  Izquierda: carátula, datos y controles  -->
                     <StackPanel
@@ -1106,7 +1096,7 @@
                     </StackPanel>
                     <!--  Derecha: letras con la misma plantilla que el panel lateral  -->
                     <Panel Grid.Column="1" Margin="32,0,0,0">
-                        <!--  Letra progresiva (ajuste LyricsStyle)  -->
+                        <!--  Letra sincronizada: progresiva (docs/specs/lyrics-progressive.md)  -->
                         <controls:ProgressiveLyricsView
                             DimForeground="#59FFFFFF"
                             IsPlaying="{Binding IsPlaying}"

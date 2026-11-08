@@ -53,13 +53,12 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.Null(loaded.LastTrackId);
         Assert.Equal("dark", loaded.ThemeId); // un settings.json anterior a los temas sigue en Oscuro
         Assert.True(loaded.ShowIsland);       // y uno anterior a la isla la recibe activada
-        Assert.Equal(LyricsStyle.Classic, loaded.LyricsStyle);
     }
 
     [Fact]
-    public async Task Load_SettingsFromV130_KeepClassicLyrics()
+    public async Task Load_SettingsFromV130_KeepsEverything()
     {
-        // settings.json tal como lo escribe la v1.3.0: completo, pero anterior a LyricsStyle.
+        // settings.json tal como lo escribe la v1.3.0.
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         await File.WriteAllTextAsync(FilePath, """
             {
@@ -78,15 +77,18 @@ public class JsonSettingsRepositoryTests : IDisposable
 
         var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
 
-        Assert.Equal(LyricsStyle.Classic, loaded.LyricsStyle);
-        Assert.Equal("negro-puro", loaded.ThemeId); // y lo demás se conserva
+        Assert.Equal("negro-puro", loaded.ThemeId);
         Assert.True(loaded.Shuffle);
     }
 
+    // Ajustes retirados de la letra progresiva (spec, M5 y M6): un settings.json que aún los tenga carga bien.
     [Theory]
-    [InlineData("ReduceMotion")] // como lo escribía la app en las pruebas de M5 (ajuste ya retirado)
-    [InlineData("reduceMotion")]
-    public async Task Load_WithRetiredReduceMotionKey_LoadsEverythingElse(string key)
+    [InlineData("\"LyricsStyle\": 1")]   // el interruptor Clásico/Progresivo, retirado en M6
+    [InlineData("\"LyricsStyle\": 0")]
+    [InlineData("\"ReduceMotion\": true")] // «reducir movimiento», retirado en M5
+    [InlineData("\"reduceMotion\": true")]
+    [InlineData("\"LyricsStyle\": 1, \"ReduceMotion\": false")]
+    public async Task Load_WithRetiredLyricsKeys_LoadsEverythingElse(string retired)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         await File.WriteAllTextAsync(FilePath, $$"""
@@ -97,8 +99,7 @@ public class JsonSettingsRepositoryTests : IDisposable
               "Shuffle": true,
               "ThemeId": "negro-puro",
               "ShowIsland": false,
-              "LyricsStyle": 1,
-              "{{key}}": true
+              {{retired}}
             }
             """);
 
@@ -112,17 +113,6 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.True(loaded.Shuffle);
         Assert.Equal("negro-puro", loaded.ThemeId);
         Assert.False(loaded.ShowIsland);
-        Assert.Equal(LyricsStyle.Progressive, loaded.LyricsStyle);
-    }
-
-    [Fact]
-    public async Task SaveThenLoad_KeepsTheLyricsStyle()
-    {
-        await new JsonSettingsRepository(FilePath).SaveAsync(AppSettings.Default with { LyricsStyle = LyricsStyle.Progressive });
-
-        var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
-
-        Assert.Equal(LyricsStyle.Progressive, loaded.LyricsStyle);
     }
 
     [Fact]
