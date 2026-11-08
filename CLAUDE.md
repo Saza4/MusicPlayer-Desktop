@@ -25,6 +25,8 @@ Letra progresiva del modo inmersivo (spec en `docs/specs/lyrics-progressive.md`)
 
 Los fps (30 pedidos, ~24 reales), las medidas y los tiempos están en `ProgressiveLyricsMetrics`; la lógica (relleno, pausas, resorte, desplazamiento, atenuación) en Core.
 
+Capas de letra (traducción y pronunciación incrustadas; spec en `docs/specs/lyrics-layers.md`). **Excepción a la regla de no subir audio:** `tests/MusicPlayer.Infrastructure.Tests/Fixtures/silencio.m4a` (0,1 s de silencio generado con ffmpeg, sin derechos), porque un M4A no se arma a mano en la prueba. El MP3 y el FLAC de prueba se generan en código (`TestAudio`). No añadas otros archivos de audio.
+
 ## Arquitectura
 
 `Desktop` (Avalonia + CommunityToolkit.Mvvm) → `Audio` (ManagedBass) e `Infrastructure` (TagLibSharp, JSON, ffmpeg) → `Core` (modelos, interfaces y lógica sin paquetes externos). La lógica testeable va en Core: no hay pruebas de Desktop ni de Audio.

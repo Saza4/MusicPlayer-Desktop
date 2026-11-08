@@ -1,0 +1,164 @@
+# Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
+
+Estado: **aprobada (7 de noviembre de 2026), en curso: M0 hecho**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+
+## Contexto
+
+Hoy la traducción y la pronunciación se leen solo de archivos hermanos junto al audio (`cancion.<idioma del sistema>.lrc` y `cancion.rom.lrc`, en `CompanionLyricsProvider`) y se unen al original con `LyricsMerger` (por marca de tiempo, ±300 ms). «Incrustar letra (.lrc)…» solo incrusta el principal (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) con `SafeFileEdit` y verificación. El README lo anota como limitación: las capas no viajan con el audio.
+
+Dos cambios:
+- **A.** Incrustar también las capas hermanas y leerlas del archivo cuando no haya hermanos.
+- **B.** Un botón en el modo inmersivo con un `MenuFlyout` para mostrar u ocultar las capas, con el mismo estado persistente que el panel lateral (que no se toca).
+
+Lo que ya existe y se reutiliza:
+- `LyricsDisplayOptions.HideOriginal` (persistido en `AppSettings`) y `Resolve()`, que ya impide ocultarlo todo.
+- `LyricsViewModel.HasTranslation` / `HasPronunciation`, calculados de las líneas unidas.
+- `LyricsMerger.Merge`, `LyricsEditor` (UTF-8 estricto, 1 MB, no vacío), `SafeFileEdit.Run`.
+- En la vista progresiva, el orden de renglones es pronunciación, original (relleno) y traducción. Hoy, con el original oculto, no se rellena nada.
+
+## Criterios de aceptación
+
+**Cambio A: incrustar**
+1. «Incrustar letra (.lrc)…» incrusta en **una sola escritura atómica** (`SafeFileEdit`) el principal y las capas que existan junto a él.
+   - Capas que cuentan: `<nombre>.<código>.lrc` como traducción y `<nombre>.rom.lrc` como pronunciación.
+   - **Código de idioma válido:** un código ISO 639-1 real (lista fija en Core, sin depender de las culturas del sistema), con una subetiqueta opcional de región (`pt-BR`, dos letras) o de escritura (`zh-Hans`, cuatro letras). Se normaliza: idioma en minúsculas, región en mayúsculas y escritura con mayúscula inicial. `.alt.lrc`, `.mix.lrc` o `.rom.lrc` no son traducciones (`alt` y `mix` solo están en ISO 639-3; `rom` es la pronunciación).
+   - Los hermanos no se borran ni se modifican; se comprueba con un hash en la prueba.
+2. **Dónde se guarda cada capa:**
+   - El principal sigue en su campo estándar, sin cambios: USLT, `LYRICS` y `©lyr`.
+   - Traducción y pronunciación van en campos propios, con el mismo nombre en los tres formatos: `LYRICS_TRANSLATION_<CÓDIGO>` (por ejemplo `LYRICS_TRANSLATION_ES` o `LYRICS_TRANSLATION_PT-BR`) y `LYRICS_PRONUNCIATION`. **Se escriben en mayúsculas y se leen sin distinguir mayúsculas.**
+
+     | Formato | Campo |
+     |---|---|
+     | MP3 | TXXX |
+     | FLAC | comentario Vorbis |
+     | M4A | átomo libre `----:com.apple.iTunes:…` |
+
+   - La traducción lleva su código de idioma; la pronunciación, no.
+3. **Verificación:** tras escribir, se reabre la copia y se comparan todas las capas escritas. Si una falla, el original queda intacto.
+4. **Reincrustar:**
+   - Reemplaza solo las capas que tienen archivo de origen; las demás se conservan.
+   - Nunca duplica un campo.
+5. **Validación por capa:** la misma de hoy (UTF-8 estricto, ≤ 1 MB por capa, no vacía).
+   - Principal inválido: se cancela todo y no se escribe nada.
+   - Capa secundaria inválida: se salta y se avisa.
+6. **Hermano sin principal:** sin `.lrc` principal no se incrusta. Si se elige el principal con el selector, las capas se toman junto al archivo elegido (`elegido.es.lrc`), no junto al audio. **En la práctica, con el selector casi solo se incrusta el principal**: rara vez hay capas junto a un `.lrc` elegido de otra carpeta.
+7. **Línea de estado:** resume lo incrustado y lo saltado. Ejemplo: «Letra de "X" incrustada: original, traducción (es) y pronunciación · saltada: traducción (en), no está en UTF-8».
+
+**Lectura**
+
+8. Si la canción no tiene hermanos pero sí capas incrustadas, se muestran igual en el panel y en el inmersivo.
+9. **Pronunciación:** el hermano gana al incrustado, la misma prioridad que el principal.
+10. **Una sola traducción visible, elegida primero por idioma** entre todas las disponibles (hermanas e incrustadas juntas):
+    1. La del idioma exacto del sistema (`CurrentUICulture.Name`, por ejemplo `pt-BR`).
+    2. Si no, la del mismo idioma principal (`pt`): primero la que no lleva subetiqueta y luego la primera alfabética (`pt-BR` antes que `pt-PT`).
+    3. Si no, la primera por orden alfabético de código.
+    - **Dentro del mismo código, el hermano gana al incrustado.**
+    - Cambia la conducta de hoy: un `.en.lrc` con el sistema en español pasa a mostrarse (hoy solo se lee el del idioma del sistema).
+11. **El panel lateral cambia de comportamiento sin cambio de código:** como lee del mismo proveedor, mostrará también las capas incrustadas y la traducción en otro idioma. Su texto «Esta canción no tiene archivos .lrc de traducción ni de pronunciación.» deja de ser exacto con capas incrustadas; se deja como está y se anota como limitación (P5).
+
+**Cambio B: botón en el inmersivo**
+
+12. Un botón con icono vectorial de burbuja con caracteres (distinto del de comillas) abre un `MenuFlyout`.
+    - Solo se muestra con letra **sincronizada** y al menos una capa disponible, sea hermana o incrustada.
+13. **Opciones del menú:**
+    - «Mostrar/Ocultar traducción», «Mostrar/Ocultar pronunciación» y «Mostrar/Ocultar original». Cada una solo aparece si su capa existe (el original, siempre que haya alguna otra).
+    - **Las etiquetas siguen el estado resuelto por `Resolve()`**, no la preferencia guardada: si `HideOriginal` está activo pero el original se ve porque no queda otra capa visible, la etiqueta dice «Ocultar original».
+    - **Se desactiva cualquier opción que dejaría todo oculto** (no solo «Ocultar original»): por ejemplo, «Ocultar traducción» con el original oculto y sin pronunciación visible.
+    - Cuando la traducción mostrada no es la del idioma del sistema, la etiqueta lleva el código: «Mostrar traducción (en)».
+    - El cálculo de etiquetas, visibilidad y desactivado vive en Core, con pruebas.
+14. **Estado compartido:** el menú usa `LyricsViewModel.ShowTranslation`, `ShowPronunciation` y `HideOriginal`, el mismo estado persistente que el panel lateral. Así quedan sincronizados; el panel no se modifica.
+15. **Colores** solo con recursos del tema, sin literales `#RRGGBB` en el XAML nuevo.
+16. **Espacio** sigue siendo reproducir/pausa con el foco en el botón y el menú cerrado (se comprueba a mano). Con el menú abierto, las teclas son del menú: Espacio y Enter activan la opción enfocada y Esc cierra.
+17. **Relleno:**
+    - Con el original visible, solo se rellena el original.
+    - Con el original oculto, se rellena la primera capa visible (pronunciación y, si no, traducción). El cálculo vive en Core, con prueba.
+    - Las capas que no se rellenan se atenúan según el estado de la línea, como hoy.
+    - El criterio 6 de `lyrics-progressive.md` se enmienda con referencia a esta spec.
+
+**Calidad**
+
+18. Lógica nueva en Core con pruebas, solo con letras sintéticas.
+19. Pruebas de escritura y lectura en MP3, FLAC y M4A (el spike confirmó que M4A es fiable).
+20. `dotnet build -c Release` sin warnings nuevos (hoy hay 1 CS8602 conocido). Todas las pruebas en verde y CI verde en Windows y Ubuntu.
+21. Un `settings.json` anterior carga igual: no hay ajustes nuevos, y una prueba lo confirma.
+22. **Archivo M4A de prueba:** excepción explícita a la regla de no subir audio. Es silencio de 0,1 s generado con ffmpeg (sin derechos), en `tests/MusicPlayer.Infrastructure.Tests/Fixtures/`, anotado en CLAUDE.md. El `.gitignore` no ignora audio, así que no hace falta negación.
+
+## Fuera de alcance
+- Lo que dio el usuario:
+  - Capas generadas automáticamente o descargadas.
+  - Pronunciación palabra a palabra.
+  - Tamaño de texto por capa.
+  - Editar capas en la app.
+- Además:
+  - Cambiar el código del panel lateral, incluido su texto «no tiene archivos .lrc…» (ver criterio 11).
+  - Elegir entre varias traducciones desde la UI.
+  - «Pronunciación en texto grande» en el menú del inmersivo.
+  - Borrar capas incrustadas.
+  - Formatos distintos de MP3, FLAC y M4A (OGG, Opus, WMA): solo el principal, como hoy, con aviso.
+
+## Casos límite
+- **Hermano sin principal:** no se incrusta nada y la línea de estado lo dice. Con el selector, ver P3.
+- **Distinto número de líneas o marcas que no casan:**
+  - Se incrusta tal cual: no se valida contra el original.
+  - Al leer, `LyricsMerger` empareja por marca (±300 ms); las líneas sin pareja quedan sin capa.
+- **Hermano vacío, mal formado o no UTF-8:** se salta, se avisa y lo demás se incrusta.
+  - «Mal formado» significa que no da letra al analizarlo.
+  - Con un tipo distinto del principal (Plain frente a Synced), `LyricsMerger` ya lo ignora al leer.
+- **Solo traducción o solo pronunciación:** se incrusta la que haya, y el menú solo muestra esa opción.
+- **Reincrustar:** sin duplicados.
+  - Una capa sin hermano conserva la incrustada, aunque el principal haya cambiado.
+- **Editar un hermano después de incrustar:** el hermano gana al leer (criterios 9 y 10). El archivo de audio solo cambia al volver a incrustar.
+- **Letra `Plain`:** sin botón y sin cambios en el inmersivo, que sigue con el render clásico.
+- **Cambio de pista con el menú abierto:** el menú se cierra al cambiar las capas disponibles. Si queda abierto, sus opciones se recalculan y nunca actúa sobre una capa que ya no existe.
+- **Espacio con el menú abierto:** el menú recibe las teclas (criterio 16).
+- **Códigos con región o escritura** (`pt-BR`, `zh-Hans`): valen como traducción si el idioma es ISO 639-1; `pt-BR` y `pt` son traducciones distintas. Un código cuya subetiqueta no tenga esa forma (`es-latino`) no cuenta.
+- **Códigos que no son idiomas** (`.alt.lrc`, `.mix.lrc`, `.live.lrc`): se ignoran.
+- **`settings.json` anterior:** carga igual.
+- **Varias traducciones** (`.es.lrc` y `.en.lrc`): se incrustan todas y se muestra una (criterio 10).
+- **Audio con un punto en el nombre** (`tema.en vivo.mp3`): los hermanos son `tema.en vivo.es.lrc`. La regla toma el nombre sin extensión del audio como prefijo exacto.
+- **Archivo en uso por la reproducción:** se libera antes de escribir con el evento `Saving` → `OnTagsSaving`, como hoy.
+
+## Decisiones tomadas (del usuario)
+1. El principal va en su campo estándar. Traducción y pronunciación van en TXXX, Vorbis y átomo libre. Antes, un spike. Si M4A no es fiable, primero MP3 y FLAC, con M4A como limitación.
+2. Se guarda el código del archivo (`es`). Se muestra una traducción: la del sistema o la primera alfabética. La pronunciación no lleva idioma.
+3. «Ocultar original» **ya existe** (`LyricsDisplayOptions.HideOriginal`) y se reutiliza. No se puede ocultar todo. Con el original oculto, se rellena la primera capa visible.
+4. Sin diálogo: se incrusta todo lo que haya, en una sola escritura. Reincrustar reemplaza solo las capas con fuente. Un hermano sin principal no se incrusta. La línea de estado resume.
+5. 1 MB por capa. Principal inválido: se cancela. Secundaria inválida: se salta y se avisa.
+
+## Revisión del autor (P1-P6 aceptados, con ajustes)
+- **P1. Nombres de campo:** `LYRICS_TRANSLATION_<CÓDIGO>` y `LYRICS_PRONUNCIATION` en los tres formatos, escritos en mayúsculas y leídos sin distinguir mayúsculas (criterio 2). TXXX y no USLT adicionales: otro reproductor nunca muestra la traducción como letra principal, y `Tag.Lyrics = null` no las borra (comprobado en M0).
+- **P2. Traducción en otro idioma:** la regla vale igual para hermanos e incrustadas. Se elige primero por idioma y, dentro del mismo, gana el hermano (criterio 10). El menú muestra el código cuando no es la del sistema (criterio 13).
+- **P3. Selector:** las capas se toman junto al archivo elegido; casi siempre se incrusta solo el principal (criterio 6).
+- **P4. Espacio:** con el menú abierto, las teclas son del menú; con el menú cerrado, Espacio en el botón reproduce o pausa, comprobado a mano (criterio 16).
+- **P5. Panel lateral:** su código no se toca, pero cambia su comportamiento; se anota (criterio 11).
+- **P6. Archivos de prueba:** el FLAC se arma en la prueba; el M4A es un archivo guardado, como excepción explícita (criterio 22).
+- **Código de idioma:** se valida contra una lista real ISO 639-1, con región o escritura opcionales (criterio 1).
+- **Criterio 13:** se desactiva cualquier opción que dejaría todo oculto, y las etiquetas siguen `Resolve()`.
+- **M4:** la prueba a mano se hace en tres copias, no en archivos reales.
+
+## Hitos (un commit cada uno)
+
+| Hito | Contenido | Verificación |
+|---|---|---|
+| M0 | (**hecho**, ver «Resultado del spike») Spike de TagLib 2.3.0: escribir y leer TXXX, Vorbis y `----` con texto multilínea y Unicode, ~1 MB y reabriendo el archivo. Archivos de prueba FLAC/M4A (P6). Resultado anotado en la spec; la spec entra en el commit. | Pruebas del spike en Infrastructure |
+| M1 | Core: modelo de capas (`LyricsLayers`: principal, traducciones por código, pronunciación), regla de nombres de hermanos (`<nombre>.<código>.lrc`) y de campos, elección de traducción. `LyricsEditor` valida por capa y devuelve un resumen (incrustado y saltado con su motivo). | Pruebas Core con un escritor falso |
+| M2 | Infrastructure (escritura): `ILyricsWriter` con capas, `TagLibLyricsWriter` por formato, reemplazo solo de las capas con fuente, verificación de todas. | MP3, FLAC y M4A: escribe, reemplaza sin duplicar, conserva etiquetas y audio, no deja temporales, falla sin tocar el original |
+| M3 | Infrastructure (lectura): lector de capas incrustadas; `CompanionLyricsProvider` con prioridad por capa (hermano > incrustado) y elección de traducción. | Pruebas: solo incrustado, solo hermano, ambos, varias traducciones |
+| M4 | Desktop A: `EmbedLyricsViewModel` busca los hermanos (junto al audio o al elegido), aviso en la línea de estado. | A mano (autor), **en tres copias** (MP3, FLAC y M4A), no en archivos reales: la escritura no se puede deshacer. Incrustar y abrir cada copia sin los hermanos |
+| M5 | Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
+| M6 | Docs en commit aparte: README (limitación), `reporte-reproductor.md`, spec, CLAUDE.md (número de pruebas). Push, PR y CI verde en Windows y Ubuntu. | CI |
+
+## Resultado del spike (M0)
+
+Con TagLibSharp 2.3.0, primero en el scratchpad y luego como pruebas (`TagLibLyricsLayersSpikeTests`, en Infrastructure):
+
+| Formato | API | Multilínea, Unicode, `/` y `;` | ~740 KB (spike) y ~500 KB (prueba) | Reescribir | Mayúsculas al leer | Principal |
+|---|---|---|---|---|---|---|
+| MP3 (ID3v2.3, UTF-16) | `UserTextInformationFrame.Get(tag, desc, StringType.UTF16, true)` | igual, en una sola parte (no parte por `/`) | igual | no duplica | `Get` **distingue**: se busca recorriendo `GetFrames<UserTextInformationFrame>()` con `OrdinalIgnoreCase` | USLT intacto; `Tag.Lyrics = null` no toca los TXXX |
+| FLAC (Vorbis) | `XiphComment.SetField`, `GetFirstField` y enumeración de nombres | igual | igual | no duplica | no distingue (Vorbis guarda los nombres en mayúsculas) | `LYRICS` intacto |
+| M4A (`----`) | `AppleTag.SetDashBox("com.apple.iTunes", nombre, texto)` y `GetDashBox`; los nombres se enumeran con las cajas `----` y sus hijas `mean` y `name` | igual | igual | no duplica | `GetDashBox` no distingue | `©lyr` intacto |
+
+- **M4A es fiable:** entra en el alcance y no queda como limitación.
+- **FLAC de prueba armado a mano** (`fLaC` + STREAMINFO de 34 bytes, sin marcos de audio): TagLib lo abre, lo escribe y lo relee. No hace falta un archivo guardado.
+- **M4A de prueba:** no se arma a mano. `Fixtures/silencio.m4a` (778 bytes, AAC, 8 kHz, mono, 0,1 s, sin metadatos): `ffmpeg -f lavfi -i anullsrc=r=8000:cl=mono -t 0.1 -c:a aac -b:a 16k -map_metadata -1 -fflags +bitexact -flags:a +bitexact silencio.m4a`.
+- La escritura real (`TagLibLyricsWriter` con capas) es M2; las pruebas de M0 solo fijan lo que TagLib permite.
