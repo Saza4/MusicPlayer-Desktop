@@ -37,8 +37,15 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
         var extras = new List<LyricsLayer>();
         var embedded = new List<LyricsLayerSource>();
         var skipped = new List<LyricsLayerSkip>();
+        var supported = layers.Count == 0 || writer.SupportsLayers(track.FilePath);
         foreach (var source in layers)
         {
+            if (!supported)
+            {
+                skipped.Add(new LyricsLayerSkip(source, "este formato no la guarda"));
+                continue;
+            }
+
             var (text, error) = await ReadAsync(source.Path, ct);
             if (text is not null && !parser.Parse(text).IsAvailable)
                 error = ReadError.NoLyrics;

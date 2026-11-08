@@ -1,6 +1,6 @@
 # Especificación: Capas de letra (traducción y pronunciación incrustadas, y botón en el inmersivo)
 
-Estado: **aprobada (7 de noviembre de 2026), en curso: M0 y M1 hechos**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
+Estado: **aprobada (7 de noviembre de 2026), en curso: M0, M1 y M2 hechos**. El autor aceptó P1-P6 con ajustes (ver «Revisión del autor»). Rama: `feature/capas-letra`.
 
 ## Contexto
 
@@ -158,7 +158,7 @@ Así, ningún nombre que hoy se muestra deja de mostrarse. Una prueba lo fija pa
 |---|---|---|
 | M0 | (**hecho**, ver «Resultado del spike») Spike de TagLib 2.3.0: escribir y leer TXXX, Vorbis y `----` con texto multilínea y Unicode, ~1 MB y reabriendo el archivo. Archivos de prueba FLAC/M4A (P6). Resultado anotado en la spec; la spec entra en el commit. | Pruebas del spike en Infrastructure |
 | M1 | (**hecho**, ver «Resultado de M1») Core: modelo de capas (`LyricsLayers`: principal, traducciones por código, pronunciación), regla de nombres de hermanos (`<nombre>.<código>.lrc`) y de campos, elección de traducción. `LyricsEditor` valida por capa y devuelve un resumen (incrustado y saltado con su motivo). | Pruebas Core con un escritor falso |
-| M2 | Infrastructure (escritura): `ILyricsWriter` con capas, `TagLibLyricsWriter` por formato, reemplazo solo de las capas con fuente, verificación de todas. | MP3, FLAC y M4A: escribe, reemplaza sin duplicar, conserva etiquetas y audio, no deja temporales, falla sin tocar el original. Además (pedido por el autor): nombres con guion (`LYRICS_TRANSLATION_PT-BR`, `LYRICS_TRANSLATION_ZH-HANS`) en TXXX, Vorbis y `----`, con la mayúscula normalizada de vuelta (`pt-BR`, `zh-Hans`); borrar la principal (`Tag.Lyrics = null`) no toca las capas en FLAC y M4A; el editor de etiquetas y «Limpiar etiquetas» (ambos con `TagLibTrackTagWriter`) conservan las capas en los tres formatos; una capa de exactamente 1 MB se escribe y se relee en los tres |
+| M2 | (**hecho**, ver «Resultado de M2») Infrastructure (escritura): `ILyricsWriter` con capas, `TagLibLyricsWriter` por formato, reemplazo solo de las capas con fuente, verificación de todas. | MP3, FLAC y M4A: escribe, reemplaza sin duplicar, conserva etiquetas y audio, no deja temporales, falla sin tocar el original. Además (pedido por el autor): nombres con guion (`LYRICS_TRANSLATION_PT-BR`, `LYRICS_TRANSLATION_ZH-HANS`) en TXXX, Vorbis y `----`, con la mayúscula normalizada de vuelta (`pt-BR`, `zh-Hans`); borrar la principal (`Tag.Lyrics = null`) no toca las capas en FLAC y M4A; el editor de etiquetas y «Limpiar etiquetas» (ambos con `TagLibTrackTagWriter`) conservan las capas en los tres formatos; una capa de exactamente 1 MB se escribe y se relee en los tres |
 | M3 | Infrastructure (lectura): lector de capas incrustadas; `CompanionLyricsProvider` con prioridad por capa (hermano > incrustado) y elección de traducción. | Pruebas: solo incrustado, solo hermano, ambos, varias traducciones |
 | M4 | Desktop A: `EmbedLyricsViewModel` busca los hermanos (junto al audio o al elegido), aviso en la línea de estado. | A mano (autor), **en tres copias** (MP3, FLAC y M4A), no en archivos reales: la escritura no se puede deshacer. Incrustar y abrir cada copia sin los hermanos |
 | M5 | Desktop B: botón e icono, `MenuFlyout` con etiquetas dinámicas, visibilidad, cierre al cambiar de pista, Espacio. Relleno de la primera capa visible (Core + `ProgressiveLyricsView`). | Pruebas Core del menú y del relleno; a mano: menú, sincronía con el panel, Plain sin botón, Espacio con el foco en el botón |
@@ -193,3 +193,20 @@ Todo en Core, con pruebas (569 en Core, +87):
 - **Linux:** la lectura de hermanos y la incrustación usan **el mismo buscador**, `LyricsSiblingFiles.Find` (Infrastructure). Recorre la carpeta con `MatchCasing.CaseInsensitive` (en Linux el patrón `*.lrc` distingue mayúsculas por defecto) y compara los nombres con `LyricsLayerNames.FindSiblings`, sin distinguir mayúsculas. No hay ninguna consulta por nombre exacto.
 - **Parte de M3 adelantada:** `CompanionLyricsProvider` ya usa ese buscador y elige la traducción con `LyricsLanguage.Pick`, con la cultura del sistema (`CultureInfo.CurrentUICulture.Name`). Pruebas: otro idioma, varias traducciones, `es-ES` frente a `es-419`, `.ES.lrc` y `SONG.ROM.LRC`, `.fil.lrc` con el sistema en `fil`, y `.fil`, `.alt` y `.mix` ignorados. Falta la lectura de lo incrustado (M3).
 - **El principal no cambia:** `cancion.lrc` se sigue buscando por nombre exacto (`Path.ChangeExtension`), igual en la lectura (`LrcFileLyricsProvider`) y en la incrustación (`EmbedLyricsViewModel`). Las dos partes ven lo mismo; en Linux, `cancion.LRC` no cuenta como principal, igual que hoy.
+- **CI tras los ajustes:** PR en borrador #5, abierto solo para ver Ubuntu (el CI corre en pull requests). Verde en `windows-latest` y `ubuntu-24.04`, con las pruebas de `.ES.lrc` y `SONG.ROM.LRC`.
+
+## Resultado de M2
+
+- **`TagLibLyricsLayerFields`** (Infrastructure): `Supports` (`.mp3`, `.flac` y `.m4a`, sin distinguir mayúsculas), `Set`, `Get` y `Read` por formato. `Set` quita antes cualquier campo con el mismo nombre en otras mayúsculas (TXXX con `RemoveFrame`, Vorbis con `RemoveField`, `----` con `SetDashBox(…, null)`) y escribe el nombre en mayúsculas. `Read` devuelve las capas con el código normalizado e ignora los campos que no son capas o tienen un código que no vale. Lo usará la lectura de M3.
+- **`TagLibLyricsWriter`**: principal y capas en la misma copia temporal de `SafeFileEdit` y verificación de todas al reabrir. Las capas que no vienen se conservan. Con capas en un formato que no las guarda, lanza `NotSupportedException`.
+- **`ILyricsWriter.SupportsLayers`**: el editor la consulta antes. En un formato sin capas (WAV), incrusta solo el principal y salta las capas con el motivo «este formato no la guarda» (spec, «Fuera de alcance»).
+- **Pruebas** (Infrastructure: 114, +36; Core: 577, +1), cada una en MP3, FLAC y M4A:
+  - Principal y capas vuelven iguales, con los nombres en mayúsculas en el archivo.
+  - **Nombres con guion:** `LYRICS_TRANSLATION_PT-BR`, `LYRICS_TRANSLATION_ZH-HANS` y `LYRICS_TRANSLATION_ES-419` en TXXX, Vorbis y `----`; al leer vuelven `pt-BR`, `zh-Hans` y `es-419`.
+  - Un campo escrito en minúsculas por otro programa se lee y, al reincrustar, se reemplaza sin duplicar.
+  - Reincrustar reemplaza solo las capas con fuente, no duplica nada y conserva las demás; incrustar solo el principal conserva las capas.
+  - **(a)** Borrar la letra principal (`Tag.Lyrics = null`) no toca las capas.
+  - **(b)** El editor de etiquetas y «Limpiar etiquetas» (los dos escriben con `TagLibTrackTagWriter`, a través de `TagEditor`) conservan las capas.
+  - **(c)** Una capa de **exactamente 1 MB** (1 048 576 bytes en UTF-8) se escribe y se relee.
+  - Se conservan las etiquetas de texto y el audio, y no quedan temporales. Un archivo dañado falla sin tocar el original.
+  - En FLAC, TagLib da todo el archivo como «invariante», así que la prueba compara el STREAMINFO y un marco de audio inventado al final del FLAC de prueba.

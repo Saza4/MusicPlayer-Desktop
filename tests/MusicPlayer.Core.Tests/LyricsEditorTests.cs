@@ -14,6 +14,8 @@ public class LyricsEditorTests : IDisposable
     {
         public List<(string Path, string Lyrics, LyricsLayers Layers)> Calls { get; } = new();
         public void Write(string filePath, LyricsLayers layers) => Calls.Add((filePath, layers.Main, layers));
+        public bool Layers { get; init; } = true;
+        public bool SupportsLayers(string filePath) => Layers;
     }
 
     private static LyricsEditor NewEditor(ILyricsWriter writer) => new(writer, new LrcLyricParser());
@@ -195,6 +197,23 @@ public class LyricsEditorTests : IDisposable
 
         Assert.Equal(LyricsEditor.MaxBytes, new FileInfo(es.Path).Length);
         Assert.Equal([es], report.Embedded);
+    }
+
+    [Fact]
+    public async Task EmbedWithLayers_FormatWithoutLayers_WritesTheMainAndSkipsEveryLayer()
+    {
+        var writer = new FakeWriter { Layers = false };
+        var es = Translation("es", "[00:01.00]Hola traducida");
+        var rom = Pronunciation("[00:01.00]Ola");
+
+        var report = await NewEditor(writer).EmbedAsync(Song, LrcFile(Main), [es, rom]);
+
+        var call = Assert.Single(writer.Calls);
+        Assert.Equal(Main, call.Lyrics);
+        Assert.Empty(call.Layers.Extras);
+        Assert.Empty(report.Embedded);
+        Assert.Equal([new LyricsLayerSkip(es, "este formato no la guarda"), new LyricsLayerSkip(rom, "este formato no la guarda")],
+            report.Skipped);
     }
 
     [Fact]
