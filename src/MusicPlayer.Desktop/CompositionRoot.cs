@@ -33,7 +33,7 @@ public static class CompositionRoot
         services.AddSingleton<ISettingsRepository>(_ => new JsonSettingsRepository(AppPaths.Settings));
         services.AddSingleton<SettingsService>();
 
-        // Letras: .lrc primero, USLT de respaldo, y encima traducción/pronunciación.
+        // Letras: .lrc primero, USLT de respaldo, y encima traducción/pronunciación (hermanas o incrustadas).
         services.AddSingleton<ILyricParser, LrcLyricParser>();
         services.AddSingleton<ILyricsProvider>(sp =>
         {
@@ -44,7 +44,8 @@ public static class CompositionRoot
                 new EmbeddedLyricsProvider(parser)
             });
             return new CompanionLyricsProvider(
-                baseProvider, parser, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+                baseProvider, parser, new TagLibLyricsLayerReader(),
+                CultureInfo.CurrentUICulture.TwoLetterISOLanguageName, CultureInfo.CurrentUICulture.Name);
         });
 
         // Carátulas: la caché es un solo objeto visto como proveedor y como "invalidable".
@@ -62,6 +63,8 @@ public static class CompositionRoot
         services.AddSingleton<CoverEditor>();
         services.AddSingleton<ILyricsWriter, TagLibLyricsWriter>();
         services.AddSingleton<LyricsEditor>();
+        services.AddSingleton<ILyricsSiblingFinder>(_ =>
+            new LyricsSiblingFinder(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName));
         services.AddSingleton<IAudioConverter, FfmpegAudioConverter>();
         services.AddSingleton<ConversionService>();
 

@@ -20,6 +20,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Archivos de prueba sin derechos (silencio generado con ffmpeg); ver CLAUDE.md -->
+  <ItemGroup>
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\MusicPlayer.Infrastructure\MusicPlayer.Infrastructure.csproj" />
   </ItemGroup>

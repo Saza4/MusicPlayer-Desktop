@@ -43,7 +43,7 @@ public class TagLibLyricsWriterTests : IDisposable
     {
         var path = CreateMp3("song.mp3");
 
-        new TagLibLyricsWriter().Write(path, Lrc);
+        new TagLibLyricsWriter().Write(path, LyricsLayers.MainOnly(Lrc));
 
         Assert.Equal(Lrc, ReadLyrics(path));
     }
@@ -54,7 +54,7 @@ public class TagLibLyricsWriterTests : IDisposable
         var path = CreateMp3("song.mp3");
         var text = "[00:01.00]夜に駆ける — canción ñ";
 
-        new TagLibLyricsWriter().Write(path, text);
+        new TagLibLyricsWriter().Write(path, LyricsLayers.MainOnly(text));
 
         Assert.Equal(text, ReadLyrics(path));
     }
@@ -64,9 +64,9 @@ public class TagLibLyricsWriterTests : IDisposable
     {
         var path = CreateMp3("song.mp3");
         var writer = new TagLibLyricsWriter();
-        writer.Write(path, "[00:01.00]Primera");
+        writer.Write(path, LyricsLayers.MainOnly("[00:01.00]Primera"));
 
-        writer.Write(path, "[00:01.00]Segunda");
+        writer.Write(path, LyricsLayers.MainOnly("[00:01.00]Segunda"));
 
         Assert.Equal("[00:01.00]Segunda", ReadLyrics(path));
     }
@@ -77,7 +77,7 @@ public class TagLibLyricsWriterTests : IDisposable
         var path = CreateMp3("song.mp3");
         new TagLibTrackTagWriter().Write(path, new TrackTags("Título", "Artista", "", "Álbum", 2020, 3, 0));
 
-        new TagLibLyricsWriter().Write(path, Lrc);
+        new TagLibLyricsWriter().Write(path, LyricsLayers.MainOnly(Lrc));
         var track = new TagLibTrackMetadataReader().Read(path);
 
         Assert.NotNull(track);
@@ -92,7 +92,7 @@ public class TagLibLyricsWriterTests : IDisposable
         var path = CreateMp3("song.mp3");
         var before = File.ReadAllBytes(path);
 
-        new TagLibLyricsWriter().Write(path, Lrc);
+        new TagLibLyricsWriter().Write(path, LyricsLayers.MainOnly(Lrc));
 
         Assert.Equal(before, AudioBytes(path));
     }
@@ -102,7 +102,7 @@ public class TagLibLyricsWriterTests : IDisposable
     {
         var path = CreateMp3("song.mp3");
 
-        new TagLibLyricsWriter().Write(path, Lrc);
+        new TagLibLyricsWriter().Write(path, LyricsLayers.MainOnly(Lrc));
 
         Assert.Single(Directory.GetFiles(_dir));
     }

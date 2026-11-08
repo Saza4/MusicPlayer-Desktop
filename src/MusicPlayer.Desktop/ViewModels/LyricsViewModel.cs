@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +17,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     : ObservableObject
 {
     private LyricBlock _block = LyricBlock.Empty;
+    private Track? _track;
     private TimeSpan? _trackDuration;
     private CancellationTokenSource? _cts;
     private bool _restoring;
@@ -22,7 +25,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     [ObservableProperty] private ObservableCollection<LyricLineViewModel> _lines = new();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowProgressiveImmersive), nameof(ShowClassicImmersive))]
+    [NotifyPropertyChangedFor(nameof(ShowProgressiveImmersive), nameof(ShowClassicImmersive), nameof(ShowLayersButton))]
     private bool _isSynced;
 
     [ObservableProperty] private int _activeIndex = -1;
@@ -62,6 +65,9 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     [NotifyPropertyChangedFor(nameof(HasExtras))]
     private bool _hasPronunciation;
 
+    /// <summary>Código de la traducción mostrada («en»), para la etiqueta del menú de capas.</summary>
+    [ObservableProperty] private string? _translationLanguage;
+
     // Preferencias del usuario persistidas mediante SettingsService.
     [ObservableProperty] private bool _showTranslation;
     [ObservableProperty] private bool _showPronunciation;
@@ -72,6 +78,37 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     public bool ShowPanel => IsOpen && IsAvailable;
 
     public bool HasExtras => HasTranslation || HasPronunciation;
+
+    /// <summary>
+    /// Botón de capas del modo inmersivo (docs/specs/lyrics-layers.md, criterio 12): con letra sincronizada, haya o no
+    /// capas, porque su menú también incrusta la primera.
+    /// </summary>
+    public bool ShowLayersButton => LyricsLayerMenu.IsButtonVisible(IsSynced);
+
+    /// <summary>La letra principal cargada, con la que se valida una capa nueva (criterio 12b).</summary>
+    public LyricBlock CurrentBlock => _block;
+
+    /// <summary>Opciones del menú de capas con el estado de ahora (criterio 13). Se recalculan cada vez.</summary>
+    public IReadOnlyList<LyricsLayerMenuItem> LayerMenu() =>
+        LyricsLayerMenu.Build(CurrentOptions(), HasTranslation, HasPronunciation,
+            TranslationLanguage, CultureInfo.CurrentUICulture.Name);
+
+    /// <summary>
+    /// Aplica una opción del menú de capas, recalculada con el estado de ahora: si la capa ya no existe (cambió la
+    /// pista con el menú abierto) o la opción dejaría todo oculto, no hace nada.
+    /// </summary>
+    public void ApplyLayerOption(LyricsRow row)
+    {
+        if (LayerMenu().FirstOrDefault(i => i.Row == row) is not { IsEnabled: true } item) return;
+
+        // Las mismas preferencias que el panel lateral (criterio 14): cada cambio se guarda como allí.
+        ShowTranslation = item.Result.ShowTranslation;
+        ShowPronunciation = item.Result.ShowPronunciation;
+        HideOriginal = item.Result.HideOriginal;
+    }
+
+    private LyricsDisplayOptions CurrentOptions() =>
+        new(ShowTranslation, ShowPronunciation, HideOriginal, EmphasizePronunciation);
 
     partial void OnShowTranslationChanged(bool value) => OnPreferenceChanged();
     partial void OnShowPronunciationChanged(bool value) => OnPreferenceChanged();
@@ -112,6 +149,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
 
+        _track = track;
         _trackDuration = track.Duration > TimeSpan.Zero ? track.Duration : null;
         SetBlock(LyricBlock.Empty);
 
@@ -135,7 +173,10 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
                 var translation = await Companion(".es.lrc");
                 var pronunciation = await Companion(".rom.lrc");
                 if (translation is not null || pronunciation is not null)
-                    block = LyricsMerger.Merge(block, translation, pronunciation);
+                    block = LyricsMerger.Merge(block, translation, pronunciation) with
+                    {
+                        TranslationLanguage = translation is null ? null : "es"
+                    };
             }
 #endif
             if (!cts.IsCancellationRequested)
@@ -197,15 +238,14 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         IsAvailable = block.IsAvailable;
         HasTranslation = block.Lines.Any(l => !string.IsNullOrWhiteSpace(l.Translation));
         HasPronunciation = block.Lines.Any(l => !string.IsNullOrWhiteSpace(l.Romanization));
+        TranslationLanguage = HasTranslation ? block.TranslationLanguage : null;
         ActiveIndex = -1;
         ApplyDisplay();
     }
 
     private void ApplyDisplay()
     {
-        var options = new LyricsDisplayOptions(
-            ShowTranslation, ShowPronunciation, HideOriginal, EmphasizePronunciation);
-        var layout = options.Resolve(HasTranslation, HasPronunciation);
+        var layout = CurrentOptions().Resolve(HasTranslation, HasPronunciation);
 
         foreach (var line in Lines)
             line.ApplyLayout(layout);
@@ -215,6 +255,7 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     public void Clear()
     {
         _cts?.Cancel(); // evita que una carga en curso reponga la letra
+        _track = null;
         SetBlock(LyricBlock.Empty);
     }
 }

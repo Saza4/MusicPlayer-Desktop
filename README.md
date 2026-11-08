@@ -28,18 +28,19 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 **Biblioteca**
 
 - Escaneo de carpetas en segundo plano, metadatos con TagLibSharp, orden por artista, álbum, disco y pista, y persistencia en JSON. Quitar canciones de la biblioteca o del disco.
-- **Búsqueda en tiempo real** por título, artista y álbum, sin distinguir mayúsculas ni acentos.
+- **Búsqueda en tiempo real** por título, artista, artista del álbum y álbum, sin distinguir mayúsculas ni acentos. Cada palabra escrita debe coincidir en alguno de esos campos.
 - **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
 - **Playlists:** crear, renombrar, eliminar, agregar y quitar canciones.
 - **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists. Al agregar la carpeta nueva, las pistas movidas se reconocen por título, artista, álbum y duración y conservan sus playlists.
-- **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir y última canción.
+- **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir, última canción, tema e isla flotante.
 
 **Letras y carátulas**
 
-- **Letras:** `.lrc` sincronizado (auto-scroll y salto al pulsar una línea) o texto USLT incrustado. Traducción y pronunciación desde archivos hermanos (`cancion.es.lrc`, `cancion.rom.lrc`).
+- **Letras:** `.lrc` sincronizado (auto-scroll y salto al pulsar una línea) o texto USLT incrustado. Traducción y pronunciación desde archivos hermanos, `cancion.<idioma>.lrc` (con el código del idioma: `cancion.es.lrc`, `cancion.en.lrc`…) y `cancion.rom.lrc`, o incrustadas en el audio; el hermano gana si están los dos. Con varias traducciones se muestra la de tu idioma (el de la interfaz del sistema) o, si no, la primera por orden alfabético.
 - **Letra progresiva en el modo inmersivo** (estilo Apple Music): la línea activa se rellena de izquierda a derecha según la posición real, el resto se desplaza con resorte y cascada y se atenúa con la distancia, y las pausas instrumentales largas muestran «♪». Pulsar una línea salta a ella; la rueda o un gesto desplazan a mano y a los 3 s la letra vuelve a su sitio. Las letras sin tiempos y el panel lateral siguen con la lista de siempre.
-- **Incrustar letra:** guarda un `.lrc` dentro de las etiquetas del archivo (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) con escritura atómica y verificación, para que la letra viaje con la canción.
-- **Carátulas bajo demanda** (incrustadas o `cover.jpg`) con caché LRU.
+- **Incrustar letra:** guarda en el archivo, en una sola escritura atómica y verificada, el `.lrc` principal (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) y su traducción y pronunciación (`cancion.<idioma>.lrc` y `cancion.rom.lrc`, en campos propios: `LYRICS_TRANSLATION_ES`, `LYRICS_PRONUNCIATION`). Así puedes quitar los `.lrc` de junto al audio. Desde el clic derecho de la lista; la línea de estado dice qué entró y qué se saltó y por qué.
+- **Capas en el modo inmersivo:** un botón arriba a la derecha (con letra sincronizada) muestra u oculta la traducción, la pronunciación y el original (las mismas opciones que el panel lateral). Con el original oculto se rellena la primera capa visible. Al final del menú, **«Incrustar traducción…» e «Incrustar pronunciación…»** abren el selector de archivos: eliges un `.lrc` de cualquier carpeta y se incrusta solo esa capa, sin tocar la letra principal y sin depender de archivos junto a la música. El idioma de la traducción sale del nombre del archivo (`algo.en.lrc`); si no lo trae, se usa el del sistema y la línea de estado lo avisa. Cancelar el selector no corta la música; al escribir, la pista se recarga en el mismo punto. Si un `.es.lrc` sigue junto al audio, ese hermano gana al leer: quítalo para ver la capa incrustada.
+- **Carátulas bajo demanda** (incrustadas o un archivo de la carpeta llamado `cover`, `folder`, `front`, `album` o `albumart`, en `.jpg`, `.jpeg` o `.png`, en ese orden de prioridad) con caché LRU.
 - **Carátulas editables:** elige una imagen JPG o PNG (máx. 10 MB) o quita la actual, directamente en el archivo (TagLibSharp, escritura atómica). También puedes aplicar una imagen a todo un álbum de una vez.
 - **Modo inmersivo** con fondo desenfocado a partir de la carátula (se desenfoca una sola vez, fuera del hilo de la interfaz).
 
@@ -125,14 +126,14 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 546 pruebas (482 en Core y 64 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 814 pruebas (641 en Core y 173 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco, teclado, la ventana de la isla y el dibujo de la letra progresiva), que se prueban a mano.
 De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
 De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, la atenuación y el desenfoque.
 
 ## Limitaciones conocidas
 
-- **Letras incrustadas:** USLT es texto sin sincronizar por especificación; los tiempos `[mm:ss.xx]` viajan dentro del texto y solo esta app los interpreta. Solo UTF-8 de hasta 1 MB. No se incrustan las traducciones ni la pronunciación. La escritura en FLAC y M4A confía en el mapeo de TagLib y no tiene prueba automática (las pruebas usan MP3).
+- **Letras incrustadas:** USLT es texto sin sincronizar por especificación; los tiempos `[mm:ss.xx]` viajan dentro del texto y solo esta app los interpreta. Solo UTF-8 de hasta 1 MB por capa. La traducción y la pronunciación incrustadas solo las muestra esta app: otros reproductores ven solo la letra principal. Con el clic derecho hace falta la letra principal para incrustar; desde el modo inmersivo, «Incrustar traducción…» e «Incrustar pronunciación…» eligen el archivo con el selector y no necesitan `cancion.lrc` ni hermanos, pero la pista ya debe tener letra sincronizada. Si un `cancion.es.lrc` sigue junto al audio, ese hermano gana al leer. Formatos con capas: MP3, FLAC y M4A (en WAV, OGG u Opus solo la principal). **Convertir formato** (ffmpeg, comprobado el 8 de noviembre de 2026 de MP3 y M4A a MP3, M4A y FLAC): la letra principal solo sobrevive de M4A a M4A o a FLAC (de MP3, o hacia MP3, ffmpeg la deja en un campo de texto suelto que no es la letra); la traducción y la pronunciación se conservan hacia MP3 y FLAC y se pierden hacia M4A. Sin la principal, las capas tampoco se ven. Si vas a convertir, conserva los `.lrc` o vuelve a incrustar después.
 - **Conversión:** convertir a WAV pierde en la práctica las etiquetas y la carátula. Convertir de un formato con pérdida a FLAC o WAV no mejora la calidad.
 - **Carátulas:** no se redimensionan, así que una portada pesada infla el archivo.
 - **Temas:** el texto sigue la variante base (clara u oscura) y no se puede personalizar. El modo inmersivo es siempre oscuro: solo el botón Reproducir/Pausa y los iconos activos siguen el tema.
