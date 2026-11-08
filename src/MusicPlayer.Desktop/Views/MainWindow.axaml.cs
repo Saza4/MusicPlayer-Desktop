@@ -45,6 +45,7 @@ public partial class MainWindow : Window
         AddHandler(KeyUpEvent, OnPreviewKeyUp, RoutingStrategies.Tunnel);
         Deactivated += (_, _) => _muteKeyDown = _spaceWasShortcut = false; // si se suelta la tecla con otra ventana en primer plano
         Opened += OnOpened;
+        SizeChanged += (_, e) => UpdateTopBarCompact(e.NewSize.Width);
 
         DataContextChanged += (_, _) =>
         {
@@ -58,11 +59,21 @@ public partial class MainWindow : Window
     }
 
     // Al abrir: la ventana toma el foco del teclado y el foco lógico queda en la lista, no en el aire.
+    // Por debajo de este ancho los botones de acción de la barra superior quedan solo con icono (spec action-buttons).
+    private const double TopBarCompactBelowWidth = 1100;
+
+    // Solo visual: la clase «compact» de la barra oculta el texto de los botones de acción (ver ActionButtonStyles.axaml).
+    private void UpdateTopBarCompact(double width)
+    {
+        if (this.FindControl<Border>("TopBar") is { } bar)
+            bar.Classes.Set("compact", width < TopBarCompactBelowWidth);
+    }
+
     private void OnOpened(object? sender, EventArgs e)
     {
+        UpdateTopBarCompact(ClientSize.Width);
         Activate();
-        this.FindControl<ListBox>("SongList")?.Focus();
-    }
+        this.FindControl<ListBox>("SongList")?.Focus();    }
 
     // Atajos en toda la ventana, salvo donde el control enfocado necesita la tecla para lo suyo:
     //   Espacio reproduce/pausa · M silencia · ← → saltan 5 s · Ctrl+↑ Ctrl+↓ cambian el volumen.

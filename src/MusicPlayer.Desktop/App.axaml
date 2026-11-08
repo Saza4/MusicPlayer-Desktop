@@ -90,6 +90,9 @@
 
         <!--  Botones de reproducción (.icon, .skip, .play, .pp): los comparten MainWindow y la isla  -->
         <StyleInclude Source="avares://MusicPlayer.Desktop/Themes/PlayerButtonStyles.axaml" />
+
+        <!--  Botones de acción (Classes="action"): barra superior y «+» de COLECCIONES; opt-in  -->
+        <StyleInclude Source="avares://MusicPlayer.Desktop/Themes/ActionButtonStyles.axaml" />
     </Application.Styles>
 
     <Application.Resources>

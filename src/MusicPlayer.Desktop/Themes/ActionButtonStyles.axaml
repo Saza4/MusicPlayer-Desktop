@@ -1,0 +1,91 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Botones de acción (spec: docs/specs/action-buttons.md): píldora tonal con icono y texto, o solo icono con «only».
+        Es opt-in con Classes="action": no cambia los ButtonBackground* globales ni ningún otro botón.
+        Mismo lenguaje que .icon (PlayerButtonStyles.axaml): píldora, velo al pasar el cursor, icono 0,7 → 1.
+        El foco con teclado usa ThemeFocusRingBrush (el color de texto, con 3:1 garantizado por ThemeFactory), no el acento.
+        Con la clase «compact» en un ancestro (la barra superior, por ancho de ventana) se oculta el texto y quedan los iconos.
+    -->
+
+    <Style Selector="Button.action">
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <!--  El adorno rectangular de Fluent no sigue la píldora: el foco lo dibuja el borde de abajo  -->
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="RenderTransform" Value="none" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.action.only">
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <!--  Borde de 2 px siempre presente (transparente en reposo): al enfocar no se mueve nada  -->
+    <Style Selector="Button.action /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ThemeOverlayHoverBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="100" />
+    </Style>
+    <Style Selector="Button.action:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ThemeOverlaySelectedHoverBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.action:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.97)" />
+    </Style>
+    <Style Selector="Button.action:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ThemeOverlaySelectedBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.action:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+    <Style Selector="Button.action:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ThemeOverlayHoverBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <!--  Va después de los demás estados: con teclado el anillo se ve también sobre hover y pressed  -->
+    <Style Selector="Button.action:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeFocusRingBrush}" />
+    </Style>
+
+    <Style Selector="Button.action PathIcon">
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Height" Value="16" />
+        <Setter Property="Opacity" Value="0.7" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.action:pointerover PathIcon">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.action:focus-visible PathIcon">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.action.only PathIcon">
+        <Setter Property="Width" Value="14" />
+        <Setter Property="Height" Value="14" />
+    </Style>
+
+    <!--  Modo compacto: solo iconos (el texto sigue en ToolTip y AutomationProperties.Name)  -->
+    <Style Selector=".compact Button.action:not(.only)">
+        <Setter Property="Padding" Value="8,0" />
+    </Style>
+    <Style Selector=".compact Button.action TextBlock.label">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+</Styles>

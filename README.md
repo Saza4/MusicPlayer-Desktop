@@ -48,6 +48,7 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 
 - **Claro, oscuro y modo del sistema** desde el botón «Tema». La lista previsualiza en vivo toda la app al pasar el cursor o moverse con las flechas; clic o `Enter` confirma y `Esc` vuelve al tema anterior. El tema por defecto es Oscuro.
 - **Temas propios:** archivos `.json` en `%APPDATA%\MusicPlayer\themes` (`~/.config/MusicPlayer/themes` en Linux), solo datos y sin código. Ver [Temas de usuario](#temas-de-usuario).
+- **Botones de acción con icono** en la barra superior («Agregar carpeta», «Limpiar etiquetas», «Convertir lo que veo…» y «Tema») y el «+» de COLECCIONES, con el color del tema y un anillo de foco visible con el teclado. Con la ventana estrecha (menos de 1100 px) quedan solo con icono; el nombre sigue en el globo al pasar el cursor.
 
 **Herramientas de etiquetas y archivos**
 
