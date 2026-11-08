@@ -1,6 +1,6 @@
 # Especificación: botones «action» (barra superior y «+» de COLECCIONES)
 
-Estado: **aprobada** (8 de noviembre de 2026), en implementación.
+Estado: **terminada** (8 de noviembre de 2026), PR #6. Ver «Resultados por hito».
 
 ## Contexto
 
@@ -70,7 +70,7 @@ Modo inmersivo, isla flotante, barra de reproducción, paneles de edición, conv
 
 ## Resultados por hito
 
-Estado: **implementado y verificado** (8 de noviembre de 2026), pendiente de la revisión visual final del autor.
+Estado: **terminada** (8 de noviembre de 2026). Implementada y verificada; PR #6 con el CI en verde (Windows y Ubuntu), fusionado en `main`.
 
 - **M0 (medidas).** Antes del cambio, a 640 px «Convertir lo que veo…» ya pisaba el cuadro de búsqueda; a 960 px el estado se veía como «32 canciones en la…». Con iconos la fila crece ≈100 px: a 960 px el texto de estado desaparecía por completo con las etiquetas visibles. **Umbral de `compact`: 1100 px** (en vez de los ≈900 estimados), para que a 960 px (ancho por defecto de la ventana) siga viéndose el estado. Consecuencia: **con el tamaño por defecto la ventana abre en modo solo iconos**; el texto de los botones se ve a partir de 1100 px. Alternativa si se prefiere ver el texto por defecto: subir `Width` de la ventana, acortar el cuadro de búsqueda o aceptar que el estado quede sin sitio.
 - **M1 (estilos).** `Themes/ActionButtonStyles.axaml` y `ThemeFocusRingBrush` (en `FluentOverrides.axaml`, que sí resuelve `SystemBaseHighColor` por variante). Hallazgo: Fluent dibuja su propio adorno de foco rectangular y de doble trazo; no seguía la píldora, así que `Button.action` lo anula (`FocusAdorner` nulo) y el foco lo dibuja el borde de 2 px.
