@@ -273,4 +273,27 @@ public class LyricsTimingWordsTests
         Assert.Equal(0.5, timeline.FillAt(line, S(12)), 6);
         Assert.Equal(1, timeline.FillAt(line, S(14)), 6);
     }
+
+    [Fact]
+    public void Timeline_FillPointAt_ReturnsThePointOfEnhancedLines_AndNullForTheRest()
+    {
+        var block = Block(
+            Normal(1, "normal"),
+            Enhanced(5, 7, new W("a", 5, 6), new W("b", 6, 7)),
+            Normal(40, "siguiente"));
+        var timeline = LyricsTimeline.Build(block);
+        int Entry(int lineIndex) => timeline.Entries.ToList().FindIndex(e => e.Kind == TimelineEntryKind.Line && e.LineIndex == lineIndex);
+
+        var point = timeline.FillPointAt(Entry(1), S(6.5));
+        Assert.NotNull(point);
+        Assert.Equal(2, point.Value.Index); // «b»
+        Assert.Null(timeline.FillPointAt(Entry(1), S(4)));    // aún no empieza
+        Assert.Null(timeline.FillPointAt(Entry(0), S(2)));    // línea normal
+        Assert.Null(timeline.FillPointAt(-1, S(6)));
+        Assert.Null(timeline.FillPointAt(99, S(6)));
+
+        var gap = timeline.Entries.ToList().FindIndex(e => e.Kind == TimelineEntryKind.Gap);
+        Assert.True(gap >= 0);
+        Assert.Null(timeline.FillPointAt(gap, S(20)));        // pausa «♪»
+    }
 }

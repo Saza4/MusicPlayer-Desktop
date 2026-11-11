@@ -96,6 +96,59 @@ public sealed class FillTextBlock : Control
     }
 
     /// <summary>
+    /// El valor de <see cref="FillX"/> que deja el relleno en <paramref name="charPosition"/>: una posición continua
+    /// en <see cref="Text"/> (la parte entera es el carácter; la decimal, lo recorrido hacia el siguiente). Suma el
+    /// ancho de los renglones anteriores y devuelve 0 si el texto aún no se ha medido.
+    /// </summary>
+    /// <remarks>
+    /// Interpolar entre dos caracteres vale igual para una palabra entera, para una partida entre renglones y para
+    /// sílabas pegadas (el fin de «Hel» es el inicio de «lo»). En texto de derecha a izquierda la x sigue siendo la
+    /// lógica: limitación documentada (docs/specs/lrc-enhanced-fill.md).
+    /// </remarks>
+    public double XAt(double charPosition)
+    {
+        if (_bright is null) return 0;
+
+        var text = Text ?? string.Empty;
+        var position = Math.Clamp(charPosition, 0, text.Length);
+        var low = SnapToCharacter(text, (int)Math.Floor(position), false);
+        var high = SnapToCharacter(text, (int)Math.Ceiling(position), true);
+
+        var from = CumulativeX(low);
+        if (high <= low) return from;
+        var to = CumulativeX(high);
+        return from + (to - from) * Math.Clamp((position - low) / (high - low), 0, 1);
+    }
+
+    /// <summary>Un par sustituto (emoji, por ejemplo) no se parte: el índice pasa a su borde.</summary>
+    private static int SnapToCharacter(string text, int index, bool forward)
+    {
+        if (index > 0 && index < text.Length && char.IsLowSurrogate(text[index]) && char.IsHighSurrogate(text[index - 1]))
+            return forward ? index + 1 : index - 1;
+        return index;
+    }
+
+    /// <summary>Distancia a lo largo del texto hasta el carácter <paramref name="index"/>.</summary>
+    private double CumulativeX(int index)
+    {
+        double before = 0;
+        var lines = _bright!.TextLines;
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            var isLast = i == lines.Count - 1;
+            // En el salto de renglón, el fin de uno y el inicio del siguiente dan la misma distancia acumulada.
+            if (isLast || index < line.FirstTextSourceIndex + line.Length)
+            {
+                var x = _bright.HitTestTextPosition(index).X - line.Start;
+                return before + Math.Clamp(x, 0, line.Width);
+            }
+            before += line.Width;
+        }
+        return before;
+    }
+
+    /// <summary>
     /// El texto con un degradado horizontal en el renglón <paramref name="line"/>: color pleno hasta
     /// <paramref name="from"/> y transparente desde <paramref name="to"/> (coordenadas del control).
     /// </summary>

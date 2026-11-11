@@ -235,7 +235,7 @@ public sealed class ProgressiveLyricsView : Panel
         if (active >= 0)
         {
             fill = timeline.FillAt(active, position);
-            _items[active].SetFill(fill);
+            _items[active].SetFill(fill, timeline.FillPointAt(active, position));
         }
 
         var moving = false;
@@ -431,6 +431,7 @@ public sealed class ProgressiveLyricsView : Panel
         private bool _isActive;
         private double _scale = 1;
         private double _fill;
+        private FillPoint? _point;       // relleno por palabra de la última llamada (null: línea sin tiempos por palabra)
 
         private SpringState _spring;
         private double _springTarget;   // a dónde va ahora (el objetivo anterior hasta que le toca arrancar)
@@ -479,20 +480,31 @@ public sealed class ProgressiveLyricsView : Panel
         public void SetActive(bool active)
         {
             _isActive = active;
-            SetFill(active ? _fill : 0); // las ya cantadas vuelven a tenue (criterio 2)
+            SetFill(active ? _fill : 0, active ? _point : null); // las ya cantadas vuelven a tenue (criterio 2)
         }
 
         /// <summary>
         /// Rellena el renglón elegido hasta <paramref name="fraction"/>. Los demás no se rellenan (criterio 6 de
         /// lyrics-progressive.md, enmendado): brillantes en la activa y tenues en las otras.
         /// </summary>
-        public void SetFill(double fraction)
+        /// <param name="point">
+        /// Posición por palabra de un .lrc enhanced (docs/specs/lrc-enhanced-fill.md). Solo la fila original la usa:
+        /// sus desplazamientos valen sobre el texto original, no sobre la pronunciación ni la traducción, que siguen
+        /// la fracción de la línea.
+        /// </param>
+        public void SetFill(double fraction, FillPoint? point = null)
         {
             _fill = fraction;
+            _point = point;
             foreach (var row in Rows())
-                row.FillX = ReferenceEquals(row, _filled) ? fraction * row.FillLength
-                          : _isActive ? double.PositiveInfinity
-                          : 0;
+            {
+                if (!ReferenceEquals(row, _filled))
+                    row.FillX = _isActive ? double.PositiveInfinity : 0;
+                else if (point is { } p && ReferenceEquals(row, _lead))
+                    row.FillX = row.XAt(p.CharPosition);
+                else
+                    row.FillX = fraction * row.FillLength;
+            }
         }
 
         private IEnumerable<FillTextBlock> Rows()
@@ -507,7 +519,7 @@ public sealed class ProgressiveLyricsView : Panel
         protected override Size MeasureOverride(Size availableSize)
         {
             var size = base.MeasureOverride(availableSize);
-            SetFill(_fill);
+            SetFill(_fill, _point);
             return size;
         }
 
@@ -570,7 +582,7 @@ public sealed class ProgressiveLyricsView : Panel
                 LyricsRow.Translation => _translation,
                 _ => _lead
             };
-            SetFill(_fill);
+            SetFill(_fill, _point);
         }
     }
 
