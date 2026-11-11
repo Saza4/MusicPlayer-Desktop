@@ -8,7 +8,7 @@ Reproductor de música local en C# / .NET 8 / Avalonia 11. El detalle de funcion
 
 ```bash
 dotnet build                                   # compila la solución (hoy: 0 errores, 1 advertencia CS8602 conocida)
-dotnet test                                    # 656 pruebas en Core y 176 en Infrastructure
+dotnet test                                    # 690 pruebas en Core y 176 en Infrastructure
 dotnet test tests/MusicPlayer.Core.Tests --filter "FullyQualifiedName~PlayQueueTests"   # una clase
 dotnet test tests/MusicPlayer.Core.Tests --filter "FullyQualifiedName~PlayQueueTests.Sequential_PlaysInOrderAndStopsAtTheEnd"  # un test
 dotnet run --project src/MusicPlayer.Desktop   # ejecuta la app (necesita los binarios de BASS en src/MusicPlayer.Audio/native/)
@@ -22,6 +22,8 @@ Letra progresiva del modo inmersivo (spec en `docs/specs/lyrics-progressive.md`)
 - `MUSICPLAYER_LYRICS_OVERRIDE=<ruta .lrc>`: usa ese `.lrc` en lugar de la letra de cualquier pista (con su `.es.lrc` y `.rom.lrc` si están al lado). Sirve para probar con letra sintética sin tocar la biblioteca; no se suben letras reales al repositorio.
 - `MUSICPLAYER_LYRICS_STATS=<ruta>`: cada 5 s escribe fotogramas por segundo, cuántos traen una posición nueva y el desvío frente al reloj.
 - `MUSICPLAYER_RENDER_OVERLAY=DirtyRects,RenderTimeGraph,…` (valores de `RendererDebugOverlays`): dibuja encima lo que Avalonia repinta.
+
+`.lrc` enhanced (`<mm:ss.xx>` por palabra; specs `docs/specs/lrc-enhanced.md` y `docs/specs/lrc-enhanced-fill.md`): `LrcLyricParser` los lee a `LyricLine.Words` y `LyricsTiming.FillPoint` da el punto de relleno por palabra (solo la fila original; pronunciación y traducción siguen la fracción de la línea). Se afina a mano con `WordPauseHold` (Core) y `FillSpring`, `FillLookahead` y `FillSnapDistance` (`ProgressiveLyricsMetrics`).
 
 Los fps (30 pedidos, ~24 reales), las medidas y los tiempos están en `ProgressiveLyricsMetrics`; la lógica (relleno, pausas, resorte, desplazamiento, atenuación) en Core.
 

@@ -127,7 +127,7 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 813 pruebas (640 en Core y 173 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 866 pruebas (690 en Core y 176 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco, teclado, la ventana de la isla y el dibujo de la letra progresiva), que se prueban a mano.
 De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
 De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, la atenuación y el desenfoque.
@@ -140,7 +140,7 @@ De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, l
 - **Carátulas:** no se redimensionan, así que una portada pesada infla el archivo.
 - **Temas:** el texto sigue la variante base (clara u oscura) y no se puede personalizar. El modo inmersivo es siempre oscuro: solo el botón Reproducir/Pausa y los iconos activos siguen el tema.
 - **Isla flotante:** solo en Windows (en Linux no se muestra). Siempre en la pantalla principal. No se maneja con el teclado: se pensó para el ratón sin quitar el foco a otras apps.
-- **Letra progresiva:** los `.lrc` normales solo traen el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada. Los `.lrc` enhanced (`<mm:ss.xx>` por palabra) se leen y sus etiquetas ya no se ven en el texto, pero el relleno por palabra aún no los usa (spec `docs/specs/lrc-enhanced.md`, Fase 2). En árabe o hebreo (de derecha a izquierda) el relleno barre igualmente de izquierda a derecha. El arrastre con el dedo o el lápiz no se ha probado en una pantalla táctil, y en Linux no se ha probado.
+- **Letra progresiva:** los `.lrc` normales solo traen el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada. Los `.lrc` enhanced (`<mm:ss.xx>` por palabra) se leen sin mostrar sus etiquetas y el relleno de la línea activa sigue sus tiempos por palabra, de forma continua y suavizada (specs `docs/specs/lrc-enhanced.md` y `docs/specs/lrc-enhanced-fill.md`); las líneas sin tiempos por palabra usan la estimación de siempre. Las medidas de CPU en Release de esta función están pendientes. En árabe o hebreo (de derecha a izquierda) el relleno barre igualmente de izquierda a derecha, aunque los tiempos por palabra lo hacen más visible. El arrastre con el dedo o el lápiz no se ha probado en una pantalla táctil, y en Linux no se ha probado.
 - **Linux:** el audio y la interfaz no se han probado.
 
 El detalle completo está en [`docs/reporte-reproductor.md`](docs/reporte-reproductor.md).
