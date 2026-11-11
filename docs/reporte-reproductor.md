@@ -682,7 +682,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 **Teclado**
 
-- Mantener pulsada la barra repite el cambio de estado.
+- Mantener pulsada la barra espaciadora alterna reproducir/pausar una sola vez (spec `docs/specs/ui-responsiveness.md`); hay que soltarla para volver a alternar.
 - La barra ya no activa un botón enfocado: Enter sí lo hace. Hasta el 8 de noviembre de 2026 no era del todo cierto: el botón se pulsaba al soltar la tecla (`Button.OnKeyUp`), así que Espacio en «Siguiente» pausaba y cambiaba de pista. Ahora la ventana se queda también con la tecla soltada.
 - La lista de controles que se quedan con las teclas es por tipo (`OwnsKeyboard`). Si se añade uno nuevo (`RadioButton`, `ToggleSwitch`), hay que sumarlo.
 - Los atajos de salto, volumen y silencio se probaron a mano en Windows y funcionan.

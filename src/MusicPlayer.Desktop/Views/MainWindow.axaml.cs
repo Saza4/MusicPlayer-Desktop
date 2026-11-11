@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private bool _muteKeyDown;
     private bool _layersMenuOpen;
     private bool _spaceWasShortcut;
+    private bool _scrubbing; // puntero pulsado sobre una barra de progreso
     private bool _layersMenuHooked;
 
     public MainWindow()
@@ -45,6 +46,14 @@ public partial class MainWindow : Window
         AddHandler(KeyUpEvent, OnPreviewKeyUp, RoutingStrategies.Tunnel);
         Deactivated += (_, _) => _muteKeyDown = _spaceWasShortcut = false; // si se suelta la tecla con otra ventana en primer plano
         Opened += OnOpened;
+
+        // Arrastre de las barras de progreso (la principal y la del inmersivo, Classes="progress"): el salto se hace
+        // al soltar (docs/specs/ui-responsiveness.md, criterio 4). Tunnel, porque el pulgar marca el evento como
+        // atendido; la captura perdida (cambio de ventana a mitad) cuenta como soltar.
+        AddHandler(PointerPressedEvent, OnProgressPressed, RoutingStrategies.Tunnel);
+        AddHandler(PointerReleasedEvent, (_, _) => EndProgressScrub(), RoutingStrategies.Tunnel);
+        AddHandler(PointerCaptureLostEvent, (_, _) => EndProgressScrub(), RoutingStrategies.Bubble, handledEventsToo: true);
+        Deactivated += (_, _) => EndProgressScrub();
         SizeChanged += (_, e) => UpdateTopBarCompact(e.NewSize.Width);
 
         DataContextChanged += (_, _) =>
@@ -75,6 +84,24 @@ public partial class MainWindow : Window
         Activate();
         this.FindControl<ListBox>("SongList")?.Focus();    }
 
+    private void OnProgressPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        if ((e.Source as Visual)?.FindAncestorOfType<Slider>(includeSelf: true) is not { } slider
+            || !slider.Classes.Contains("progress"))
+            return;
+
+        _scrubbing = true;
+        vm.BeginScrub();
+    }
+
+    private void EndProgressScrub()
+    {
+        if (!_scrubbing) return;
+        _scrubbing = false;
+        (DataContext as MainViewModel)?.EndScrub();
+    }
+
     // Atajos en toda la ventana, salvo donde el control enfocado necesita la tecla para lo suyo:
     //   Espacio reproduce/pausa · M silencia · ← → saltan 5 s · Ctrl+↑ Ctrl+↓ cambian el volumen.
     // ↑ ↓ sin modificador no se tocan: mueven la selección de las listas.
@@ -98,8 +125,11 @@ public partial class MainWindow : Window
         switch (e.Key, e.KeyModifiers)
         {
             case (Key.Space, KeyModifiers.None) when e.Source is not CheckBox:
-                vm.TogglePlayPauseCommand.Execute(null);
-                _spaceWasShortcut = true;
+                if (!_spaceWasShortcut) // mantener la tecla no debe alternar una y otra vez
+                {
+                    _spaceWasShortcut = true;
+                    vm.TogglePlayPauseCommand.Execute(null);
+                }
                 break;
 
             case (Key.M, KeyModifiers.None):

@@ -235,6 +235,9 @@ public partial class MainViewModel : ViewModelBase
         // Espera 200 ms tras la última tecla para no refiltrar en cada pulsación.
         _searchDebounce = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Normal,
             (_, _) => { _searchDebounce.Stop(); ApplyFilter(); });
+        // Ese constructor deja el temporizador en marcha: sin pararlo, a los 200 ms filtraba solo y pisaba la
+        // línea de estado del arranque (docs/specs/ui-responsiveness.md, criterio 1).
+        _searchDebounce.Stop();
 
         Playlists.Changed += (_, _) => ApplyFilter();
         Playlists.Notified += message => Status = message;
@@ -359,17 +362,26 @@ public partial class MainViewModel : ViewModelBase
         var playlist = Playlists.CurrentPlaylist;
         if (playlist is null)
         {
-            Artists = new(LibraryGrouper.GroupArtists(visible.Select(i => i.Track))
-                .Select(g => new ArtistItemViewModel(g, _covers)));
+            // Solo se agrupa lo que se ve (criterio 3): cada cambio de vista o de álbum abierto pasa por aquí.
+            Artists = ShowArtists
+                ? new(LibraryGrouper.GroupArtists(visible.Select(i => i.Track))
+                    .Select(g => new ArtistItemViewModel(g, _covers)))
+                : new();
             if (_artistScope is { } artist)
                 visible = visible.Where(i =>
                     string.Equals(i.Track.AlbumOwner.Trim(), artist, StringComparison.OrdinalIgnoreCase)).ToList();
-            Albums = new(LibraryGrouper.GroupAlbums(visible.Select(i => i.Track))
-                .Select(g => new AlbumItemViewModel(g, _covers)));
+            Albums = ShowAlbums
+                ? new(LibraryGrouper.GroupAlbums(visible.Select(i => i.Track))
+                    .Select(g => new AlbumItemViewModel(g, _covers)))
+                : new();
             if (_albumScope is { } album)
                 visible = visible.Where(i => LibraryGrouper.AlbumKey(i.Track) == album.Key).ToList();
         }
+
+        // La lista se sustituye entera y la selección se iría con ella: se recupera por Id (criterio 2).
+        var selectedId = SelectedTrack?.Track.Id;
         Tracks = new ObservableCollection<TrackItemViewModel>(visible);
+        SelectedTrack = selectedId is { } id ? visible.FirstOrDefault(i => i.Track.Id == id) : null;
         var searching = !string.IsNullOrWhiteSpace(SearchText);
         Status = playlist is not null
             ? source.Count == 0 ? $"\"{playlist.Name}\" está vacía. Clic derecho en una canción para agregarla"
@@ -522,6 +534,7 @@ public partial class MainViewModel : ViewModelBase
     private void ClearCurrentTrack()
     {
         _coverCts?.Cancel(); // evita que una carátula en curso reaparezca
+        _scrub.Abandon();
         Lyrics.Clear();
         _player.Unload();
         _isUpdatingFromTimer = true;
@@ -587,6 +600,7 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Actualiza lo que se ve (título, duración, letra, carátula) para la pista que suena.</summary>
     private void ShowTrack(TrackItemViewModel item)
     {
+        _scrub.Abandon(); // un arrastre a medias no debe saltar en la pista nueva
         // Reiniciar posición ANTES de cambiar el máximo: si no, el Slider ajusta su
         // valor al nuevo rango y dispara un Seek no deseado.
         _isUpdatingFromTimer = true;
@@ -664,6 +678,12 @@ public partial class MainViewModel : ViewModelBase
         catch (OperationCanceledException)
         {
             // Se cambió de canción antes de terminar.
+        }
+        catch (Exception)
+        {
+            // La carátula es decorativa, pero no debe quedarse la de la pista anterior (criterio 8).
+            if (!cts.IsCancellationRequested)
+                NowPlayingCover = null;
         }
     }
 
@@ -921,9 +941,22 @@ public partial class MainViewModel : ViewModelBase
 
     // ---- Barra de progreso y volumen ----
 
+    // Arrastre de la barra de progreso (docs/specs/ui-responsiveness.md, criterios 4 y 5).
+    private readonly SeekScrub _scrub = new();
+
+    /// <summary>El puntero se pulsó sobre una barra de progreso: hasta soltar no se salta ni se mueve el pulgar.</summary>
+    public void BeginScrub() => _scrub.Begin();
+
+    /// <summary>El puntero se soltó: el único salto del arrastre.</summary>
+    public void EndScrub()
+    {
+        if (_scrub.End() is { } target)
+            _player.Seek(target);
+    }
+
     private void OnTick(object? sender, EventArgs e)
     {
-        if (_player.State != PlaybackState.Playing) return;
+        if (_player.State != PlaybackState.Playing || !_scrub.TimerMayWrite) return;
 
         _isUpdatingFromTimer = true;
         try { PositionSeconds = _player.CurrentTime.TotalSeconds; }
@@ -938,9 +971,9 @@ public partial class MainViewModel : ViewModelBase
         PositionText = TimeFormatter.Format(TimeSpan.FromSeconds(value));
         UpdateRemainingText();
 
-        // Si el cambio vino del usuario (arrastrando el Slider), saltar a ese punto.
-        if (!_isUpdatingFromTimer)
-            _player.Seek(TimeSpan.FromSeconds(value));
+        // Si el cambio vino del usuario, saltar a ese punto; durante un arrastre, solo al soltar (EndScrub).
+        if (!_isUpdatingFromTimer && _scrub.Change(TimeSpan.FromSeconds(value)) is { } target)
+            _player.Seek(target);
     }
 
     // Silencio (mute): un clic deja el volumen en 0 y otro clic devuelve el nivel anterior
