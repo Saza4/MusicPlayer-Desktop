@@ -55,7 +55,7 @@ Lo que ya está preparado: `FillTextBlock` recibe el progreso como posición hor
 14. **Hito medible:** con cualquier `.lrc` enhanced que cumpla este formato, ninguna pantalla muestra `<...>`. Aún no hay relleno por palabra.
 15. **Calidad:** lógica en Core con pruebas con letra sintética; `dotnet build -c Release` sin warnings nuevos (hoy 1 CS8602 conocido); todas las pruebas en verde; CI en Windows y Ubuntu. Un `settings.json` anterior carga igual (no hay ajustes nuevos).
 
-**Fase 2: relleno por palabra (spec propia al llegar; aquí solo la dirección)**
+**Fase 2: relleno por palabra (spec propia: `docs/specs/lrc-enhanced-fill.md`; aquí solo la dirección)**
 
 16. `LyricsTiming` calcula el relleno con `Words` cuando la línea los tiene, y con la estimación de 80 ms por carácter cuando no. Aplica un **máximo acumulado** a los tiempos de palabra para que el relleno no retroceda con tiempos desordenados.
 17. Core devuelve la posición de relleno como **índice de carácter de `Text` más fracción dentro de la palabra**, no como x. La vista la convierte con `TextLayout.HitTestTextPosition`, sumando el ancho de los renglones anteriores (el `FillX` de `FillTextBlock` es acumulado). Punto de enganche actual: `ProgressiveLyricsView.cs`, donde hoy se calcula `fraction * row.FillLength`.
