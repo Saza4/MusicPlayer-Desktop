@@ -18,7 +18,7 @@ Puntos del código que esta fase toca:
 
 **Core** (sin dependencias nuevas, con pruebas):
 
-- `FillPoint(int Index, double Fraction)`: «carácter de `LyricLine.Text` donde empieza la palabra activa y fracción recorrida de esa palabra». La posición continua en el texto es `Index + Fraction × longitud de la palabra`.
+- `FillPoint(int Index, int Length, double Fraction)`: «carácter de `LyricLine.Text` donde empieza la palabra activa, su longitud y fracción recorrida». La posición continua en el texto es `Index + Fraction × Length` (propiedad `CharPosition`). `Length` está en el registro porque la vista no conoce las palabras (se añadió en M1).
 - `LyricsTiming.FillPoint(block, index, position)` devuelve `FillPoint?`: `null` si la línea no tiene `Words` (la vista usa la fracción de siempre).
 - **Tiempos efectivos.** Inicio efectivo de la palabra *i*: `max(inicio_0 … inicio_i)` (máximo acumulado). Fin efectivo: `max(End ?? inicio efectivo de la siguiente, inicio efectivo propio)`. En la última palabra sin `End` propio se usa `LyricLine.End` y, si no existe, `inicio + 80 ms × longitud de la palabra` (sin los topes de 1 y 8 s, que son de línea entera).
 - **Entre palabras** (posición ≥ fin efectivo de la *i* y < inicio efectivo de la *i+1*): el punto queda al final de la *i*. Antes de la primera palabra efectiva: relleno 0.

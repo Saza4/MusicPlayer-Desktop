@@ -15,6 +15,18 @@ public sealed record InstrumentalGap(TimeSpan Start, TimeSpan End)
 }
 
 /// <summary>
+/// Dónde está el relleno de una línea con tiempos por palabra: la palabra activa y lo recorrido de ella. La posición
+/// continua en <c>LyricLine.Text</c> es <c>Index + Fraction × Length</c>; la vista la convierte en x.
+/// </summary>
+/// <param name="Index">Carácter de <c>LyricLine.Text</c> donde empieza la palabra.</param>
+/// <param name="Length">Longitud de la palabra.</param>
+/// <param name="Fraction">Fracción recorrida de la palabra, de 0 a 1.</param>
+public readonly record struct FillPoint(int Index, int Length, double Fraction)
+{
+    public double CharPosition => Index + Fraction * Length;
+}
+
+/// <summary>
 /// Tiempos de la letra progresiva (docs/specs/lyrics-progressive.md). Un .lrc normal solo trae el inicio de cada
 /// línea, así que lo que dura cantándose se estima por la longitud del texto, con el hueco hasta la siguiente
 /// como tope. Todo es función de la posición: no hay estado que se acumule al saltar.
@@ -39,13 +51,87 @@ public static class LyricsTiming
         var line = block.Lines[index];
         if (IsBlank(line)) return TimeSpan.Zero;
 
-        var characters = line.Text.Trim().Length;
-        var estimated = Clamp(PerCharacter * characters, MinFill, MaxFill);
+        // Con tiempos por palabra (.lrc enhanced) la línea dura hasta su fin real; si no, se estima por la longitud.
+        TimeSpan duration;
+        if (EffectiveSpans(line) is { } spans)
+        {
+            var lineEnd = spans[^1].End;
+            if (line.End is { } declared && declared > lineEnd) lineEnd = declared;
+            duration = lineEnd > line.Timestamp ? lineEnd - line.Timestamp : TimeSpan.Zero;
+        }
+        else
+        {
+            duration = Clamp(PerCharacter * line.Text.Trim().Length, MinFill, MaxFill);
+        }
 
-        if (block.GetLineEnd(index) is not { } next) return estimated; // última línea
+        if (block.GetLineEnd(index) is not { } next) return duration; // última línea
         var room = next - line.Timestamp;
         if (room <= TimeSpan.Zero) return TimeSpan.Zero;
-        return room < estimated ? room : estimated;
+        return room < duration ? room : duration;
+    }
+
+    /// <summary>
+    /// Dónde está el relleno de la línea en <paramref name="position"/> según los tiempos por palabra, o null si la
+    /// línea no los tiene (entonces vale <see cref="Fill"/>). Entre dos palabras se queda al final de la anterior.
+    /// </summary>
+    public static FillPoint? FillPoint(LyricBlock block, int index, TimeSpan position)
+    {
+        if (block.Kind != LyricsKind.Synced || index < 0 || index >= block.Lines.Count) return null;
+
+        var line = block.Lines[index];
+        if (IsBlank(line) || EffectiveSpans(line) is not { } spans) return null;
+
+        // Última palabra que ya empezó (los inicios efectivos no decrecen). Antes de la primera: la primera, sin avance.
+        var current = 0;
+        for (int i = 0; i < spans.Length; i++)
+        {
+            if (spans[i].Start <= position) current = i;
+            else break;
+        }
+
+        var word = line.Words![current];
+        var span = spans[current];
+        double fraction;
+        if (position < span.Start) fraction = 0;
+        else if (position >= span.End) fraction = 1;
+        else fraction = (position - span.Start) / (span.End - span.Start); // span.End > Start: si no, caería arriba
+
+        // Los desplazamientos vienen de un archivo: no deben salirse del texto.
+        var start = Math.Clamp(word.Offset, 0, line.Text.Length);
+        var length = Math.Clamp(word.Text.Length, 0, line.Text.Length - start);
+        return new FillPoint(start, length, fraction);
+    }
+
+    /// <summary>
+    /// Tiempos de cada palabra con el máximo acumulado de los inicios (los archivos reales traen palabras
+    /// desordenadas y el relleno no debe retroceder). Null si la línea no tiene palabras.
+    /// </summary>
+    private static (TimeSpan Start, TimeSpan End)[]? EffectiveSpans(LyricLine line)
+    {
+        if (line.Words is not { Count: > 0 } words) return null;
+
+        var spans = new (TimeSpan Start, TimeSpan End)[words.Count];
+        var floor = TimeSpan.MinValue;
+        for (int i = 0; i < words.Count; i++)
+        {
+            if (words[i].Start > floor) floor = words[i].Start;
+            spans[i].Start = floor;
+        }
+
+        for (int i = 0; i < words.Count; i++)
+        {
+            var next = i + 1 < words.Count ? spans[i + 1].Start : (TimeSpan?)null;
+            var end = words[i].End
+                ?? next
+                ?? line.End
+                ?? spans[i].Start + PerCharacter * words[i].Text.Length; // sin tope Min/Max: es una palabra, no la línea
+
+            if (next is { } n && end > n) end = n; // no se solapa con la siguiente
+            if (end < spans[i].Start) end = spans[i].Start;
+            spans[i].End = end;
+        }
+
+        return spans;
     }
 
     /// <summary>Cuánto está rellena la línea en <paramref name="position"/>, de 0 a 1.</summary>
