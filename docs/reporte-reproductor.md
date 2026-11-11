@@ -661,7 +661,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 **Letras**
 
 - USLT es texto _sin sincronizar_ por especificación. Los tiempos `[mm:ss.xx]` viajan dentro del texto. La app los interpreta, pero un reproductor estricto los mostrará como texto. No se escribe SYLT, el marco sincronizado del estándar.
-- Solo UTF-8, de hasta 1 MB.
+- Solo UTF-8, de hasta 1 MB, al incrustar y al leer (spec `docs/specs/untrusted-input-limits.md`): un `.lrc`, un hermano o una letra incrustada mayor se ignora; un texto con caracteres nulos no se toma por letra; de una línea se usan como mucho 32 marcas de tiempo iniciales.
 - Sustituye la letra incrustada anterior sin preguntar y no hay botón para quitarla.
 - La traducción y la pronunciación incrustadas (`LYRICS_TRANSLATION_<CÓDIGO>`, `LYRICS_PRONUNCIATION`) solo las muestra esta app; otros reproductores ven solo la principal. En WAV, OGG u Opus solo se incrusta la principal.
 - Con el clic derecho («Incrustar letra (.lrc)…») hace falta la letra principal: con solo `.es.lrc` y `.rom.lrc` no se incrusta nada. Desde el inmersivo, «Incrustar traducción…» e «Incrustar pronunciación…» eligen el archivo con el selector y no necesitan `cancion.lrc` ni hermanos, pero sí que la pista ya tenga letra sincronizada (sin ella, el botón de capas del inmersivo no aparece y la capa no se vería).

@@ -57,17 +57,25 @@ public sealed class CompanionLyricsProvider(
         if (sibling is not null && await ReadAsync(sibling.Path, ct) is { IsAvailable: true } fromFile && fromFile.Kind == originalKind)
             return fromFile;
 
+        // Una capa incrustada por otra herramienta puede pasarse del tope: se trata como ausente.
         var layer = layers.FirstOrDefault(l => l.Kind == kind && Same(l.Language, code));
-        return layer is not null && parser.Parse(layer.Text) is { IsAvailable: true } fromTag && fromTag.Kind == originalKind
-            ? fromTag
-            : null;
+        if (layer is null || !LyricsEditor.FitsLimit(layer.Text))
+            return null;
+
+        var fromTag = await Task.Run(() => parser.Parse(layer.Text), ct);
+        return fromTag.IsAvailable && fromTag.Kind == originalKind ? fromTag : null;
     }
 
     private async Task<LyricBlock?> ReadAsync(string path, CancellationToken ct)
     {
         try
         {
-            return parser.Parse(await File.ReadAllTextAsync(path, ct));
+            // Un hermano mayor que el tope cuenta como ilegible: cede su sitio a la capa incrustada.
+            if (new FileInfo(path).Length > LyricsEditor.MaxBytes)
+                return null;
+
+            var text = await File.ReadAllTextAsync(path, ct);
+            return await Task.Run(() => parser.Parse(text), ct); // el análisis, fuera del hilo de la interfaz
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

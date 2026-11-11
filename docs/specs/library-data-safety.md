@@ -1,6 +1,6 @@
 # Spec: robustez de datos de la biblioteca (derivada de la auditoría)
 
-Estado: implementado (C1, S2, S5). S1 sigue pendiente: no hay un archivo que haga lanzar a TagLib otra excepción, así que queda como no reproducible. Pruebas: `LibraryDataSafetyTests` (Core) y `JsonLibraryConcurrentSaveTests` (Infrastructure).
+Estado: implementado (C1, S2, S5). S1 se cerró después en `untrusted-input-limits.md`: un FLAC con un tamaño absurdo en su bloque de comentarios hace lanzar a TagLib `ArgumentOutOfRangeException`, y el escáner ya omite ese archivo. Pruebas: `LibraryDataSafetyTests` (Core) y `JsonLibraryConcurrentSaveTests` (Infrastructure).
 
 ## Context
 

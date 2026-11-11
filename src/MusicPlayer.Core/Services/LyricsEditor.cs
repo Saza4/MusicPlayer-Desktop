@@ -9,6 +9,13 @@ public sealed class LyricsEditor(ILyricsWriter writer, ILyricParser parser)
     /// <summary>Límite por capa: el principal y cada traducción o pronunciación por separado.</summary>
     public const long MaxBytes = 1024 * 1024;
 
+    /// <summary>
+    /// True si el texto cabe en <see cref="MaxBytes"/> medido en UTF-8. Lo usan los lectores: una letra incrustada
+    /// por otra herramienta puede pasarse del tope (docs/specs/untrusted-input-limits.md, criterio 3).
+    /// </summary>
+    public static bool FitsLimit(string text) =>
+        text.Length <= MaxBytes && (text.Length * 3L <= MaxBytes || Encoding.UTF8.GetByteCount(text) <= MaxBytes);
+
     // Estricto: un archivo que no sea UTF-8 válido se rechaza en lugar de incrustar caracteres rotos para siempre.
     private static readonly UTF8Encoding StrictUtf8 =
         new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);

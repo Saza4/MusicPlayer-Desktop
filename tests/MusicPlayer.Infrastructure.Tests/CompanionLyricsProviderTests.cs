@@ -139,5 +139,52 @@ public class CompanionLyricsProviderTests : IDisposable
         Assert.False(block.IsAvailable);
     }
 
+    // ---- Límites (docs/specs/untrusted-input-limits.md, criterios 2 y 3) ----
+
+    private sealed class FixedLayers(params LyricsLayer[] layers) : ILyricsLayerReader
+    {
+        public IReadOnlyList<LyricsLayer> Read(string filePath) => layers;
+    }
+
+    private static string Oversized(string firstLine) =>
+        firstLine + "\n" + new string(' ', (int)LyricsEditor.MaxBytes);
+
+    [Fact]
+    public async Task SiblingOverTheLimit_GivesWayToTheEmbeddedLayer_AndTheOriginalStays()
+    {
+        await Write("song.es.lrc", Oversized("[00:01.00]Hermano enorme"));
+        var provider = new CompanionLyricsProvider(
+            new FixedProvider(Original()), _parser,
+            new FixedLayers(new LyricsLayer(LyricsLayerKind.Translation, "es", "[00:01.00]Incrustada")), "es");
+
+        var block = await provider.GetLyricsAsync(NewTrack());
+
+        Assert.Equal("Incrustada", block.Lines[0].Translation);
+        Assert.Equal("Hello", block.Lines[0].Text);
+    }
+
+    [Fact]
+    public async Task SiblingOverTheLimit_WithNothingEmbedded_ShowsTheOriginalAlone()
+    {
+        await Write("song.rom.lrc", Oversized("[00:01.00]Helo"));
+
+        var block = await NewProvider(Original()).GetLyricsAsync(NewTrack());
+
+        Assert.Equal("Hello", block.Lines[0].Text);
+        Assert.Null(block.Lines[0].Romanization);
+    }
+
+    [Fact]
+    public async Task EmbeddedLayerOverTheLimit_IsTreatedAsMissing()
+    {
+        var provider = new CompanionLyricsProvider(
+            new FixedProvider(Original()), _parser,
+            new FixedLayers(new LyricsLayer(LyricsLayerKind.Pronunciation, null, Oversized("[00:01.00]Helo"))), "es");
+
+        var block = await provider.GetLyricsAsync(NewTrack());
+
+        Assert.Null(block.Lines[0].Romanization);
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

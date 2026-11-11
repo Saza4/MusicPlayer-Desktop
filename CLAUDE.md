@@ -8,7 +8,7 @@ Reproductor de música local en C# / .NET 8 / Avalonia 11. El detalle de funcion
 
 ```bash
 dotnet build                                   # compila la solución (hoy: 0 errores, 1 advertencia CS8602 conocida)
-dotnet test                                    # 704 pruebas en Core y 182 en Infrastructure
+dotnet test                                    # 712 pruebas en Core y 191 en Infrastructure
 dotnet test tests/MusicPlayer.Core.Tests --filter "FullyQualifiedName~PlayQueueTests"   # una clase
 dotnet test tests/MusicPlayer.Core.Tests --filter "FullyQualifiedName~PlayQueueTests.Sequential_PlaysInOrderAndStopsAtTheEnd"  # un test
 dotnet run --project src/MusicPlayer.Desktop   # ejecuta la app (necesita los binarios de BASS en src/MusicPlayer.Audio/native/)

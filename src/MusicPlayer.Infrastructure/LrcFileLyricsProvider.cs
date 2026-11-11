@@ -1,5 +1,6 @@
 using MusicPlayer.Core.Interfaces;
 using MusicPlayer.Core.Models;
+using MusicPlayer.Core.Services;
 
 namespace MusicPlayer.Infrastructure;
 
@@ -14,7 +15,13 @@ public sealed class LrcFileLyricsProvider(ILyricParser parser) : ILyricsProvider
 
         try
         {
-            return parser.Parse(await File.ReadAllTextAsync(path, ct));
+            // Mismo tope que al incrustar: un .lrc mayor se trata como si no estuviera
+            // (docs/specs/untrusted-input-limits.md, criterio 1).
+            if (new FileInfo(path).Length > LyricsEditor.MaxBytes)
+                return LyricBlock.Empty;
+
+            var text = await File.ReadAllTextAsync(path, ct);
+            return await Task.Run(() => parser.Parse(text), ct); // el análisis, fuera del hilo de la interfaz
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

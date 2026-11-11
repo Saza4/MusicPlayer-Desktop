@@ -41,7 +41,7 @@ public sealed class LibraryScanner(ITrackMetadataReader reader)
                 if (!SupportedExtensions.Contains(Path.GetExtension(path)) || IsTemporary(path))
                     continue;
 
-                var track = reader.Read(path);
+                var track = SafeRead(path);
                 if (track is null) continue;
 
                 tracks.Add(track);
@@ -53,5 +53,19 @@ public sealed class LibraryScanner(ITrackMetadataReader reader)
 
     /// <summary>Lee los metadatos de archivos concretos, sin recorrer carpetas.</summary>
     public Task<IReadOnlyList<Track>> ReadFilesAsync(IEnumerable<string> paths, CancellationToken ct = default) =>
-        Task.Run<IReadOnlyList<Track>>(() => paths.Select(reader.Read).OfType<Track>().ToList(), ct);
+        Task.Run<IReadOnlyList<Track>>(() => paths.Select(SafeRead).OfType<Track>().ToList(), ct);
+
+    // El lector no debería lanzar, pero las etiquetas son una entrada externa: un archivo que lo haga lanzar se
+    // omite y los demás entran (docs/specs/untrusted-input-limits.md, criterio 7).
+    private Track? SafeRead(string path)
+    {
+        try
+        {
+            return reader.Read(path);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return null;
+        }
+    }
 }
