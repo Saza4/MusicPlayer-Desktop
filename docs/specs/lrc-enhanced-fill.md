@@ -1,6 +1,6 @@
 # Especificación: relleno por palabra (`.lrc` enhanced, Fase 2)
 
-Estado: **aprobada (10 de noviembre de 2026); M1 y M2 hechos. M2b (naturalidad del relleno, 10 de noviembre) añadido tras la prueba a mano de M2.** Continúa `docs/specs/lrc-enhanced.md` (Fase 1, lectura), de donde sale el modelo `LyricWord`. Va en un PR distinto, en una rama nueva (`feature/lrc-enhanced-relleno`) que se crea cuando el PR de la Fase 1 esté fusionado.
+Estado: **aprobada (10 de noviembre de 2026); M1, M2, M2b y M3 hechos. M2b (naturalidad del relleno, 10 de noviembre) añadido tras la prueba a mano de M2.** Continúa `docs/specs/lrc-enhanced.md` (Fase 1, lectura), de donde sale el modelo `LyricWord`. Va en un PR distinto, en una rama nueva (`feature/lrc-enhanced-relleno`) que se crea cuando el PR de la Fase 1 esté fusionado.
 
 ## Contexto
 

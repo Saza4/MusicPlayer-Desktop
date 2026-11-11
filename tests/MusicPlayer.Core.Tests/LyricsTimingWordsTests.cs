@@ -357,4 +357,98 @@ public class LyricsTimingWordsTests
         Assert.Equal((2, 2), (end.Index, end.Length));
         Assert.Equal(4, end.CharPosition, 6);
     }
+
+    // ---- M3: pausas y línea de tiempo con letra enhanced ----
+
+    private static int LineEntry(LyricsTimeline timeline, int lineIndex) =>
+        timeline.Entries.ToList().FindIndex(e => e.Kind == TimelineEntryKind.Line && e.LineIndex == lineIndex);
+
+    [Fact]
+    public void InstrumentalGap_AfterTheLastEnhancedLine_StartsAtItsEnd()
+    {
+        var block = Block(Enhanced(5, 12, new W("a", 5, 8), new W("b", 8, 12)));
+
+        var gap = Assert.Single(LyricsTiming.GetInstrumentalGaps(block, S(30)).Where(g => g.Start >= S(5)));
+
+        Assert.Equal((S(12), S(30)), (gap.Start, gap.End));
+    }
+
+    [Fact]
+    public void Timeline_EnhancedLines_PlaceTheGapAfterTheRealEnd()
+    {
+        var block = Block(Enhanced(5, 12, new W("a", 5, 8), new W("b", 8, 12)), Normal(30, "siguiente"));
+        var timeline = LyricsTimeline.Build(block);
+
+        var gapEntry = timeline.Entries.ToList().FindIndex(e => e.Kind == TimelineEntryKind.Gap && e.Start == S(12));
+        Assert.True(gapEntry >= 0, "falta la pausa «♪» a partir del fin real de la línea");
+
+        Assert.Equal(0.5, timeline.FillAt(gapEntry, S(21)), 6);                 // mitad de 12 → 30
+        Assert.Equal(gapEntry, timeline.ActiveEntryAt(S(15)));
+        Assert.Equal(S(30), timeline.NextStartAfter(S(15)));
+        Assert.Equal(1, timeline.FillAt(LineEntry(timeline, 0), S(13)), 6);     // la línea ya está rellena
+    }
+
+    [Fact]
+    public void Gap_FollowsTheDeclaredLineEnd_WhenItIsLaterThanTheLastWord()
+    {
+        // La última palabra acaba en 8 pero la línea declara fin en 11: la pausa empieza en 11.
+        var block = Block(Enhanced(5, 11, new W("a", 5, 6), new W("b", 6, 8)), Normal(30, "siguiente"));
+
+        Assert.Equal(S(11), LyricsTiming.FillEnd(block, 0));
+        Assert.Contains(LyricsTiming.GetInstrumentalGaps(block), g => g.Start == S(11) && g.End == S(30));
+    }
+
+    [Fact]
+    public void FillEnd_WordsThatRunPastTheNextLine_AreCappedAndCreateNoGap()
+    {
+        var block = Block(Enhanced(5, 40, new W("a", 5, 20), new W("b", 20, 40)), Normal(12, "siguiente"));
+
+        Assert.Equal(S(12), LyricsTiming.FillEnd(block, 0));
+        Assert.DoesNotContain(LyricsTiming.GetInstrumentalGaps(block), g => g.Start >= S(5) && g.Start < S(12));
+    }
+
+    [Fact]
+    public void Gap_AfterEnhancedLineWithoutEnd_StartsAfterTheLastWordEstimate()
+    {
+        // Última palabra «hola» (4 × 80 ms) desde 10: fin en 10,32.
+        var block = Block(Enhanced(5, null, new W("a", 5), new W("hola", 10)), Normal(30, "siguiente"));
+
+        Assert.Equal(S(10.32), LyricsTiming.FillEnd(block, 0));
+        Assert.Contains(LyricsTiming.GetInstrumentalGaps(block), g => g.Start == S(10.32) && g.End == S(30));
+    }
+
+    [Fact]
+    public void Gap_ExplicitBlankLineAfterAnEnhancedLine_StillWorks()
+    {
+        var block = Block(Enhanced(5, 8, new W("a", 5, 8)), Normal(8, ""), Normal(30, "siguiente"));
+
+        var gap = Assert.Single(LyricsTiming.GetInstrumentalGaps(block).Where(g => g.Start >= S(5)));
+
+        Assert.Equal((S(8), S(30)), (gap.Start, gap.End));
+        // Una sola entrada para esa pausa: la línea vacía, sin duplicar con una «♪» deducida.
+        var timeline = LyricsTimeline.Build(block);
+        Assert.Equal(1, timeline.Entries.Count(e => e.Start == S(8)));
+    }
+
+    [Fact]
+    public void FillEnd_EnhancedLineSharingItsMarkWithTheNext_IsItsOwnStart()
+    {
+        var block = Block(Enhanced(10, 15, new W("a", 10, 15)), Normal(10, "B"), Normal(40, "C"));
+
+        Assert.Equal(S(10), LyricsTiming.FillEnd(block, 0));
+        Assert.Equal(TimeSpan.Zero, LyricsTiming.FillDuration(block, 0));
+    }
+
+    [Fact]
+    public void Timeline_MixedBlock_UsesEachLinePath()
+    {
+        var block = Block(Normal(5, new string('a', 25)), Enhanced(20, 24, new W("x", 20, 22), new W("y", 22, 24)), Normal(60, "fin"));
+        var timeline = LyricsTimeline.Build(block);
+
+        // Normal: 25 × 80 ms = 2 s. Enhanced: su fin real (4 s).
+        Assert.Equal(0.5, timeline.FillAt(LineEntry(timeline, 0), S(6)), 6);
+        Assert.Equal(0.5, timeline.FillAt(LineEntry(timeline, 1), S(22)), 6);
+        Assert.Null(timeline.FillPointAt(LineEntry(timeline, 0), S(6)));
+        Assert.NotNull(timeline.FillPointAt(LineEntry(timeline, 1), S(22)));
+    }
 }
