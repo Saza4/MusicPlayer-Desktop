@@ -16,6 +16,9 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
     /// <summary>Antes de escribir: quien reproduce debe soltar ese archivo.</summary>
     public event Action<Track>? Saving;
 
+    /// <summary>La escritura terminó, bien o mal: quien soltó el archivo en <see cref="Saving"/> puede volver a cargarlo.</summary>
+    public event Action? Finished;
+
     public event Action<string>? Notified;
 
     /// <summary>
@@ -58,7 +61,11 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
         {
             Notified?.Invoke($"No se pudo incrustar la letra: {ex.Message}");
         }
-        finally { _busy = false; }
+        finally
+        {
+            _busy = false;
+            if (saving) Finished?.Invoke();
+        }
         return saving;
     }
 
@@ -68,9 +75,8 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
     /// archivo: cancelarlo no corta la reproducción.
     /// </summary>
     /// <param name="main">Letra principal cargada: la capa debe ser del mismo tipo (con marcas de tiempo si ella las tiene).</param>
-    /// <param name="beforeSaving">Se llama tras elegir el archivo y justo antes de soltar la pista (para anotar la posición).</param>
     /// <returns>Como <see cref="EmbedAsync"/>: True si soltó el archivo y hay que volver a cargar la pista.</returns>
-    public async Task<bool> EmbedLayerAsync(Track track, LyricsLayerKind kind, LyricBlock main, Action? beforeSaving = null)
+    public async Task<bool> EmbedLayerAsync(Track track, LyricsLayerKind kind, LyricBlock main)
     {
         var saving = false;
         if (_busy) return false;
@@ -107,7 +113,6 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
                 }
             }
 
-            beforeSaving?.Invoke();
             saving = true;
             Saving?.Invoke(track);
             var report = await editor.EmbedLayerAsync(track, new LyricsLayerSource(kind, language, path), main);
@@ -117,7 +122,11 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
         {
             Notified?.Invoke($"No se pudo incrustar la letra: {ex.Message}");
         }
-        finally { _busy = false; }
+        finally
+        {
+            _busy = false;
+            if (saving) Finished?.Invoke();
+        }
         return saving;
     }
 }

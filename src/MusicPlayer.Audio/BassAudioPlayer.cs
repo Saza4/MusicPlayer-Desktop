@@ -124,6 +124,20 @@ public sealed class BassAudioPlayer : IAudioPlayer
     {
         if (_disposed) return;
 
+        if (filePath is null)
+        {
+            // Cancelar suelta todo lo preparado, también lo que ya entró al mezclador: quien lo pide va a
+            // escribir o borrar ese archivo. Al terminar la actual se dispara TrackEnded y la cola sigue
+            // por el camino normal (docs/specs/playback-resilience.md, criterio 4).
+            Discard(Interlocked.Exchange(ref _next, null));
+            if (Interlocked.Exchange(ref _chained, null) is { } chained)
+            {
+                BassMix.MixerRemoveChannel(chained.Stream);
+                Bass.StreamFree(chained.Stream);
+            }
+            return;
+        }
+
         // Ya hay una pista añadida al mezclador y a punto de oírse: la siguiente de esa se prepara
         // cuando llegue AdvancedToNext.
         if (Volatile.Read(ref _chained) is not null) return;
@@ -133,7 +147,7 @@ public sealed class BassAudioPlayer : IAudioPlayer
             return;
 
         Discard(Interlocked.Exchange(ref _next, null));
-        if (filePath is null || _current is null) return;
+        if (_current is null) return;
 
         // Si no se puede abrir, no pasa nada: al terminar la actual se usará el camino normal.
         var next = Open(filePath);

@@ -648,7 +648,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - Guardar etiquetas y carátula a la vez copia el archivo dos veces. Con FLAC grandes se nota.
 - La carátula no se redimensiona: una portada de 8 MB infla ese archivo.
 - La carátula de álbum aplica el criterio de «mismo álbum». Un recopilatorio sin «artista del álbum» se separa por artista.
-- Si suena una pista del álbum al aplicarle una carátula, la reproducción se detiene y la portada grande se vacía (`ClearCurrentTrack`). No hay que esperar al siguiente cambio de pista para ver la portada nueva: basta con volver a reproducirla. Las miniaturas de la lista se refrescan.
+- Si suena una pista al escribir en su archivo (etiquetas, carátula, carátula de álbum, autocompletar o letra), se descarga para escribir y se vuelve a cargar en el mismo punto, sonando o en pausa como estaba (spec `docs/specs/playback-resilience.md`): se nota un corte breve. Las miniaturas de la lista se refrescan.
 - La carátula de álbum no tiene botón para cancelar ni para quitar la imagen de todo el álbum.
 
 **Conversión**

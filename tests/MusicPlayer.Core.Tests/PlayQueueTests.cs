@@ -356,4 +356,74 @@ public class PlayQueueTests
     {
         Assert.Null(new PlayQueue<string>().PeekNextAfterEnd());
     }
+
+    // ---- Pistas no disponibles (docs/specs/playback-resilience.md, criterio 9) ----
+
+    [Fact]
+    public void MoveNext_SkipsUnavailableTracks()
+    {
+        var queue = Started();
+
+        Assert.Equal("c", queue.MoveNext(song => song != "b"));
+        Assert.Equal("c", queue.Current);
+    }
+
+    [Fact]
+    public void MovePrevious_WithNothingAvailableBehind_LeavesTheQueueWhereItWas()
+    {
+        var queue = new PlayQueue<string>();
+        queue.Start(new[] { "a", "b" }, 1);
+
+        Assert.Null(queue.MovePrevious(song => song != "a"));
+
+        Assert.Equal("b", queue.Current);
+        Assert.Null(queue.MoveNext()); // "Siguiente" no vuelve a arrancar "b"
+    }
+
+    [Fact]
+    public void MoveNext_WithNothingAvailableAhead_KeepsCurrent_AndRepeatOneStillRepeatsIt()
+    {
+        var queue = new PlayQueue<string> { Repeat = RepeatMode.One };
+        queue.Start(new[] { "a", "b" }, 0);
+
+        Assert.Null(queue.MoveNext(song => song != "b"));
+
+        Assert.Equal("a", queue.Current);
+        Assert.Equal("a", queue.MoveNextAfterEnd(song => song != "b"));
+    }
+
+    [Fact]
+    public void MoveNext_RepeatAll_OnlyCurrentAvailable_EndsOnTheCurrentTrack()
+    {
+        var queue = Started(start: 2, repeat: RepeatMode.All);
+
+        Assert.Equal("c", queue.MoveNext(song => song == "c"));
+        Assert.Equal("c", queue.Current);
+    }
+
+    [Fact]
+    public void MoveNext_RepeatAllShuffled_NothingAvailable_KeepsTheOrder()
+    {
+        var queue = Started(start: 1, shuffle: true, seed: 3, repeat: RepeatMode.All);
+        var twin = Started(start: 1, shuffle: true, seed: 3, repeat: RepeatMode.All);
+
+        Assert.Null(queue.MoveNext(_ => false)); // da la vuelta (y baraja otra) sin encontrar nada
+
+        Assert.Equal("b", queue.Current);
+        for (var i = 0; i < Songs.Length - 1; i++)
+            Assert.Equal(twin.MoveNext(), queue.MoveNext());
+    }
+
+    [Fact]
+    public void MoveNext_NothingAvailable_KeepsThePendingPlayNextTracks()
+    {
+        var queue = Started();
+        queue.PlayNext("x");
+        queue.PlayNext("y");
+
+        Assert.Null(queue.MoveNext(_ => false));
+        queue.PlayNext("z"); // debe ir detrás de las que ya se pidieron
+
+        Assert.Equal(new[] { "x", "y", "z" }, new[] { queue.MoveNext(), queue.MoveNext(), queue.MoveNext() });
+    }
 }

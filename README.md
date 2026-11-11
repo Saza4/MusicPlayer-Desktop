@@ -127,7 +127,7 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 875 pruebas (698 en Core y 177 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 886 pruebas (704 en Core y 182 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco, teclado, la ventana de la isla y el dibujo de la letra progresiva), que se prueban a mano.
 De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
 De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, la atenuación y el desenfoque.
@@ -148,7 +148,8 @@ El detalle completo está en [`docs/reporte-reproductor.md`](docs/reporte-reprod
 ## Datos del usuario
 
 `library.json`, `playlists.json` y `settings.json` se guardan en `%APPDATA%\MusicPlayer` (Windows)
-o `~/.config/MusicPlayer` (Linux).
+o `~/.config/MusicPlayer` (Linux). En la misma carpeta, `errores.log` anota los errores inesperados
+(texto local, hasta 256 KB; no se envía a ningún sitio).
 
 ## Temas de usuario
 

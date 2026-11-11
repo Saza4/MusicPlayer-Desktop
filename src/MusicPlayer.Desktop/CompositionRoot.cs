@@ -19,6 +19,9 @@ public static class CompositionRoot
         // Audio
         services.AddSingleton<IAudioPlayer, BassAudioPlayer>();
 
+        // Red de seguridad: los errores no controlados se anotan aquí (App.axaml.cs).
+        services.AddSingleton(_ => new ErrorLog(AppPaths.Errors));
+
         // Biblioteca
         services.AddSingleton<ITrackMetadataReader, TagLibTrackMetadataReader>();
         services.AddSingleton<LibraryScanner>();

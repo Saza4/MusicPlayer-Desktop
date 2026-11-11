@@ -21,6 +21,9 @@ public partial class TagAutoFixViewModel(TagEditor editor) : ObservableObject
     /// <summary>Después de escribir: la biblioteca nueva, ya reordenada.</summary>
     public event Action<LibrarySnapshot>? Applied;
 
+    /// <summary>La escritura terminó, bien o mal: quien soltó el archivo en <see cref="Saving"/> puede volver a cargarlo.</summary>
+    public event Action? Finished;
+
     public event Action<string>? Notified;
 
     [ObservableProperty] private bool _isOpen;
@@ -157,6 +160,10 @@ public partial class TagAutoFixViewModel(TagEditor editor) : ObservableObject
         {
             Notified?.Invoke($"No se pudo completar: {ex.Message}");
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            IsBusy = false;
+            Finished?.Invoke();
+        }
     }
 }

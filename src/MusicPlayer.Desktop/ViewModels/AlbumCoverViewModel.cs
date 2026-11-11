@@ -19,12 +19,16 @@ public class AlbumCoverViewModel(
     /// <summary>Terminó: la biblioteca actual, para que las filas vuelvan a pedir su carátula.</summary>
     public event Action<LibrarySnapshot>? Applied;
 
+    /// <summary>La escritura terminó, bien o mal: quien soltó el archivo en <see cref="Saving"/> puede volver a cargarlo.</summary>
+    public event Action? Finished;
+
     public event Action<string>? Notified;
 
     public async Task ApplyAsync(Track track)
     {
         if (_busy) return;
         _busy = true;
+        var saving = false;
         try
         {
             var scope = AlbumScope.Of(track, library.Current.Tracks);
@@ -50,6 +54,7 @@ public class AlbumCoverViewModel(
             var image = await File.ReadAllBytesAsync(path); // el tipo lo valida CoverEditor
 
             Notified?.Invoke($"Aplicando carátula a {Plural.Of(available.Count, "canción", "canciones")}…");
+            saving = true;
             foreach (var item in available) Saving?.Invoke(item);
 
             var result = await editor.SetManyAsync(available, image);
@@ -62,7 +67,11 @@ public class AlbumCoverViewModel(
         {
             Notified?.Invoke($"No se pudo aplicar la carátula: {ex.Message}");
         }
-        finally { _busy = false; }
+        finally
+        {
+            _busy = false;
+            if (saving) Finished?.Invoke(); // un lote, una sola reanudación
+        }
     }
 
     private static string Summarize(CoverBatchResult r, int unavailable)
