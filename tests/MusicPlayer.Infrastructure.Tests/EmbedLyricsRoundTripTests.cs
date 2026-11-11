@@ -67,6 +67,28 @@ public class EmbedLyricsRoundTripTests : IDisposable
         Assert.Equal("Wurudo", block.Lines[1].Romanization);
     }
 
+    // docs/specs/lrc-enhanced.md, criterios 12 y 13: las marcas <mm:ss.xx> viajan dentro del audio y se leen igual
+    // (principal y traducción), sin que quede ningún «<» en el texto.
+    [Theory, MemberData(nameof(Formats))]
+    public async Task EnhancedLyrics_SurviveEmbedding(string format)
+    {
+        var audio = NewFile(format);
+        var main = Write("song.lrc", "[00:01.00]<00:01.00>Hel<00:01.30>lo <00:01.60>mundo <00:02.20>\n[00:03.00]Uno <00:03.40>dos");
+        Write("song.es.lrc", "[00:01.00]<00:01.00>Hola <00:01.60>mundo\n[00:03.00]Uno <00:03.40>dos");
+
+        await EmbedAsync(audio, main);
+        foreach (var lrc in Directory.GetFiles(_dir, "*.lrc"))
+            File.Delete(lrc);
+        var block = await ReadAsync(audio);
+
+        var first = block.Lines[0];
+        Assert.Equal("Hello mundo", first.Text);
+        Assert.Equal(new[] { "Hel", "lo", "mundo" }, first.Words!.Select(w => w.Text));
+        Assert.Equal(TimeSpan.FromSeconds(2.2), first.End);
+        Assert.Equal("Hola mundo", first.Translation);
+        Assert.DoesNotContain(block.Lines, l => l.Text.Contains('<') || l.Translation?.Contains('<') == true);
+    }
+
     // Prueba a mano 3 del autor: un hermano inválido se salta y la línea de estado lo dice.
     [Theory, MemberData(nameof(Formats))]
     public async Task AnInvalidSibling_IsSkippedAndReported(string format)

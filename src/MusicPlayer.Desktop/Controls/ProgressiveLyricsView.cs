@@ -235,12 +235,13 @@ public sealed class ProgressiveLyricsView : Panel
         if (active >= 0)
         {
             fill = timeline.FillAt(active, position);
-            _items[active].SetFill(fill);
+            // El punto por palabra se adelanta para compensar el retraso del resorte del relleno (M2b).
+            _items[active].SetFill(fill, timeline.FillPointAt(active, position + M.FillLookahead));
         }
 
         var moving = false;
         foreach (var item in _items)
-            moving |= item.Advance(_target, now, elapsed);
+            moving |= item.Advance(_target, now, elapsed) | item.AdvanceFill(elapsed);
 
         ApplyVisuals();
 
@@ -431,6 +432,10 @@ public sealed class ProgressiveLyricsView : Panel
         private bool _isActive;
         private double _scale = 1;
         private double _fill;
+        private FillPoint? _point;       // relleno por palabra de la última llamada (null: línea sin tiempos por palabra)
+        private bool _smoothFill;        // el relleno de la fila original va por palabra y lo suaviza un resorte (M2b)
+        private double _fillTarget;      // la x a la que va
+        private SpringState _fillState;  // la x que se muestra
 
         private SpringState _spring;
         private double _springTarget;   // a dónde va ahora (el objetivo anterior hasta que le toca arrancar)
@@ -479,20 +484,61 @@ public sealed class ProgressiveLyricsView : Panel
         public void SetActive(bool active)
         {
             _isActive = active;
-            SetFill(active ? _fill : 0); // las ya cantadas vuelven a tenue (criterio 2)
+            SetFill(active ? _fill : 0, active ? _point : null); // las ya cantadas vuelven a tenue (criterio 2)
         }
 
         /// <summary>
         /// Rellena el renglón elegido hasta <paramref name="fraction"/>. Los demás no se rellenan (criterio 6 de
         /// lyrics-progressive.md, enmendado): brillantes en la activa y tenues en las otras.
         /// </summary>
-        public void SetFill(double fraction)
+        /// <param name="point">
+        /// Posición por palabra de un .lrc enhanced (docs/specs/lrc-enhanced-fill.md). Solo la fila original la usa:
+        /// sus desplazamientos valen sobre el texto original, no sobre la pronunciación ni la traducción, que siguen
+        /// la fracción de la línea.
+        /// </param>
+        public void SetFill(double fraction, FillPoint? point = null)
         {
             _fill = fraction;
+            _point = point;
             foreach (var row in Rows())
-                row.FillX = ReferenceEquals(row, _filled) ? fraction * row.FillLength
-                          : _isActive ? double.PositiveInfinity
-                          : 0;
+            {
+                if (!ReferenceEquals(row, _filled))
+                    row.FillX = _isActive ? double.PositiveInfinity : 0;
+                else if (point is { } p && ReferenceEquals(row, _lead))
+                    row.FillX = SetSmoothTarget(row.XAt(p.Index, p.Length, p.Fraction));
+                else
+                {
+                    _smoothFill = false;
+                    row.FillX = fraction * row.FillLength;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fija la x objetivo del relleno por palabra y devuelve la que se muestra. Retrocede o se aleja mucho
+        /// (barra, pulsar una línea, redimensionar): salto directo. Si no, la alcanza el resorte en
+        /// <see cref="AdvanceFill"/>, que da continuidad a la velocidad entre palabras.
+        /// </summary>
+        private double SetSmoothTarget(double target)
+        {
+            var distance = target - _fillState.Position;
+            if (!_smoothFill || distance < -1 || distance > M.FillSnapDistance)
+                _fillState = SpringState.At(target);
+            _smoothFill = true;
+            _fillTarget = target;
+            return _fillState.Position;
+        }
+
+        /// <summary>Avanza el resorte del relleno. Devuelve true mientras aún no ha llegado a su objetivo.</summary>
+        public bool AdvanceFill(TimeSpan elapsed)
+        {
+            if (!_smoothFill) return false;
+
+            _fillState = SpringSolver.Step(_fillState, _fillTarget, elapsed, M.FillSpring);
+            var settled = SpringSolver.IsSettled(_fillState, _fillTarget);
+            if (settled) _fillState = SpringState.At(_fillTarget);
+            _filled.FillX = _fillState.Position;
+            return !settled;
         }
 
         private IEnumerable<FillTextBlock> Rows()
@@ -507,7 +553,7 @@ public sealed class ProgressiveLyricsView : Panel
         protected override Size MeasureOverride(Size availableSize)
         {
             var size = base.MeasureOverride(availableSize);
-            SetFill(_fill);
+            SetFill(_fill, _point);
             return size;
         }
 
@@ -570,7 +616,7 @@ public sealed class ProgressiveLyricsView : Panel
                 LyricsRow.Translation => _translation,
                 _ => _lead
             };
-            SetFill(_fill);
+            SetFill(_fill, _point);
         }
     }
 

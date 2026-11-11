@@ -107,6 +107,20 @@ public sealed class LyricsTimeline
             : 1;
     }
 
+    /// <summary>
+    /// Dónde está el relleno de una línea con tiempos por palabra (.lrc enhanced), o null si la entrada no los tiene
+    /// (línea normal, pausa o línea vacía) o aún no ha empezado: entonces vale <see cref="FillAt"/>.
+    /// </summary>
+    public FillPoint? FillPointAt(int entryIndex, TimeSpan position)
+    {
+        if (entryIndex < 0 || entryIndex >= Entries.Count) return null;
+
+        var entry = Entries[entryIndex];
+        if (entry.Kind != TimelineEntryKind.Line || position < entry.Start || _entryGaps[entryIndex] is not null) return null;
+
+        return LyricsTiming.FillPoint(_block, entry.LineIndex, position);
+    }
+
     /// <summary>Inicio de la primera entrada posterior a <paramref name="position"/>, para despertar el reloj.</summary>
     public TimeSpan? NextStartAfter(TimeSpan position)
     {
