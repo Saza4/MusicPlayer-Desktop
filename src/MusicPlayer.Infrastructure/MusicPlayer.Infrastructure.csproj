@@ -8,6 +8,11 @@
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Las pruebas llegan a AtomicJson y SafeFileEdit, que son internos. -->
+    <InternalsVisibleTo Include="MusicPlayer.Infrastructure.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -83,7 +83,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 
 - **Lógica pura y probada:** la cola, el filtro, el orden, el parser `.lrc`, la combinación de letras, el agrupador de álbumes y las reglas de conversión viven en Core y se prueban sin interfaz. La mayoría tampoco toca el disco; las pruebas de `LyricsEditor`, `LibraryService`, `LibraryScanner` y la conversión usan directorios temporales reales.
 - **Proveedores componibles:** letras y carátulas siguen los patrones _composite_ y _decorator_. Añadir una fuente nueva no modifica las existentes.
-- **Persistencia segura:** escritura atómica (archivo temporal y reemplazo), copia `.corrupt` si el JSON se daña y DTOs propios para que el formato no dependa de los modelos.
+- **Persistencia segura:** escritura atómica (archivo temporal y reemplazo), copia `.corrupt-<fecha>` si el JSON se daña (se conservan las cinco últimas) y DTOs propios para que el formato no dependa de los modelos.
 - **Escritura atómica en los archivos de audio:** `SafeFileEdit` trabaja sobre una copia temporal (`~tags-{guid}.ext`), la edita, la verifica y la intercambia con `File.Replace`. Si algo falla, el original queda intacto. La comparten el editor de etiquetas, el de carátulas y el de letras.
 - **Identidad estable de las pistas:** el `Id` de cada canción se conserva al reescanear, reubicar archivos y editar etiquetas, de modo que las playlists sobreviven.
 - **Archivos bloqueados en Windows:** antes de escribir en un archivo, el reproductor lo suelta (`Unload` y `PrepareNext(null)`).
@@ -126,7 +126,7 @@ Reglas finas del código que no aparecen en otras secciones (verificadas contra 
 **Persistencia**
 
 - **Formato:** los JSON llevan `Version = 1`. La compatibilidad con archivos antiguos se logra con campos opcionales (por ejemplo `DiscNumber` y `AlbumArtist` en la biblioteca) y porque el deserializador ignora las claves desconocidas, de modo que los ajustes retirados cargan sin problema.
-- **Dos implementaciones de escritura atómica:** `AtomicJson` (ajustes, playlists) y `JsonLibraryRepository`, que repite el mismo patrón (`.tmp`, `File.Move`, `.corrupt`) por su cuenta.
+- **Dos implementaciones de escritura atómica:** `AtomicJson` (ajustes, playlists) y `JsonLibraryRepository`, que repite el mismo patrón (`.tmp`, `File.Move`) por su cuenta; las dos comparten el candado por archivo y el respaldo con fecha (`CorruptBackup`).
 - **Metadatos sin uso en la interfaz:** el género (`Track.Genre`) se lee y se guarda en `library.json`, pero ninguna pantalla lo muestra, lo filtra ni lo edita.
 - **Temas de usuario (`JsonThemeRepository`):** el JSON admite comentarios y comas finales, y un BOM UTF-8 al principio; las claves se leen sin distinguir mayúsculas. El identificador del tema es el nombre del archivo sin extensión.
 

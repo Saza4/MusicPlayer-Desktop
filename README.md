@@ -74,7 +74,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
   combinación de letras, el agrupador de álbumes y las reglas de conversión viven en Core y se prueban sin UI. La mayoría tampoco toca el disco.
 - **Proveedores componibles:** letras y carátulas siguen el patrón _composite_ y _decorator_, de modo
   que añadir una fuente nueva no modifica las existentes.
-- **Persistencia segura:** escritura atómica (archivo temporal y mover), copia `.corrupt` si el JSON
+- **Persistencia segura:** escritura atómica (archivo temporal y mover), copia `.corrupt-<fecha>` (se guardan las cinco últimas) si el JSON
   se daña y DTOs propios para que el formato no dependa de los modelos.
 - **Escritura atómica en los archivos de audio:** el editor de etiquetas, el de carátulas y el de letras trabajan sobre una copia temporal, la verifican y la intercambian con el original. Si algo falla, el original queda intacto.
 - **Identidad estable de las pistas:** el `Id` de cada canción se conserva al reescanear, reubicar archivos y editar etiquetas, así que las playlists sobreviven.
@@ -127,7 +127,7 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 903 pruebas (712 en Core y 191 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 929 pruebas (732 en Core y 197 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco, teclado, la ventana de la isla y el dibujo de la letra progresiva), que se prueban a mano.
 De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
 De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, la atenuación y el desenfoque.

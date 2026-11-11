@@ -313,8 +313,14 @@ public partial class MainViewModel : ViewModelBase
             var result = await _library.ScanFolderAsync(folder, progress);
             ApplySnapshot(result.Snapshot);
             _ = CheckAvailabilityAsync();
-            if (result.Relocated > 0) // ApplySnapshot escribe el estado general: este mensaje va después
-                Status = $"{Plural.Of(result.Relocated, "canción reubicada", "canciones reubicadas")}, con sus playlists";
+            // ApplySnapshot escribe el estado general: estos mensajes van después.
+            var notes = new List<string>();
+            if (result.Relocated > 0)
+                notes.Add($"{Plural.Of(result.Relocated, "canción reubicada", "canciones reubicadas")}, con sus playlists");
+            if (result.TemporariesRemoved > 0)
+                notes.Add(Plural.Of(result.TemporariesRemoved, "temporal antiguo eliminado", "temporales antiguos eliminados"));
+            if (notes.Count > 0)
+                Status = string.Join("; ", notes);
         }
         catch (Exception ex)
         {
@@ -499,7 +505,17 @@ public partial class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Status = $"No se pudo quitar la canción: {ex.Message}";
+            // El guardado falló con el archivo ya borrado: la pista sigue en la biblioteca, pero no disponible
+            // (docs/specs/library-data-safety-2.md, criterio 2).
+            if (deleteFile && !File.Exists(item.Track.FilePath))
+            {
+                Status = $"Se borró el archivo, pero no se pudo guardar la biblioteca: {ex.Message}";
+                _ = CheckAvailabilityAsync();
+            }
+            else
+            {
+                Status = $"No se pudo quitar la canción: {ex.Message}";
+            }
         }
     }
 

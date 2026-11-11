@@ -44,7 +44,7 @@ public class JsonPlaylistRepositoryTests : IDisposable
         var loaded = await new JsonPlaylistRepository(FilePath).LoadAsync();
 
         Assert.Empty(loaded);
-        Assert.True(File.Exists(FilePath + ".corrupt"));
+        Assert.Single(Directory.GetFiles(Path.GetDirectoryName(FilePath)!, Path.GetFileName(FilePath) + ".corrupt-*"));
     }
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);

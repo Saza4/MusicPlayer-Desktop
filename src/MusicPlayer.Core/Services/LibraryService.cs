@@ -26,6 +26,14 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         return _current;
     }
 
+    // Primero el disco y después la memoria: si el guardado lanza, _current sigue siendo lo que hay guardado
+    // (docs/specs/library-data-safety-2.md, criterio 1).
+    private async Task<LibrarySnapshot> CommitAsync(LibrarySnapshot next, CancellationToken ct = default)
+    {
+        await repository.SaveAsync(next, ct);
+        return _current = next;
+    }
+
     private void EnsureWritable()
     {
         if (_loadFailed)
@@ -58,8 +66,8 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
         var found = await scanner.ScanAsync(folder, progress, ct);
 
         var byPath = _current.Tracks
-            .DistinctBy(t => t.FilePath, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(t => t.FilePath, StringComparer.OrdinalIgnoreCase);
+            .DistinctBy(t => t.FilePath, FilePaths.Comparer)
+            .ToDictionary(t => t.FilePath, FilePaths.Comparer);
 
         // Rutas que la biblioteca aún no conocía: candidatas a ser pistas movidas.
         var fresh = found.Where(t => !byPath.ContainsKey(t.FilePath)).ToList();
@@ -82,9 +90,11 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             relocated++;
         }
 
-        _current = new LibrarySnapshot(TrackSorter.Sort(byPath.Values));
-        await repository.SaveAsync(_current, ct);
-        return new AddFolderResult(_current, relocated);
+        // Temporales de la app que quedaron de un cierre brusco (criterio 7).
+        var cleaned = await scanner.CleanStaleTemporariesAsync(folder, ct);
+
+        var saved = await CommitAsync(new LibrarySnapshot(TrackSorter.Sort(byPath.Values)), ct);
+        return new AddFolderResult(saved, relocated, cleaned);
     }
 
     public Task<RemoveResult> RemoveTracksAsync(IEnumerable<Guid> ids, bool deleteFiles) =>
@@ -121,10 +131,10 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             return new RemoveResult(_current, removed, errors);
 
         var gone = removed.Select(t => t.Id).ToHashSet();
-        _current = _current with { Tracks = _current.Tracks.Where(t => !gone.Contains(t.Id)).ToList() };
-        await repository.SaveAsync(_current);
+        // Si el guardado falla con archivos ya borrados, esas pistas siguen en la biblioteca como no disponibles.
+        var saved = await CommitAsync(_current with { Tracks = _current.Tracks.Where(t => !gone.Contains(t.Id)).ToList() });
 
-        return new RemoveResult(_current, removed, errors);
+        return new RemoveResult(saved, removed, errors);
     }
 
     /// <summary>Pistas de la biblioteca cuyo archivo ya no existe. No modifica nada.</summary>
@@ -152,9 +162,7 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             return _current;
 
         var updated = _current.Tracks.Select(t => t.Id == trackId ? tags.ApplyTo(t) : t);
-        _current = _current with { Tracks = TrackSorter.Sort(updated) };
-        await repository.SaveAsync(_current, ct);
-        return _current;
+        return await CommitAsync(_current with { Tracks = TrackSorter.Sort(updated) }, ct);
     }
 
     /// <summary>Aplica etiquetas a varias pistas con un único guardado y reordena.</summary>
@@ -169,9 +177,7 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             return _current;
 
         var updated = _current.Tracks.Select(t => changes.TryGetValue(t.Id, out var tags) ? tags.ApplyTo(t) : t);
-        _current = _current with { Tracks = TrackSorter.Sort(updated) };
-        await repository.SaveAsync(_current, ct);
-        return _current;
+        return await CommitAsync(_current with { Tracks = TrackSorter.Sort(updated) }, ct);
     }
 
     /// <summary>Agrega archivos concretos (por ejemplo, los recién convertidos), conservando el Id de los ya conocidos.</summary>
@@ -185,16 +191,14 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             return _current;
 
         var byPath = _current.Tracks
-            .DistinctBy(t => t.FilePath, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(t => t.FilePath, StringComparer.OrdinalIgnoreCase);
+            .DistinctBy(t => t.FilePath, FilePaths.Comparer)
+            .ToDictionary(t => t.FilePath, FilePaths.Comparer);
 
         foreach (var track in found)
             byPath[track.FilePath] = byPath.TryGetValue(track.FilePath, out var known)
                 ? track with { Id = known.Id, AddedAt = known.AddedAt }
                 : track;
 
-        _current = _current with { Tracks = TrackSorter.Sort(byPath.Values) };
-        await repository.SaveAsync(_current, ct);
-        return _current;
+        return await CommitAsync(_current with { Tracks = TrackSorter.Sort(byPath.Values) }, ct);
     }
 }
