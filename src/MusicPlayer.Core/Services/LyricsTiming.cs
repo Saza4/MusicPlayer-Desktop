@@ -18,9 +18,9 @@ public sealed record InstrumentalGap(TimeSpan Start, TimeSpan End)
 /// Dónde está el relleno de una línea con tiempos por palabra: la palabra activa y lo recorrido de ella. La posición
 /// continua en <c>LyricLine.Text</c> es <c>Index + Fraction × Length</c>; la vista la convierte en x.
 /// </summary>
-/// <param name="Index">Carácter de <c>LyricLine.Text</c> donde empieza la palabra.</param>
-/// <param name="Length">Longitud de la palabra.</param>
-/// <param name="Fraction">Fracción recorrida de la palabra, de 0 a 1.</param>
+/// <param name="Index">Carácter de <c>LyricLine.Text</c> donde empieza el tramo (una palabra).</param>
+/// <param name="Length">Longitud del tramo: la palabra y, si no hay pausa real, hasta la siguiente (espacio incluido).</param>
+/// <param name="Fraction">Fracción recorrida del tramo, de 0 a 1.</param>
 public readonly record struct FillPoint(int Index, int Length, double Fraction)
 {
     public double CharPosition => Index + Fraction * Length;
@@ -39,6 +39,12 @@ public static class LyricsTiming
     /// <summary>Límites de la estimación: ni un destello en líneas cortas ni un relleno eterno en las largas.</summary>
     public static readonly TimeSpan MinFill = TimeSpan.FromSeconds(1);
     public static readonly TimeSpan MaxFill = TimeSpan.FromSeconds(8);
+
+    /// <summary>
+    /// Pausa máxima entre una palabra y la siguiente (de un .lrc enhanced) para que el relleno no se detenga: hasta
+    /// aquí es una sola pasada continua; con más es un silencio real y se queda al final de la palabra.
+    /// </summary>
+    public static readonly TimeSpan WordPauseHold = TimeSpan.FromMilliseconds(250);
 
     /// <summary>Un hueco sin letra a partir de esta duración es una pausa instrumental.</summary>
     public static readonly TimeSpan InstrumentalThreshold = TimeSpan.FromSeconds(8);
@@ -91,15 +97,26 @@ public static class LyricsTiming
 
         var word = line.Words![current];
         var span = spans[current];
-        double fraction;
-        if (position < span.Start) fraction = 0;
-        else if (position >= span.End) fraction = 1;
-        else fraction = (position - span.Start) / (span.End - span.Start); // span.End > Start: si no, caería arriba
 
         // Los desplazamientos vienen de un archivo: no deben salirse del texto.
         var start = Math.Clamp(word.Offset, 0, line.Text.Length);
-        var length = Math.Clamp(word.Text.Length, 0, line.Text.Length - start);
-        return new FillPoint(start, length, fraction);
+        var textEnd = start + Math.Clamp(word.Text.Length, 0, line.Text.Length - start);
+        var timeEnd = span.End;
+
+        // Sin pausa real hasta la siguiente palabra, el tramo la alcanza (espacio incluido): el relleno ni se
+        // detiene ni salta el espacio, y la velocidad cambia de una palabra a otra sin escalón de posición.
+        if (current + 1 < spans.Length && spans[current + 1].Start - span.End <= WordPauseHold)
+        {
+            timeEnd = spans[current + 1].Start;
+            textEnd = Math.Clamp(line.Words[current + 1].Offset, textEnd, line.Text.Length);
+        }
+
+        double fraction;
+        if (position < span.Start) fraction = 0;
+        else if (position >= timeEnd) fraction = 1;
+        else fraction = (position - span.Start) / (timeEnd - span.Start); // timeEnd > Start: si no, caería arriba
+
+        return new FillPoint(start, textEnd - start, fraction);
     }
 
     /// <summary>

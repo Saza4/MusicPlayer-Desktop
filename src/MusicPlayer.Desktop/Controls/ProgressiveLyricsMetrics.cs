@@ -33,6 +33,17 @@ public static class ProgressiveLyricsMetrics
     /// <summary>El resorte del desplazamiento (el spring() de SwiftUI, como el original).</summary>
     public static readonly Spring Spring = Spring.Default;
 
+    /// <summary>
+    /// Suavizado del relleno por palabra (docs/specs/lrc-enhanced-fill.md, M2b): un resorte sin rebote que redondea
+    /// los cambios de ritmo entre palabras. Con respuesta 0,18 s el resorte va ≈ 57 ms por detrás de una rampa
+    /// (2/ω), que <see cref="FillLookahead"/> compensa. Se afinan a mano.
+    /// </summary>
+    public static readonly Spring FillSpring = Spring.FromResponse(0.18, 1);
+    public static readonly TimeSpan FillLookahead = TimeSpan.FromMilliseconds(60);
+
+    /// <summary>Si el objetivo del relleno se aleja más que esto (barra, pulsar una línea, redimensionar), salta sin deslizarse.</summary>
+    public const double FillSnapDistance = 120;
+
     /// <summary>Criterio 8: tras desplazar a mano, tiempo sin tocar nada hasta que vuelve el automático.</summary>
     public static readonly TimeSpan ManualScrollHold = TimeSpan.FromSeconds(3);
 

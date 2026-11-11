@@ -96,28 +96,28 @@ public sealed class FillTextBlock : Control
     }
 
     /// <summary>
-    /// El valor de <see cref="FillX"/> que deja el relleno en <paramref name="charPosition"/>: una posición continua
-    /// en <see cref="Text"/> (la parte entera es el carácter; la decimal, lo recorrido hacia el siguiente). Suma el
-    /// ancho de los renglones anteriores y devuelve 0 si el texto aún no se ha medido.
+    /// El valor de <see cref="FillX"/> que deja el relleno a la <paramref name="fraction"/> del tramo de
+    /// <paramref name="length"/> caracteres que empieza en <paramref name="index"/>. Suma el ancho de los renglones
+    /// anteriores y devuelve 0 si el texto aún no se ha medido.
     /// </summary>
     /// <remarks>
-    /// Interpolar entre dos caracteres vale igual para una palabra entera, para una partida entre renglones y para
-    /// sílabas pegadas (el fin de «Hel» es el inicio de «lo»). En texto de derecha a izquierda la x sigue siendo la
-    /// lógica: limitación documentada (docs/specs/lrc-enhanced-fill.md).
+    /// Interpola entre la distancia del inicio y la del final del tramo, así que la velocidad es uniforme en x (una
+    /// «m» ancha y una «i» estrecha no cambian el ritmo) y vale igual para un tramo que cruza renglones, porque la
+    /// distancia acumulada es continua. En texto de derecha a izquierda la x sigue siendo la lógica: limitación
+    /// documentada (docs/specs/lrc-enhanced-fill.md).
     /// </remarks>
-    public double XAt(double charPosition)
+    public double XAt(int index, int length, double fraction)
     {
         if (_bright is null) return 0;
 
         var text = Text ?? string.Empty;
-        var position = Math.Clamp(charPosition, 0, text.Length);
-        var low = SnapToCharacter(text, (int)Math.Floor(position), false);
-        var high = SnapToCharacter(text, (int)Math.Ceiling(position), true);
+        var start = SnapToCharacter(text, Math.Clamp(index, 0, text.Length), false);
+        var from = CumulativeX(start);
+        if (length <= 0 || fraction <= 0) return from;
 
-        var from = CumulativeX(low);
-        if (high <= low) return from;
-        var to = CumulativeX(high);
-        return from + (to - from) * Math.Clamp((position - low) / (high - low), 0, 1);
+        var end = SnapToCharacter(text, Math.Clamp(index + length, 0, text.Length), true);
+        var to = CumulativeX(end);
+        return from + (to - from) * Math.Min(fraction, 1);
     }
 
     /// <summary>Un par sustituto (emoji, por ejemplo) no se parte: el índice pasa a su borde.</summary>

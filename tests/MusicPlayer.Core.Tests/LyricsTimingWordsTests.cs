@@ -36,11 +36,11 @@ public class LyricsTimingWordsTests
         var block = Block(Enhanced(10, 13, new W("Oh", 10, 11), new W("it", 11, 12), new W("was", 12, 13)));
 
         var first = LyricsTiming.FillPoint(block, 0, S(10.5))!.Value;
-        Assert.Equal((0, 2), (first.Index, first.Length));
+        Assert.Equal((0, 3), (first.Index, first.Length)); // «Oh » (el tramo incluye el espacio)
         Assert.Equal(0.5, first.Fraction, 6);
 
         var second = LyricsTiming.FillPoint(block, 0, S(11.5))!.Value;
-        Assert.Equal((3, 2), (second.Index, second.Length));
+        Assert.Equal((3, 3), (second.Index, second.Length));
         Assert.Equal(0.5, second.Fraction, 6);
 
         var third = LyricsTiming.FillPoint(block, 0, S(12.25))!.Value;
@@ -61,8 +61,9 @@ public class LyricsTimingWordsTests
     }
 
     [Fact]
-    public void FillPoint_BetweenWords_StaysAtTheEndOfThePrevious()
+    public void FillPoint_RealPauseBetweenWords_StaysAtTheEndOfThePrevious()
     {
+        // 0,6 s de silencio (> WordPauseHold): se queda quieto al final del texto de «Oh».
         var block = Block(Enhanced(10, 13, new W("Oh", 10, 10.4), new W("it", 11, 12)));
 
         var gap = LyricsTiming.FillPoint(block, 0, S(10.7))!.Value;
@@ -103,7 +104,7 @@ public class LyricsTimingWordsTests
 
         // «beat» entra a la vez que la línea (inicio efectivo 48,29) y recorre su tramo.
         var inside = LyricsTiming.FillPoint(block, 0, S(48.29 + 0.355))!.Value;
-        Assert.Equal((3, 4), (inside.Index, inside.Length));
+        Assert.Equal((3, 5), (inside.Index, inside.Length));
         Assert.Equal(0.5, inside.Fraction, 2);
     }
 
@@ -295,5 +296,65 @@ public class LyricsTimingWordsTests
         var gap = timeline.Entries.ToList().FindIndex(e => e.Kind == TimelineEntryKind.Gap);
         Assert.True(gap >= 0);
         Assert.Null(timeline.FillPointAt(gap, S(20)));        // pausa «♪»
+    }
+
+    // ---- Tramo continuo (M2b) ----
+
+    [Fact]
+    public void FillPoint_ShortPauseBetweenWords_ContinuesThroughTheSpace()
+    {
+        // Pausa de exactamente WordPauseHold (250 ms): cuenta como continua.
+        var block = Block(Enhanced(10, 13, new W("Oh", 10, 10.75), new W("it", 11, 12)));
+
+        var mid = LyricsTiming.FillPoint(block, 0, S(10.875))!.Value; // a mitad del tramo estirado (10 → 11)
+
+        Assert.Equal((0, 3), (mid.Index, mid.Length));
+        Assert.Equal(0.875, mid.Fraction, 6);
+    }
+
+    [Fact]
+    public void FillPoint_JustOverTheHold_StopsAtTheEndOfTheWord()
+    {
+        var gap = LyricsTiming.WordPauseHold + TimeSpan.FromMilliseconds(1);
+        var endOfOh = 10.5;
+        var block = Block(Enhanced(10, 13, new W("Oh", 10, endOfOh), new W("it", endOfOh + gap.TotalSeconds, 12)));
+
+        var point = LyricsTiming.FillPoint(block, 0, S(endOfOh + 0.1))!.Value;
+
+        Assert.Equal((0, 2), (point.Index, point.Length));
+        Assert.Equal(1, point.Fraction, 6);
+    }
+
+    [Fact]
+    public void FillPoint_ContiguousWords_PositionIsContinuousAcrossTheWholeLine()
+    {
+        // Sin pausas, CharPosition crece sin saltos entre palabras, con espacios y con sílabas pegadas.
+        var block = Block(Enhanced(10, 14,
+            new W("Hel", 10, 10.6), new W("lo", 10.6, 11.4, Glued: true), new W("big", 11.4, 12.2), new W("world", 12.2, 14)));
+        Assert.Equal("Hello big world", block.Lines[0].Text);
+
+        double? previous = null;
+        for (var t = 10.0; t <= 14.0; t += 0.001)
+        {
+            var position = LyricsTiming.FillPoint(block, 0, S(t))!.Value.CharPosition;
+            if (previous is { } p)
+            {
+                Assert.True(position >= p - 1e-9, $"retrocede en {t:F3}");
+                Assert.True(position - p < 0.2, $"salta {position - p:F3} caracteres en {t:F3}"); // 0,001 s → como mucho unas décimas
+            }
+            previous = position;
+        }
+        Assert.Equal(block.Lines[0].Text.Length, previous!.Value, 6); // acaba en el final del texto
+    }
+
+    [Fact]
+    public void FillPoint_LastWord_EndsAtTheEndOfTheText()
+    {
+        var block = Block(Enhanced(10, 12, new W("a", 10, 11), new W("bc", 11, 12)));
+
+        var end = LyricsTiming.FillPoint(block, 0, S(12))!.Value;
+
+        Assert.Equal((2, 2), (end.Index, end.Length));
+        Assert.Equal(4, end.CharPosition, 6);
     }
 }
