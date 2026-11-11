@@ -8,6 +8,17 @@ public sealed class LibraryScanner(ITrackMetadataReader reader)
     public static readonly IReadOnlySet<string> SupportedExtensions =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp3", ".flac", ".wav", ".m4a" };
 
+    /// <summary>
+    /// Temporales de la propia app (<c>~tags-*</c> de las ediciones, <c>~conv-*</c> de la conversión): pueden quedar
+    /// tras un cierre brusco o estar a medio escribir, y no son música (docs/specs/library-data-safety.md).
+    /// </summary>
+    public static bool IsTemporary(string path)
+    {
+        var name = Path.GetFileName(path);
+        return name.StartsWith("~tags-", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("~conv-", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Escanea en segundo plano para no congelar la UI.</summary>
     public Task<IReadOnlyList<Track>> ScanAsync(
         string rootFolder,
@@ -27,7 +38,7 @@ public sealed class LibraryScanner(ITrackMetadataReader reader)
             {
                 ct.ThrowIfCancellationRequested();
 
-                if (!SupportedExtensions.Contains(Path.GetExtension(path)))
+                if (!SupportedExtensions.Contains(Path.GetExtension(path)) || IsTemporary(path))
                     continue;
 
                 var track = reader.Read(path);

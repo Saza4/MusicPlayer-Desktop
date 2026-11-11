@@ -6,6 +6,7 @@ namespace MusicPlayer.Core.Services;
 public sealed class PlaylistManager(IPlaylistRepository repository)
 {
     private IReadOnlyList<Playlist> _playlists = Array.Empty<Playlist>();
+    private bool _loadFailed;
 
     public IReadOnlyList<Playlist> Playlists => _playlists;
 
@@ -13,7 +14,16 @@ public sealed class PlaylistManager(IPlaylistRepository repository)
 
     public async Task<IReadOnlyList<Playlist>> LoadAsync(CancellationToken ct = default)
     {
-        _playlists = await repository.LoadAsync(ct);
+        try
+        {
+            _playlists = await repository.LoadAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _loadFailed = true; // guardar ahora sobrescribiría lo que no se pudo leer
+            throw;
+        }
+        _loadFailed = false;
         return _playlists;
     }
 
@@ -112,6 +122,10 @@ public sealed class PlaylistManager(IPlaylistRepository repository)
 
     private async Task CommitAsync(IReadOnlyList<Playlist> updated, CancellationToken ct)
     {
+        if (_loadFailed)
+            throw new InvalidOperationException(
+                "Las playlists no se pudieron cargar al arrancar, así que no se guarda nada para no sobrescribirlas. Reinicia la app.");
+
         await repository.SaveAsync(updated, ct);
         _playlists = updated;
     }

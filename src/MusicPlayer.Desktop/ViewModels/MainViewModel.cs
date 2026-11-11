@@ -261,7 +261,11 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             Status = "Cargando…";
-            var saved = await _settings.LoadAsync();
+            // Los ajustes no deben impedir que cargue la biblioteca (docs/specs/library-data-safety.md, criterio 2).
+            var saved = AppSettings.Default;
+            string? settingsProblem = null;
+            try { saved = await _settings.LoadAsync(); }
+            catch (Exception ex) { settingsProblem = $"No se pudieron leer los ajustes ({ex.Message}); se usan los de siempre"; }
             _restoring = true;
             try
             {
@@ -284,10 +288,11 @@ public partial class MainViewModel : ViewModelBase
                 SelectedTrack = _allTracks.FirstOrDefault(i => i.Track.Id == lastId);
 
             _ = CheckAvailabilityAsync(); // en segundo plano: no retrasa el arranque
+            if (settingsProblem is not null) Status = settingsProblem;
         }
         catch (Exception ex)
         {
-            Status = $"No se pudo cargar la biblioteca: {ex.Message}";
+            Status = $"No se pudo cargar la biblioteca: {ex.Message}. No se guardará nada hasta reiniciar, para no perder tus datos";
         }
     }
 

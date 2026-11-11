@@ -64,10 +64,18 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
                 t.Id, t.FilePath, t.Title, t.Artist, t.Album, t.Year,
                 t.Genre, t.TrackNumber, t.Duration.Ticks, t.AddedAt, t.DiscNumber, t.AlbumArtist)).ToList());
 
-        var tempPath = filePath + ".tmp";
-        await using (var stream = File.Create(tempPath))
-            await JsonSerializer.SerializeAsync(stream, file, JsonOptions, ct);
+        // Un temporal único por escritura: dos guardados a la vez no chocan en el mismo archivo.
+        var tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await using (var stream = File.Create(tempPath))
+                await JsonSerializer.SerializeAsync(stream, file, JsonOptions, ct);
 
-        File.Move(tempPath, filePath, overwrite: true);
+            File.Move(tempPath, filePath, overwrite: true);
+        }
+        finally
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (IOException) { }
+        }
     }
 }
