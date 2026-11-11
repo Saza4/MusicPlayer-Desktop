@@ -499,7 +499,7 @@ Tres novedades: una **letra progresiva** en el modo inmersivo (estilo Apple Musi
 - Pulsar una línea (o «♪») salta a ella. La rueda del ratón o un gesto desplazan a mano, y a los 3 s sin tocar nada la letra vuelve a su sitio.
 - Cuesta poco: reloj propio a 30 fotogramas por segundo pedidos (~24 reales) que solo corre mientras hay algo que mover; en pausa, 0 fotogramas. La carátula del fondo se desenfoca una sola vez, fuera del hilo de la interfaz.
 - **No cambia** el panel lateral ni las letras sin tiempos: siguen con la lista de siempre. No hay ajuste para volver al estilo anterior en el inmersivo.
-- **Limitación:** los `.lrc` solo traen el inicio de cada línea, así que no hay sincronía por palabra: el relleno avanza uniforme durante una duración estimada.
+- **Limitación:** los `.lrc` normales solo traen el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada. Los `.lrc` enhanced (`<mm:ss.xx>` por palabra) se leen y las etiquetas ya no se ven en el texto, pero el relleno por palabra todavía no los usa (spec `docs/specs/lrc-enhanced.md`, Fase 2).
 
 #### Traducción y pronunciación incrustadas
 
@@ -673,7 +673,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 **Letra progresiva**
 
-- Sin sincronía por palabra: el `.lrc` solo da el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada (80 ms por carácter, entre 1 y 8 s, nunca más allá de la línea siguiente). La precaución para añadirla después (el progreso entra en `FillTextBlock` como posición horizontal) está hecha; `LyricLine.Words` se quitó el 8 de noviembre de 2026 por no tener ningún uso, así que habría que volver a crearlo.
+- Sin relleno por palabra (los `.lrc` enhanced se leen pero su tiempo por palabra aún no se usa, spec `docs/specs/lrc-enhanced.md`): el relleno avanza uniforme durante una duración estimada (80 ms por carácter, entre 1 y 8 s, nunca más allá de la línea siguiente). La precaución para añadirla después (el progreso entra en `FillTextBlock` como posición horizontal) está hecha; `LyricLine.Words` se quitó el 8 de noviembre de 2026 por no tener ningún uso, así que habría que volver a crearlo.
 - Texto de derecha a izquierda (árabe, hebreo): el relleno barre siempre de izquierda a derecha. Con tramos LTR y RTL mezclados en una línea, no se ha probado.
 - El arrastre con el dedo o el lápiz no se ha probado en una pantalla táctil.
 - No se ha probado en Linux (compila y pasa las pruebas en CI).

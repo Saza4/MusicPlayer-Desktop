@@ -140,7 +140,7 @@ De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, l
 - **Carátulas:** no se redimensionan, así que una portada pesada infla el archivo.
 - **Temas:** el texto sigue la variante base (clara u oscura) y no se puede personalizar. El modo inmersivo es siempre oscuro: solo el botón Reproducir/Pausa y los iconos activos siguen el tema.
 - **Isla flotante:** solo en Windows (en Linux no se muestra). Siempre en la pantalla principal. No se maneja con el teclado: se pensó para el ratón sin quitar el foco a otras apps.
-- **Letra progresiva:** no hay sincronía por palabra: los `.lrc` solo traen el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada. En árabe o hebreo (de derecha a izquierda) el relleno barre igualmente de izquierda a derecha. El arrastre con el dedo o el lápiz no se ha probado en una pantalla táctil, y en Linux no se ha probado.
+- **Letra progresiva:** los `.lrc` normales solo traen el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada. Los `.lrc` enhanced (`<mm:ss.xx>` por palabra) se leen y sus etiquetas ya no se ven en el texto, pero el relleno por palabra aún no los usa (spec `docs/specs/lrc-enhanced.md`, Fase 2). En árabe o hebreo (de derecha a izquierda) el relleno barre igualmente de izquierda a derecha. El arrastre con el dedo o el lápiz no se ha probado en una pantalla táctil, y en Linux no se ha probado.
 - **Linux:** el audio y la interfaz no se han probado.
 
 El detalle completo está en [`docs/reporte-reproductor.md`](docs/reporte-reproductor.md).
