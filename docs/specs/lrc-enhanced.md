@@ -1,6 +1,6 @@
 # Especificación: `.lrc` enhanced (marcas `<mm:ss.xx>` por palabra)
 
-Estado: **aprobada (10 de noviembre de 2026). Fase 1 (M1 y M2) hecha en la rama `feature/lrc-enhanced-lectura`; falta la revisión del PR y la Fase 2.** Fase 1 (lectura) y Fase 2 (relleno por palabra) van en PR distintos. Fase 3 son comprobaciones de coherencia.
+Estado: **aprobada (10 de noviembre de 2026). Fases 1 y 2 hechas y fusionadas en `main` el 10 de noviembre de 2026 (`3ae9ff9`, una fusión local, sin PR).** La Fase 2 está en `lrc-enhanced-fill.md`. Fase 1 (lectura) y Fase 2 (relleno por palabra) van en PR distintos. Fase 3 son comprobaciones de coherencia.
 
 ## Contexto
 
@@ -11,7 +11,7 @@ Hoy `LrcLyricParser` solo reconoce las marcas de línea `[mm:ss.xx]` al inicio. 
 - Una traducción o pronunciación enhanced (hermana o incrustada) también se ve sucia, porque `LyricsMerger` copia `.Text`.
 - La incrustación no necesita cambios: guarda el archivo tal cual y al leer vuelve a pasar por el mismo parser.
 
-LrcStudio (`C:\Users\norte\LrcStudio`) produce estos archivos: lee, edita y escribe enhanced (sus specs 01, 09 y 10). Esta spec fija lo que MusicPlayer debe entender de ese formato. **No se copia su parser**: tiene defectos que aquí no se quieren heredar (ver «Diferencias con LrcStudio»).
+LrcStudio (otro proyecto del autor) produce estos archivos: lee, edita y escribe enhanced (sus specs 01, 09 y 10). Esta spec fija lo que MusicPlayer debe entender de ese formato. **No se copia su parser**: tiene defectos que aquí no se quieren heredar (ver «Diferencias con LrcStudio»).
 
 Lo que ya está preparado: `FillTextBlock` recibe el progreso como posición horizontal (RNF-5 de `lyrics-progressive.md`). `LyricLine.Words` y `LyricWord` se quitaron el 8 de noviembre de 2026 por no tener uso; ahora lo tienen y se reintroducen con otra forma.
 

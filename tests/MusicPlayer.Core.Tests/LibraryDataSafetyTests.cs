@@ -157,6 +157,8 @@ public class LibraryDataSafetyTests : IDisposable
     {
         var a = Touch("a/one.mp3");
         var b = Touch("b/two.mp3");
+        // Única espera real de las pruebas (docs/specs/test-waits-and-docs.md, criterio 4): solo ensancha la ventana
+        // en la que dos guardados se solaparían. Lo que se comprueba no depende de cuánto dure.
         var repo = new FlakyRepository { SaveDelay = TimeSpan.FromMilliseconds(80) };
         var service = NewService(repo);
 

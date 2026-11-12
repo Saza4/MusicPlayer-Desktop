@@ -8,6 +8,9 @@ namespace MusicPlayer.Core.Services;
 
 public sealed partial class LrcLyricParser : ILyricParser
 {
+    /// <summary>Marcas [mm:ss.xx] iniciales que se usan por línea; las demás se descartan (docs/specs/untrusted-input-limits.md).</summary>
+    public const int MaxLeadingMarks = 32;
+
     // Uno o más tags de tiempo al inicio de la línea: [mm:ss.xx][mm:ss.xx]
     [GeneratedRegex(@"^(?:\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\])+")]
     private static partial Regex LeadingTimeTags();
@@ -25,7 +28,8 @@ public sealed partial class LrcLyricParser : ILyricParser
 
     public LyricBlock Parse(string content)
     {
-        if (string.IsNullOrWhiteSpace(content))
+        // Un carácter nulo delata un binario renombrado a .lrc: no es una letra.
+        if (string.IsNullOrWhiteSpace(content) || content.Contains('\0'))
             return LyricBlock.Empty;
 
         var synced = new List<LyricLine>();
@@ -40,11 +44,13 @@ public sealed partial class LrcLyricParser : ILyricParser
             var prefix = LeadingTimeTags().Match(line);
             if (prefix.Success)
             {
-                var marks = SingleTimeTag().Matches(prefix.Value);
+                // Con tope: cada marca copia todas las palabras de la línea, y sin él una sola línea con miles de
+                // marcas iniciales y por palabra agota la memoria.
+                var marks = SingleTimeTag().Matches(prefix.Value).Take(MaxLeadingMarks).ToList();
                 // Los tiempos de las palabras están escritos respecto a la primera marca del archivo: cada copia los desplaza.
                 var baseTime = ToTimeSpan(marks[0]);
                 var (text, words, end) = ParseBody(line[prefix.Length..], baseTime, out var hasWords);
-                foreach (Match tag in marks)
+                foreach (var tag in marks)
                 {
                     var at = ToTimeSpan(tag);
                     var delta = at - baseTime;

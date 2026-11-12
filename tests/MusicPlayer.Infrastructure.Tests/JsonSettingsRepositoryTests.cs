@@ -36,7 +36,7 @@ public class JsonSettingsRepositoryTests : IDisposable
         var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
 
         Assert.Equal(AppSettings.Default, loaded);
-        Assert.True(File.Exists(FilePath + ".corrupt"));
+        Assert.Single(Directory.GetFiles(Path.GetDirectoryName(FilePath)!, Path.GetFileName(FilePath) + ".corrupt-*"));
         Assert.False(File.Exists(FilePath));
     }
 
@@ -105,7 +105,7 @@ public class JsonSettingsRepositoryTests : IDisposable
 
         var loaded = await new JsonSettingsRepository(FilePath).LoadAsync();
 
-        Assert.False(File.Exists(FilePath + ".corrupt")); // la clave desconocida no lo daña
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(FilePath)!, "*.corrupt*")); // la clave desconocida no lo daña
         Assert.True(File.Exists(FilePath));
         Assert.Equal(0.4, loaded.Volume);
         Assert.True(loaded.ShowTranslation);

@@ -1,5 +1,6 @@
 using MusicPlayer.Core.Interfaces;
 using MusicPlayer.Core.Models;
+using MusicPlayer.Core.Services;
 
 namespace MusicPlayer.Infrastructure;
 
@@ -13,7 +14,9 @@ public sealed class EmbeddedLyricsProvider(ILyricParser parser) : ILyricsProvide
             {
                 using var file = TagLib.File.Create(track.FilePath);
                 var lyrics = file.Tag.Lyrics;
-                return string.IsNullOrWhiteSpace(lyrics) ? LyricBlock.Empty : parser.Parse(lyrics);
+                return string.IsNullOrWhiteSpace(lyrics) || !LyricsEditor.FitsLimit(lyrics)
+                    ? LyricBlock.Empty
+                    : parser.Parse(lyrics);
             }
             catch (Exception ex) when (ex is TagLib.CorruptFileException
                                           or TagLib.UnsupportedFormatException

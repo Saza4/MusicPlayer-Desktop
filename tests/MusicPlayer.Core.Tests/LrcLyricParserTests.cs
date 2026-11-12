@@ -93,4 +93,45 @@ public class LrcLyricParserTests
 
         Assert.Equal(expected, block.GetActiveLineIndex(TimeSpan.FromSeconds(seconds)));
     }
+
+    // ---- Límites (docs/specs/untrusted-input-limits.md, criterios 4 y 6) ----
+
+    private static string Marks(int count) =>
+        string.Concat(Enumerable.Range(0, count).Select(i => $"[{i / 60:00}:{i % 60:00}.00]"));
+
+    [Fact]
+    public void Parse_ExactlyTheMaximumLeadingMarks_KeepsThemAll()
+    {
+        var block = _parser.Parse(Marks(LrcLyricParser.MaxLeadingMarks) + "Estribillo");
+
+        Assert.Equal(LrcLyricParser.MaxLeadingMarks, block.Lines.Count);
+    }
+
+    [Fact]
+    public void Parse_MoreLeadingMarksThanTheMaximum_UsesTheFirstOnes_AndKeepsTheTextClean()
+    {
+        var block = _parser.Parse(Marks(40) + "Estribillo");
+
+        Assert.Equal(32, block.Lines.Count);
+        Assert.All(block.Lines, line => Assert.Equal("Estribillo", line.Text));
+        Assert.Equal(TimeSpan.FromSeconds(31), block.Lines[^1].Timestamp);
+    }
+
+    [Fact]
+    public void Parse_ThousandsOfLeadingAndWordMarks_StaysBounded()
+    {
+        var words = string.Concat(Enumerable.Range(0, 2000).Select(i => $"<{i / 60:00}:{i % 60:00}.00>la "));
+
+        var block = _parser.Parse(Marks(2000) + words);
+
+        Assert.Equal(32, block.Lines.Count);
+        Assert.Equal(2000, block.Lines[0].Words!.Count);
+    }
+
+    [Fact]
+    public void Parse_TextWithNullCharacters_IsNotLyrics()
+    {
+        Assert.False(_parser.Parse("[00:01.00]Hola\n\0\0binario").IsAvailable);
+        Assert.False(_parser.Parse("ID3\0\0\0cualquier cosa").IsAvailable);
+    }
 }

@@ -29,11 +29,11 @@ public sealed class TagLibTrackMetadataReader : ITrackMetadataReader
                 Duration = file.Properties.Duration
             };
         }
-        catch (Exception ex) when (ex is TagLib.CorruptFileException
-                                      or TagLib.UnsupportedFormatException
-                                      or IOException
-                                      or UnauthorizedAccessException)
+        catch (Exception)
         {
+            // Cualquier fallo es «no se pudo leer»: con archivos dañados TagLib lanza también
+            // ArgumentOutOfRangeException y ArgumentException, no solo CorruptFileException
+            // (docs/specs/untrusted-input-limits.md, criterios 7 y 9).
             return null;
         }
     }

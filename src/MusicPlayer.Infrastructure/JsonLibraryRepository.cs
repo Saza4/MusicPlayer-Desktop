@@ -47,8 +47,8 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
         }
         catch (JsonException)
         {
-            // Archivo corrupto: se conserva como respaldo y se empieza de cero.
-            File.Move(filePath, filePath + ".corrupt", overwrite: true);
+            // Archivo corrupto: se conserva como respaldo (con fecha, sin pisar los anteriores) y se empieza de cero.
+            CorruptBackup.Move(filePath);
             return LibrarySnapshot.Empty;
         }
     }
@@ -64,18 +64,28 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
                 t.Id, t.FilePath, t.Title, t.Artist, t.Album, t.Year,
                 t.Genre, t.TrackNumber, t.Duration.Ticks, t.AddedAt, t.DiscNumber, t.AlbumArtist)).ToList());
 
-        // Un temporal único por escritura: dos guardados a la vez no chocan en el mismo archivo.
-        var tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
+        // Las escrituras del mismo archivo van en fila: en Windows, dos File.Move con sobrescritura a la vez
+        // chocan (docs/specs/library-data-safety-2.md, criterio 3). El temporal es único por escritura.
+        var gate = AtomicJson.GateFor(filePath);
+        await gate.WaitAsync(ct);
         try
         {
-            await using (var stream = File.Create(tempPath))
-                await JsonSerializer.SerializeAsync(stream, file, JsonOptions, ct);
+            var tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await using (var stream = File.Create(tempPath))
+                    await JsonSerializer.SerializeAsync(stream, file, JsonOptions, ct);
 
-            File.Move(tempPath, filePath, overwrite: true);
+                File.Move(tempPath, filePath, overwrite: true);
+            }
+            finally
+            {
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (IOException) { }
+            }
         }
         finally
         {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (IOException) { }
+            gate.Release();
         }
     }
 }

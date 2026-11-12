@@ -1,7 +1,7 @@
 # MusicPlayer-Desktop — Documento maestro y reporte de novedades
 
 > Reproductor de música local, ligero y multiplataforma. **C# · .NET 8 · Avalonia UI 11**.
-> Estado a **8 de noviembre de 2026** · última release publicada: **v1.3.0**. **v1.4.0** (letra progresiva, capas de letra, botones de acción y limpieza de código) está preparada como borrador en GitHub, pendiente de que el autor la publique.
+> Estado a **11 de noviembre de 2026** · última release publicada: **v1.4.0** (8 de noviembre de 2026: letra progresiva, capas de letra, botones de acción y limpieza de código). Después de v1.4.0 y sin release todavía: lectura y relleno por palabra de los `.lrc` enhanced y los arreglos de la auditoría del 11 de noviembre (specs en `docs/specs/`), que tienen pendiente la verificación manual.
 
 Este documento reúne en un solo lugar: la visión y la especificación del proyecto, el reporte de todo lo implementado durante el desarrollo, el historial de versiones tal como se publicó en GitHub Releases, las decisiones de diseño, las limitaciones conocidas y la hoja de ruta. Al final, como anexos, se conserva la especificación original y el prompt maestro.
 
@@ -73,9 +73,9 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 
 | Proyecto                     | Responsabilidad                           | Piezas principales                                                                                                                                                                                                                                                                                                                         |
 | ---------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MusicPlayer.Core`           | Modelos, contratos y lógica pura          | `Track`, `TrackTags`, `LibrarySnapshot`, `PlayQueue<T>`, `LibraryScanner`, `LibraryService`, `PlaylistManager`, `TrackFilter`, `TrackSorter`, `LibraryGrouper`, `LrcLyricParser`, `LyricsMerger`, `CompositeLyricsProvider`, `CompositeCoverArtProvider`, `LruCache`, `CachedCoverArtProvider`, `TagEditor`, `CoverEditor`, `AlbumScope`, `LyricsEditor`, `ConversionPlanner`, `ConversionService`, `ThemeFactory`, `ThemeCatalog`, `BuiltInThemes`, `ColorContrast`, `PlaybackShortcuts`, `TimeText`, `IslandVisibility`, `IslandPlacement`, `IslandHover`, `ModalTracker`, `TrackRelocator`, `TagSuggester`, `FileNameParser`, `TitleCleaner`, `SettingsService`, `LyricsTiming`, `LyricsTimeline`, `SpringSolver`, `LyricsScroll`, `LyricsAppearance`, `GaussianBlur`, `LyricsLanguage`, `LyricsLayerNames`, `LyricsLayerMenu` |
+| `MusicPlayer.Core`           | Modelos, contratos y lógica pura          | `Track`, `TrackTags`, `LibrarySnapshot`, `PlayQueue<T>`, `LibraryScanner`, `LibraryService`, `PlaylistManager`, `TrackFilter`, `TrackSorter`, `LibraryGrouper`, `LrcLyricParser`, `LyricsMerger`, `CompositeLyricsProvider`, `CompositeCoverArtProvider`, `LruCache`, `CachedCoverArtProvider`, `TagEditor`, `CoverEditor`, `AlbumScope`, `LyricsEditor`, `ConversionPlanner`, `ConversionService`, `ThemeFactory`, `ThemeCatalog`, `BuiltInThemes`, `ColorContrast`, `PlaybackShortcuts`, `TimeText`, `IslandVisibility`, `IslandPlacement`, `IslandHover`, `ModalTracker`, `TrackRelocator`, `TagSuggester`, `FileNameParser`, `TitleCleaner`, `SettingsService`, `LyricsTiming`, `LyricsTimeline`, `SpringSolver`, `LyricsScroll`, `LyricsAppearance`, `GaussianBlur`, `LyricsLanguage`, `LyricsLayerNames`, `LyricsLayerMenu`, `SeekScrub`, `ThumbnailRequests`, `FilePaths` |
 | `MusicPlayer.Audio`          | Motor de sonido                           | `BassAudioPlayer` (implementa `IAudioPlayer` con BASS y BASSmix)                                                                                                                                                                                                                                                                           |
-| `MusicPlayer.Infrastructure` | Acceso a archivos y herramientas externas | `TagLibTrackMetadataReader`, `TagLibTrackTagWriter`, `TagLibCoverArtWriter`, `TagLibLyricsWriter`, `SafeFileEdit`, `EmbeddedCoverArtProvider`, `FolderCoverArtProvider`, `EmbeddedLyricsProvider`, `LrcFileLyricsProvider`, `CompanionLyricsProvider`, `TagLibLyricsLayerReader`, `LyricsSiblingFinder`, `FfmpegAudioConverter`, `JsonThemeRepository`, repositorios JSON, `AtomicJson`, `AppPaths` |
+| `MusicPlayer.Infrastructure` | Acceso a archivos y herramientas externas | `TagLibTrackMetadataReader`, `TagLibTrackTagWriter`, `TagLibCoverArtWriter`, `TagLibLyricsWriter`, `SafeFileEdit`, `EmbeddedCoverArtProvider`, `FolderCoverArtProvider`, `EmbeddedLyricsProvider`, `LrcFileLyricsProvider`, `CompanionLyricsProvider`, `TagLibLyricsLayerReader`, `LyricsSiblingFinder`, `FfmpegAudioConverter`, `JsonThemeRepository`, repositorios JSON, `AtomicJson`, `CorruptBackup`, `ErrorLog`, `AppPaths` |
 | `MusicPlayer.Desktop`        | Interfaz y composición                    | `MainWindow`, `MainViewModel`, `LyricsViewModel`, `PlaylistViewModel`, `TagEditorViewModel`, `TagAutoFixViewModel`, `ConvertViewModel`, `AlbumCoverViewModel`, `EmbedLyricsViewModel`, `ThemeViewModel`, `ThemeService`, `CoverArtLoader`, `IslandWindow`, `IslandController`, `IslandMetrics`, `NonActivatingWindow`, `WindowNative`, `ProgressiveLyricsView`, `FillTextBlock`, `BlurredBackdrop`, `ProgressiveLyricsMetrics`, `TrackItemViewModel`, `AlbumItemViewModel`, `ArtistItemViewModel`, selectores de archivos y carpetas, estilos y pinceles en `Themes/` (`ThemeBrushes`, `FluentOverrides`, `PlayerButtonStyles`, `ActionButtonStyles`), `CompositionRoot`                                                                              |
 | `tests/`                     | Pruebas                                   | `MusicPlayer.Core.Tests`, `MusicPlayer.Infrastructure.Tests`                                                                                                                                                                                                                                                                               |
 
@@ -83,7 +83,7 @@ Todas las dependencias apuntan hacia **Core**, que no conoce la interfaz ni ning
 
 - **Lógica pura y probada:** la cola, el filtro, el orden, el parser `.lrc`, la combinación de letras, el agrupador de álbumes y las reglas de conversión viven en Core y se prueban sin interfaz. La mayoría tampoco toca el disco; las pruebas de `LyricsEditor`, `LibraryService`, `LibraryScanner` y la conversión usan directorios temporales reales.
 - **Proveedores componibles:** letras y carátulas siguen los patrones _composite_ y _decorator_. Añadir una fuente nueva no modifica las existentes.
-- **Persistencia segura:** escritura atómica (archivo temporal y reemplazo), copia `.corrupt` si el JSON se daña y DTOs propios para que el formato no dependa de los modelos.
+- **Persistencia segura:** escritura atómica (archivo temporal y reemplazo), copia `.corrupt-<fecha>` si el JSON se daña (se conservan las cinco últimas) y DTOs propios para que el formato no dependa de los modelos.
 - **Escritura atómica en los archivos de audio:** `SafeFileEdit` trabaja sobre una copia temporal (`~tags-{guid}.ext`), la edita, la verifica y la intercambia con `File.Replace`. Si algo falla, el original queda intacto. La comparten el editor de etiquetas, el de carátulas y el de letras.
 - **Identidad estable de las pistas:** el `Id` de cada canción se conserva al reescanear, reubicar archivos y editar etiquetas, de modo que las playlists sobreviven.
 - **Archivos bloqueados en Windows:** antes de escribir en un archivo, el reproductor lo suelta (`Unload` y `PrepareNext(null)`).
@@ -107,7 +107,7 @@ Reglas finas del código que no aparecen en otras secciones (verificadas contra 
 - **Aleatorio (`PlayQueue`):** una vuelta nueva evita empezar por la última pista de la anterior. Si se quita la pista en curso, «Siguiente» sigue desde la anterior.
 - **Anterior:** reinicia la pista si ya van más de 3 s; si no, retrocede.
 - **Ratón y teclado:** doble clic en una canción la reproduce; `Esc` cierra el modo inmersivo (con el modo inmersivo la ventana pasa a pantalla completa y recuerda su estado anterior).
-- **Ajustes (`SettingsService`):** el guardado se aplaza 500 ms; si falla, se reintenta en el siguiente cambio o al cerrar (`FlushAsync`).
+- **Ajustes (`SettingsService`):** el guardado se aplaza 500 ms; si falla, se reintenta en el siguiente cambio o al cerrar (`FlushAsync`). Si `settings.json` no se pudo leer al arrancar (error de E/S), no se guarda nada hasta una carga correcta, para no sobrescribirlo.
 - **Cierre (`App.axaml.cs`):** la app termina al cerrar la ventana principal (`ShutdownMode.OnMainWindowClose`), no la última, porque la isla es una segunda ventana. Al salir guarda los ajustes pendientes y libera el contenedor (y con él BASS).
 - **Reloj de la barra:** un temporizador de 250 ms actualiza la posición mientras suena; `_isUpdatingFromTimer` evita que esa actualización vuelva a llamar a `Seek`.
 - **Motor (`BassAudioPlayer`):** reproduce a través de un mezclador (BASSmix) con la frecuencia de la pista; la siguiente se añade al mezclador cuando el final de la actual acaba de mezclarse (`Mixtime`) y el aviso `AdvancedToNext` llega cuando ese final ya se oyó. Si no hay siguiente preparada, termina (`TrackEnded`). Si la pista terminó sola, Reproducir la vuelve a abrir. Los plugins `bassflac` y `bass_aac` son opcionales: sin ellos solo se pierde ese formato.
@@ -126,7 +126,7 @@ Reglas finas del código que no aparecen en otras secciones (verificadas contra 
 **Persistencia**
 
 - **Formato:** los JSON llevan `Version = 1`. La compatibilidad con archivos antiguos se logra con campos opcionales (por ejemplo `DiscNumber` y `AlbumArtist` en la biblioteca) y porque el deserializador ignora las claves desconocidas, de modo que los ajustes retirados cargan sin problema.
-- **Dos implementaciones de escritura atómica:** `AtomicJson` (ajustes, playlists) y `JsonLibraryRepository`, que repite el mismo patrón (`.tmp`, `File.Move`, `.corrupt`) por su cuenta.
+- **Dos implementaciones de escritura atómica:** `AtomicJson` (ajustes, playlists) y `JsonLibraryRepository`, que repite el mismo patrón (`.tmp`, `File.Move`) por su cuenta; las dos comparten el candado por archivo y el respaldo con fecha (`CorruptBackup`).
 - **Metadatos sin uso en la interfaz:** el género (`Track.Genre`) se lee y se guarda en `library.json`, pero ninguna pantalla lo muestra, lo filtra ni lo edita.
 - **Temas de usuario (`JsonThemeRepository`):** el JSON admite comentarios y comas finales, y un BOM UTF-8 al principio; las claves se leen sin distinguir mayúsculas. El identificador del tema es el nombre del archivo sin extensión.
 
@@ -599,6 +599,15 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | Última ejecución confirmada (8 de noviembre de 2026, `-c Release`) | 641        | 173                  | Todas superadas. Compila con 0 errores y 1 advertencia (CS8602). CI del PR #5 (con M7) en verde en Windows y Ubuntu. |
 | Botones de acción (PR #6)                                          | +0         | +0                   | Sin pruebas nuevas: es solo estilo y XAML (no hay pruebas de vista). `dotnet test` sigue en 641 + 173 y el CI del PR #6 en verde en Windows y Ubuntu. |
 | Limpieza de código sin uso (PR #7)                                  | −1         | +0                   | Se quita la prueba de `LyricLine.Words`; las de `AddFolderAsync` pasan a `ScanFolderAsync` y se quitan las aserciones sobre `Folders`. Queda en **640 + 173 = 813**, todas superadas. CI del PR #7 en verde en Windows y Ubuntu. |
+| Letras `.lrc` enhanced, lectura y relleno por palabra (10 de noviembre de 2026) | +50 | +3 | Queda en 690 + 176 = 866. |
+| Datos de la biblioteca (`library-data-safety.md`) | +8 | +1 | 698 + 177 = 875. |
+| Auditoría, spec 1: reproducción (`playback-resilience.md`) | +6 | +5 | 704 + 182 = 886. |
+| Auditoría, spec 2: entradas no confiables (`untrusted-input-limits.md`) | +8 | +9 | 712 + 191 = 903. |
+| Auditoría, spec 3: datos de la biblioteca, segunda parte (`library-data-safety-2.md`) | +20 | +6 | 732 + 197 = 929. |
+| Auditoría, spec 4: interfaz (`ui-responsiveness.md`) | +16 | +0 | 748 + 197 = 945. |
+| Auditoría, spec 5: medida de CPU del relleno por palabra (`lyrics-render-perf.md`) | +0 | +0 | Sin código nuevo: solo la sonda `tools/medir-cpu.ps1` y las cifras. |
+| Segunda auditoría (`audit-followup.md`), ejecución del 11 de noviembre de 2026 (`-c Release`) | +6 | +7 | **754 + 204 = 958**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Sin CI todavía: la rama no se ha subido. |
+| Pruebas sin esperas reales (`test-waits-and-docs.md`) | +1 | +0 | **755 + 204 = 959**. La prueba del guardado diferido de los ajustes ya no depende del reloj. |
 
 La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las propiedades de la isla la desplazaron): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
@@ -646,9 +655,9 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 **Carátulas y etiquetas**
 
 - Guardar etiquetas y carátula a la vez copia el archivo dos veces. Con FLAC grandes se nota.
-- La carátula no se redimensiona: una portada de 8 MB infla ese archivo.
+- La carátula no se redimensiona: una portada de 8 MB infla ese archivo. Al leer, una imagen de más de 10 MB (incrustada por otra herramienta, o un `cover.jpg` de la carpeta) se ignora, igual que al elegirla.
 - La carátula de álbum aplica el criterio de «mismo álbum». Un recopilatorio sin «artista del álbum» se separa por artista.
-- Si suena una pista del álbum al aplicarle una carátula, la reproducción se detiene y la portada grande se vacía (`ClearCurrentTrack`). No hay que esperar al siguiente cambio de pista para ver la portada nueva: basta con volver a reproducirla. Las miniaturas de la lista se refrescan.
+- Si suena una pista al escribir en su archivo (etiquetas, carátula, carátula de álbum, autocompletar o letra), se descarga para escribir y se vuelve a cargar en el mismo punto, sonando o en pausa como estaba (spec `docs/specs/playback-resilience.md`): se nota un corte breve. Las miniaturas de la lista se refrescan.
 - La carátula de álbum no tiene botón para cancelar ni para quitar la imagen de todo el álbum.
 
 **Conversión**
@@ -661,7 +670,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 **Letras**
 
 - USLT es texto _sin sincronizar_ por especificación. Los tiempos `[mm:ss.xx]` viajan dentro del texto. La app los interpreta, pero un reproductor estricto los mostrará como texto. No se escribe SYLT, el marco sincronizado del estándar.
-- Solo UTF-8, de hasta 1 MB.
+- Solo UTF-8, de hasta 1 MB, al incrustar y al leer (spec `docs/specs/untrusted-input-limits.md`): un `.lrc`, un hermano o una letra incrustada mayor se ignora; un texto con caracteres nulos no se toma por letra; de una línea se usan como mucho 32 marcas de tiempo iniciales.
 - Sustituye la letra incrustada anterior sin preguntar y no hay botón para quitarla.
 - La traducción y la pronunciación incrustadas (`LYRICS_TRANSLATION_<CÓDIGO>`, `LYRICS_PRONUNCIATION`) solo las muestra esta app; otros reproductores ven solo la principal. En WAV, OGG u Opus solo se incrusta la principal.
 - Con el clic derecho («Incrustar letra (.lrc)…») hace falta la letra principal: con solo `.es.lrc` y `.rom.lrc` no se incrusta nada. Desde el inmersivo, «Incrustar traducción…» e «Incrustar pronunciación…» eligen el archivo con el selector y no necesitan `cancion.lrc` ni hermanos, pero sí que la pista ya tenga letra sincronizada (sin ella, el botón de capas del inmersivo no aparece y la capa no se vería).
@@ -682,7 +691,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 **Teclado**
 
-- Mantener pulsada la barra repite el cambio de estado.
+- Mantener pulsada la barra espaciadora alterna reproducir/pausar una sola vez (spec `docs/specs/ui-responsiveness.md`); hay que soltarla para volver a alternar.
 - La barra ya no activa un botón enfocado: Enter sí lo hace. Hasta el 8 de noviembre de 2026 no era del todo cierto: el botón se pulsaba al soltar la tecla (`Button.OnKeyUp`), así que Espacio en «Siguiente» pausaba y cambiaba de pista. Ahora la ventana se queda también con la tecla soltada.
 - La lista de controles que se quedan con las teclas es por tipo (`OwnsKeyboard`). Si se añade uno nuevo (`RadioButton`, `ToggleSwitch`), hay que sumarlo.
 - Los atajos de salto, volumen y silencio se probaron a mano en Windows y funcionan.
@@ -720,8 +729,10 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 1. **Integración con el sistema:** SMTC en Windows y MPRIS en Linux.
 2. **Probar en Linux:** omitido por ahora.
-3. **Publicar v1.4.0** (letra progresiva, capas de letra y botones de acción): el borrador está preparado y la publica el autor tras confirmar la licencia de BASS.
+3. **v1.4.0 está publicada** (8 de noviembre de 2026). La siguiente release reunirá los `.lrc` enhanced y los arreglos de la auditoría del 11 de noviembre, cuando esté hecha su verificación manual (cada spec lista sus pasos).
 4. **Captura del README:** `docs/screenshot.png` se actualizó el 8 de noviembre de 2026 (barra superior con iconos, biblioteca vacía).
+
+Lo que falta y todavía no tiene spec está en `docs/pendientes.md`.
 
 **Deuda menor conocida:** ninguna de las anteriores sigue en pie. El 8 de noviembre de 2026 se quitó el código sin uso (ver 4.3.7). Quedan dos ayudas que solo usan las pruebas: `LyricsLayers.MainOnly` y `LyricsLanguage.KnownLanguageCount`; y un dato que se guarda pero ninguna pantalla muestra, el género (`Track.Genre`).
 

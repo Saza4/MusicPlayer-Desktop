@@ -49,6 +49,22 @@ public class JsonLibraryRepositoryTests : IDisposable
         Assert.Empty(loaded.Tracks);
     }
 
+    // docs/specs/library-data-safety-2.md, criterio 5: el segundo respaldo no pisa el primero.
+    [Fact]
+    public async Task Load_CorruptFileTwice_KeepsBothBackups()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        var repo = new JsonLibraryRepository(FilePath);
+
+        await File.WriteAllTextAsync(FilePath, "{ primero roto");
+        await repo.LoadAsync();
+        await File.WriteAllTextAsync(FilePath, "{ segundo roto");
+        await repo.LoadAsync();
+
+        var backups = Directory.GetFiles(Path.GetDirectoryName(FilePath)!, Path.GetFileName(FilePath) + ".corrupt-*");
+        Assert.Equal(new[] { "{ primero roto", "{ segundo roto" }, backups.Order().Select(File.ReadAllText));
+    }
+
     [Fact]
     public async Task Load_CorruptFile_ReturnsEmptyAndKeepsBackup()
     {
@@ -58,7 +74,7 @@ public class JsonLibraryRepositoryTests : IDisposable
         var loaded = await new JsonLibraryRepository(FilePath).LoadAsync();
 
         Assert.Empty(loaded.Tracks);
-        Assert.True(File.Exists(FilePath + ".corrupt"));
+        Assert.Single(Directory.GetFiles(Path.GetDirectoryName(FilePath)!, Path.GetFileName(FilePath) + ".corrupt-*"));
         Assert.False(File.Exists(FilePath));
     }
 

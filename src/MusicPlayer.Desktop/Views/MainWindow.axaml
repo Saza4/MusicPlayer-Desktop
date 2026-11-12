@@ -620,6 +620,7 @@
                                 Text="{Binding PositionText}" />
                             <Slider
                                 Grid.Column="1"
+                                Classes="progress"
                                 Maximum="{Binding DurationSeconds}"
                                 Minimum="0"
                                 Value="{Binding PositionSeconds}" />
@@ -1060,6 +1061,7 @@
                                 Text="{Binding PositionText}" />
                             <Slider
                                 Grid.Column="1"
+                                Classes="progress"
                                 Maximum="{Binding DurationSeconds}"
                                 Minimum="0"
                                 Value="{Binding PositionSeconds}" />

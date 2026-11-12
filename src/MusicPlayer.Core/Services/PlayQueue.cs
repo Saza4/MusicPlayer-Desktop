@@ -106,6 +106,34 @@ public sealed class PlayQueue<T> where T : class
         return Current;
     }
 
+    /// <summary>
+    /// Como <see cref="MoveNext()"/>, pero salta las pistas que no cumplan <paramref name="isAvailable"/>.
+    /// Si no hay ninguna disponible, la cola queda como estaba y devuelve null.
+    /// </summary>
+    public T? MoveNext(Predicate<T> isAvailable) => MoveToAvailable(MoveNext, isAvailable);
+
+    /// <summary>Como <see cref="MoveNextAfterEnd()"/>, saltando las no disponibles sin mover la cola si no hay ninguna.</summary>
+    public T? MoveNextAfterEnd(Predicate<T> isAvailable) => MoveToAvailable(MoveNextAfterEnd, isAvailable);
+
+    /// <summary>Como <see cref="MovePrevious()"/>, saltando las no disponibles sin mover la cola si no hay ninguna.</summary>
+    public T? MovePrevious(Predicate<T> isAvailable) => MoveToAvailable(MovePrevious, isAvailable);
+
+    private T? MoveToAvailable(Func<T?> advance, Predicate<T> isAvailable)
+    {
+        // Los movimientos nunca modifican _order en sitio (crean otro arreglo): basta guardar la referencia.
+        var (order, position, pendingNext) = (_order, _position, _pendingNext);
+
+        // Tope de una vuelta completa: sin él, "Repetir todas" con todo ausente no terminaría nunca.
+        for (var attempts = 0; attempts <= _items.Length; attempts++)
+        {
+            if (advance() is not { } candidate) break;
+            if (isAvailable(candidate)) return candidate;
+        }
+
+        (_order, _position, _pendingNext) = (order, position, pendingNext);
+        return null;
+    }
+
     /// <summary>Quita de la cola las pistas que cumplan la condición, conservando el orden y la posición.</summary>
     public void RemoveWhere(Predicate<T> shouldRemove)
     {
@@ -129,6 +157,19 @@ public sealed class PlayQueue<T> where T : class
         _order = order.ToArray();
         _position = position;
         _pendingNext = 0;
+    }
+
+    /// <summary>
+    /// Cambia cada elemento por el que devuelva <paramref name="replacement"/>, sin tocar el orden, la posición ni las
+    /// pistas pendientes de «Reproducir siguiente». Sirve para que la cola no se quede con copias viejas cuando la
+    /// biblioteca se vuelve a cargar (docs/specs/audit-followup.md, criterio 2).
+    /// </summary>
+    public void Replace(Func<T, T> replacement)
+    {
+        var items = new T[_items.Length];
+        for (var i = 0; i < items.Length; i++)
+            items[i] = replacement(_items[i]);
+        _items = items;
     }
 
     private void Insert(T item, int orderPosition)

@@ -18,12 +18,14 @@ public sealed class FolderCoverArtProvider : ICoverArtProvider
 
         try
         {
+            // Mismo tope que al elegir una carátula: una imagen mayor se trata como si no estuviera y se pasa a la
+            // siguiente candidata. El tamaño se mira antes de abrir (docs/specs/audit-followup.md, criterio 6).
             var file = Directory.EnumerateFiles(directory)
                 .Where(f => Extensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)
                             && Names.Contains(Path.GetFileNameWithoutExtension(f), StringComparer.OrdinalIgnoreCase))
                 .OrderBy(f => Array.FindIndex(Names, n =>
                     n.Equals(Path.GetFileNameWithoutExtension(f), StringComparison.OrdinalIgnoreCase)))
-                .FirstOrDefault();
+                .FirstOrDefault(f => new FileInfo(f).Length <= CoverImage.MaxBytes);
 
             return file is null ? null : await File.ReadAllBytesAsync(file, ct);
         }

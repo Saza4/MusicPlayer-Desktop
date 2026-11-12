@@ -208,6 +208,23 @@ public class JsonThemeRepositoryTests : IDisposable
         Assert.Contains(report.Errors, e => e.Message.Contains("contraste"));
     }
 
+    // Un sustituto suelto escapado pasa el análisis del JSON y lanza al leer el texto (InvalidOperationException):
+    // es un error de ese archivo, no del repositorio (docs/specs/audit-followup.md, criterio 4).
+    [Theory]
+    [InlineData("""{ "formatVersion": 1, "name": "\uD800" }""")]
+    [InlineData("""{ "formatVersion": 1, "name": "x", "colors": { "background": "\uDC00" } }""")]
+    [InlineData("""{ "formatVersion": 1, "name": "x", "\uD800": 1 }""")]
+    public async Task Load_LoneSurrogateEscape_IsAnErrorOfThatFile_AndTheRestLoad(string broken)
+    {
+        Write("a-roto.json", broken);
+        Write("medianoche.json", Valid);
+
+        var report = await Load();
+
+        Assert.Equal("medianoche", Assert.Single(report.Themes).Id);
+        Assert.Equal("a-roto.json", Assert.Single(report.Errors).File);
+    }
+
     public void Dispose()
     {
         try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }

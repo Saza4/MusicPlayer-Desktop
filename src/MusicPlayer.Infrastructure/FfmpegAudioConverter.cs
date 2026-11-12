@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using MusicPlayer.Core.Interfaces;
 using MusicPlayer.Core.Models;
@@ -5,8 +6,12 @@ using MusicPlayer.Core.Models;
 namespace MusicPlayer.Infrastructure;
 
 /// <summary>Convierte con el ffmpeg instalado en el equipo. No se redistribuye ni usa la red.</summary>
-public sealed class FfmpegAudioConverter : IAudioConverter
+public sealed class FfmpegAudioConverter : IAudioConverter, IDisposable
 {
+    // Procesos en marcha y su temporal: al cerrar la app se matan y se borra lo que dejaron a medias
+    // (docs/specs/library-data-safety-2.md, criterio 6).
+    private readonly ConcurrentDictionary<Process, string> _running = new();
+
     public bool IsAvailable => Locate() is not null;
 
     public async Task ConvertAsync(string input, string output, ConversionOptions options, CancellationToken ct = default)
@@ -31,23 +36,31 @@ public sealed class FfmpegAudioConverter : IAudioConverter
                 psi.ArgumentList.Add(argument);
 
             using var process = Process.Start(psi) ?? throw new IOException("No se pudo iniciar ffmpeg.");
-            var stderr = process.StandardError.ReadToEndAsync();
-            var stdout = process.StandardOutput.ReadToEndAsync();
-
+            _running[process] = temp;
             try
             {
-                await process.WaitForExitAsync(ct);
-            }
-            catch (OperationCanceledException)
-            {
-                try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
-                process.WaitForExit(2000);
-                throw;
-            }
+                var stderr = process.StandardError.ReadToEndAsync();
+                var stdout = process.StandardOutput.ReadToEndAsync();
 
-            await Task.WhenAll(stderr, stdout);
-            if (process.ExitCode != 0)
-                throw new IOException(LastLine(await stderr));
+                try
+                {
+                    await process.WaitForExitAsync(ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+                    process.WaitForExit(2000);
+                    throw;
+                }
+
+                await Task.WhenAll(stderr, stdout);
+                if (process.ExitCode != 0)
+                    throw new IOException(LastLine(await stderr));
+            }
+            finally
+            {
+                _running.TryRemove(process, out _);
+            }
 
             File.Move(temp, output); // lanza si ya existe: nunca sobrescribe
         }
@@ -55,6 +68,30 @@ public sealed class FfmpegAudioConverter : IAudioConverter
         {
             try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }
         }
+    }
+
+    /// <summary>
+    /// Cierre de la app con una conversión en marcha: sin esto ffmpeg seguiría vivo y dejaría un <c>~conv-*</c>
+    /// completo junto a la música. Lo llama el contenedor al liberarse.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var (process, temp) in _running.ToArray())
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(2000);
+            }
+            catch (Exception)
+            {
+                // Ya había terminado o ya se liberó: no hay nada que matar.
+            }
+
+            try { if (File.Exists(temp)) File.Delete(temp); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+        _running.Clear();
     }
 
     /// <summary>Argumentos de ffmpeg. Público para poder probarlos sin ejecutar nada.</summary>

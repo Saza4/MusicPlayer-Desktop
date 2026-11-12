@@ -235,22 +235,29 @@ public partial class MainViewModel : ViewModelBase
         // Espera 200 ms tras la última tecla para no refiltrar en cada pulsación.
         _searchDebounce = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Normal,
             (_, _) => { _searchDebounce.Stop(); ApplyFilter(); });
+        // Ese constructor deja el temporizador en marcha: sin pararlo, a los 200 ms filtraba solo y pisaba la
+        // línea de estado del arranque (docs/specs/ui-responsiveness.md, criterio 1).
+        _searchDebounce.Stop();
 
         Playlists.Changed += (_, _) => ApplyFilter();
         Playlists.Notified += message => Status = message;
         TagEditor.Saving += OnTagsSaving;
         TagEditor.Saved += OnTagsSaved;
+        TagEditor.Finished += ResumeInterrupted;
         TagEditor.Notified += message => Status = message;
         AutoFix.Saving += OnAutoFixSaving;
         AutoFix.Applied += OnTagsSaved; // el mismo manejador del editor manual
+        AutoFix.Finished += ResumeInterrupted;
         AutoFix.Notified += message => Status = message;
         Conversion.Added += ApplySnapshot;
         Conversion.Notified += message => Status = message;
         AlbumCover.Applied += ApplySnapshot;
         AlbumCover.Notified += message => Status = message;
         AlbumCover.Saving += OnTagsSaving;
+        AlbumCover.Finished += ResumeInterrupted;
         EmbedLyrics.Notified += message => Status = message;
         EmbedLyrics.Saving += OnTagsSaving;
+        EmbedLyrics.Finished += ResumeInterrupted;
         Themes.Notified += message => Status = message;
     }
 
@@ -265,7 +272,7 @@ public partial class MainViewModel : ViewModelBase
             var saved = AppSettings.Default;
             string? settingsProblem = null;
             try { saved = await _settings.LoadAsync(); }
-            catch (Exception ex) { settingsProblem = $"No se pudieron leer los ajustes ({ex.Message}); se usan los de siempre"; }
+            catch (Exception ex) { settingsProblem = $"No se pudieron leer los ajustes ({ex.Message}); se usan los de siempre y no se guardarán cambios hasta reiniciar"; }
             _restoring = true;
             try
             {
@@ -299,18 +306,24 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task AddFolderAsync()
     {
-        var folder = await _folderPicker.PickFolderAsync();
-        if (folder is null) return;
-
         try
         {
+            var folder = await _folderPicker.PickFolderAsync();
+            if (folder is null) return;
+
             Status = "Escaneando…";
             var progress = new Progress<int>(count => Status = $"Escaneando… {count} canciones");
             var result = await _library.ScanFolderAsync(folder, progress);
             ApplySnapshot(result.Snapshot);
             _ = CheckAvailabilityAsync();
-            if (result.Relocated > 0) // ApplySnapshot escribe el estado general: este mensaje va después
-                Status = $"{Plural.Of(result.Relocated, "canción reubicada", "canciones reubicadas")}, con sus playlists";
+            // ApplySnapshot escribe el estado general: estos mensajes van después.
+            var notes = new List<string>();
+            if (result.Relocated > 0)
+                notes.Add($"{Plural.Of(result.Relocated, "canción reubicada", "canciones reubicadas")}, con sus playlists");
+            if (result.TemporariesRemoved > 0)
+                notes.Add(Plural.Of(result.TemporariesRemoved, "temporal antiguo eliminado", "temporales antiguos eliminados"));
+            if (notes.Count > 0)
+                Status = string.Join("; ", notes);
         }
         catch (Exception ex)
         {
@@ -324,6 +337,11 @@ public partial class MainViewModel : ViewModelBase
         _allTracks = snapshot.Tracks
             .Select(t => new TrackItemViewModel(t, _covers) { IsAvailable = !_missingIds.Contains(t.Id) })
             .ToList();
+        // La cola guardaba las instancias anteriores, con las etiquetas y la ruta de antes: se cambian por las
+        // nuevas, por Id (docs/specs/audit-followup.md, criterio 2). Las que ya no están en la biblioteca se quedan.
+        var fresh = new Dictionary<Guid, TrackItemViewModel>();
+        foreach (var item in _allTracks) fresh.TryAdd(item.Track.Id, item);
+        _queue.Replace(queued => fresh.GetValueOrDefault(queued.Track.Id, queued));
         MissingCount = _missingIds.Count;
         ApplyFilter();
     }
@@ -349,17 +367,26 @@ public partial class MainViewModel : ViewModelBase
         var playlist = Playlists.CurrentPlaylist;
         if (playlist is null)
         {
-            Artists = new(LibraryGrouper.GroupArtists(visible.Select(i => i.Track))
-                .Select(g => new ArtistItemViewModel(g, _covers)));
+            // Solo se agrupa lo que se ve (criterio 3): cada cambio de vista o de álbum abierto pasa por aquí.
+            Artists = ShowArtists
+                ? new(LibraryGrouper.GroupArtists(visible.Select(i => i.Track))
+                    .Select(g => new ArtistItemViewModel(g, _covers)))
+                : new();
             if (_artistScope is { } artist)
                 visible = visible.Where(i =>
                     string.Equals(i.Track.AlbumOwner.Trim(), artist, StringComparison.OrdinalIgnoreCase)).ToList();
-            Albums = new(LibraryGrouper.GroupAlbums(visible.Select(i => i.Track))
-                .Select(g => new AlbumItemViewModel(g, _covers)));
+            Albums = ShowAlbums
+                ? new(LibraryGrouper.GroupAlbums(visible.Select(i => i.Track))
+                    .Select(g => new AlbumItemViewModel(g, _covers)))
+                : new();
             if (_albumScope is { } album)
                 visible = visible.Where(i => LibraryGrouper.AlbumKey(i.Track) == album.Key).ToList();
         }
+
+        // La lista se sustituye entera y la selección se iría con ella: se recupera por Id (criterio 2).
+        var selectedId = SelectedTrack?.Track.Id;
         Tracks = new ObservableCollection<TrackItemViewModel>(visible);
+        SelectedTrack = selectedId is { } id ? visible.FirstOrDefault(i => i.Track.Id == id) : null;
         var searching = !string.IsNullOrWhiteSpace(SearchText);
         Status = playlist is not null
             ? source.Count == 0 ? $"\"{playlist.Name}\" está vacía. Clic derecho en una canción para agregarla"
@@ -436,19 +463,19 @@ public partial class MainViewModel : ViewModelBase
         MissingCount = _missingIds.Count;
     }
 
-    /// <summary>Avanza la cola con <paramref name="advance"/> saltando las pistas cuyo archivo ya no existe.</summary>
-    private TrackItemViewModel? MoveToAvailable(Func<TrackItemViewModel?> advance)
+    /// <summary>
+    /// Para los movimientos de la cola que saltan pistas ausentes: comprueba el archivo y lo anota. Si no hay
+    /// ninguna disponible, la cola no se mueve (docs/specs/playback-resilience.md, criterio 9).
+    /// </summary>
+    private bool CheckAvailable(TrackItemViewModel candidate)
     {
-        // Tope de una vuelta completa: sin él, "Repetir todas" con todo ausente no terminaría nunca.
-        for (var attempts = 0; attempts <= _queue.Count; attempts++)
-        {
-            if (advance() is not { } candidate) return null;
-            var exists = File.Exists(candidate.Track.FilePath);
-            MarkAvailability(candidate, exists);
-            if (exists) return candidate;
-        }
-        return null;
+        var exists = File.Exists(candidate.Track.FilePath);
+        MarkAvailability(candidate, exists);
+        return exists;
     }
+
+    private static string NotAvailable(TrackItemViewModel item) =>
+        $"\"{item.Title}\" no está disponible: el archivo se movió o se borró";
 
     // ---- Eliminación y desvinculación ----
 
@@ -495,13 +522,24 @@ public partial class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Status = $"No se pudo quitar la canción: {ex.Message}";
+            // El guardado falló con el archivo ya borrado: la pista sigue en la biblioteca, pero no disponible
+            // (docs/specs/library-data-safety-2.md, criterio 2).
+            if (deleteFile && !File.Exists(item.Track.FilePath))
+            {
+                Status = $"Se borró el archivo, pero no se pudo guardar la biblioteca: {ex.Message}";
+                _ = CheckAvailabilityAsync();
+            }
+            else
+            {
+                Status = $"No se pudo quitar la canción: {ex.Message}";
+            }
         }
     }
 
     private void ClearCurrentTrack()
     {
         _coverCts?.Cancel(); // evita que una carátula en curso reaparezca
+        _scrub.Abandon();
         Lyrics.Clear();
         _player.Unload();
         _isUpdatingFromTimer = true;
@@ -545,7 +583,7 @@ public partial class MainViewModel : ViewModelBase
         if (!File.Exists(item.Track.FilePath))
         {
             MarkAvailability(item, false);
-            Status = $"\"{item.Title}\" no está disponible: el archivo se movió o se borró";
+            Status = NotAvailable(item);
             return;
         }
         try
@@ -567,6 +605,7 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Actualiza lo que se ve (título, duración, letra, carátula) para la pista que suena.</summary>
     private void ShowTrack(TrackItemViewModel item)
     {
+        _scrub.Abandon(); // un arrastre a medias no debe saltar en la pista nueva
         // Reiniciar posición ANTES de cambiar el máximo: si no, el Slider ajusta su
         // valor al nuevo rango y dispara un Seek no deseado.
         _isUpdatingFromTimer = true;
@@ -612,9 +651,9 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        if (ReferenceEquals(next, CurrentTrack))
+        if (next.Track.Id == CurrentTrack?.Track.Id)
         {
-            // "Repetir una": misma letra y carátula, solo vuelve el contador al principio.
+            // "Repetir una": misma letra y carátula, solo vuelve el contador al principio. Por Id, como en OnTrackEnded.
             _isUpdatingFromTimer = true;
             try { PositionSeconds = 0; }
             finally { _isUpdatingFromTimer = false; }
@@ -645,6 +684,12 @@ public partial class MainViewModel : ViewModelBase
         {
             // Se cambió de canción antes de terminar.
         }
+        catch (Exception)
+        {
+            // La carátula es decorativa, pero no debe quedarse la de la pista anterior (criterio 8).
+            if (!cts.IsCancellationRequested)
+                NowPlayingCover = null;
+        }
     }
 
     /// <summary>
@@ -657,27 +702,53 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentTrack is not { } item) return;
 
-        // La posición se anota al elegir el archivo, no al abrir el selector: mientras se elige, la música sigue.
-        var position = TimeSpan.Zero;
-        var wasPlaying = false;
-        void Note()
+        // Mientras se elige el archivo la música sigue. Al escribir, OnTagsSaving anota la posición y
+        // ResumeInterrupted (evento Finished) vuelve a cargar la pista.
+        await EmbedLyrics.EmbedLayerAsync(item.Track, kind, Lyrics.CurrentBlock);
+    }
+
+    // Lo que sonaba cuando una escritura obligó a soltar el archivo (docs/specs/playback-resilience.md, criterio 5).
+    private sealed record Interrupted(TrackItemViewModel Item, TimeSpan Position, bool WasPlaying, bool WasImmersive);
+    private Interrupted? _interrupted;
+
+    /// <summary>Descarga la pista en curso para poder escribir en su archivo, anotando cómo volver a ella.</summary>
+    private void InterruptForWriting(TrackItemViewModel item)
+    {
+        _interrupted = new Interrupted(
+            item, _player.CurrentTime, _player.State == PlaybackState.Playing, IsImmersive);
+        ClearCurrentTrack();
+    }
+
+    /// <summary>
+    /// La escritura terminó, bien o mal: la pista vuelve al mismo punto, sonando o en pausa como estaba. Si el
+    /// usuario eligió otra mientras tanto, gana lo último que pidió.
+    /// </summary>
+    private void ResumeInterrupted()
+    {
+        // Saving soltó también la pista preparada. Si no hay nada que reanudar (se escribió en otra pista, o el
+        // usuario ya eligió otra), se vuelve a preparar la siguiente para no perder el empalme sin silencio
+        // (docs/specs/audit-followup.md, criterio 3).
+        var was = _interrupted;
+        _interrupted = null;
+        if (was is null || CurrentTrack is not null)
         {
-            position = _player.CurrentTime;
-            wasPlaying = _player.State == PlaybackState.Playing;
+            UpdateGapless();
+            return;
         }
 
-        if (await EmbedLyrics.EmbedLayerAsync(item.Track, kind, Lyrics.CurrentBlock, Note) && CurrentTrack is null)
-            ResumePlayback(item, position, wasPlaying);
+        // Tras guardar, la biblioteca tiene una instancia nueva con las etiquetas ya cambiadas.
+        var item = _allTracks.FirstOrDefault(i => i.Track.Id == was.Item.Track.Id) ?? was.Item;
+        ResumePlayback(item, was.Position, was.WasPlaying, was.WasImmersive);
     }
 
     // Como StartPlayback, pero en una posición y sin arrancar si estaba en pausa. Vale para la misma pista recién
     // escrita: la cola no se tocó al descargarla.
-    private void ResumePlayback(TrackItemViewModel item, TimeSpan position, bool play)
+    private void ResumePlayback(TrackItemViewModel item, TimeSpan position, bool play, bool immersive)
     {
         if (!File.Exists(item.Track.FilePath))
         {
             MarkAvailability(item, false);
-            Status = $"\"{item.Title}\" no está disponible: el archivo se movió o se borró";
+            Status = NotAvailable(item);
             return;
         }
         try
@@ -685,10 +756,17 @@ public partial class MainViewModel : ViewModelBase
             _player.Load(item.Track.FilePath);
             ShowTrack(item);
             if (position > TimeSpan.Zero && position < _player.Duration)
+            {
                 _player.Seek(position);
+                // En pausa el temporizador no escribe: sin esto la barra, el tiempo y la letra quedarían en 0:00 y
+                // ← → saltarían desde el principio (docs/specs/audit-followup.md, criterio 1).
+                _isUpdatingFromTimer = true;
+                try { PositionSeconds = position.TotalSeconds; }
+                finally { _isUpdatingFromTimer = false; }
+            }
             if (play) _player.Play();
             UpdateGapless();
-            IsImmersive = true;
+            IsImmersive = immersive;
         }
         catch (Exception ex)
         {
@@ -719,9 +797,9 @@ public partial class MainViewModel : ViewModelBase
                 _player.Play();
                 break;
             default:
-                if (CurrentTrack is not null)
+                if (CurrentTrack is { } current)
                 {
-                    _player.Play();
+                    TryPlay(current);
                     break;
                 }
                 var target = SelectedTrack ?? Tracks.FirstOrDefault();
@@ -730,10 +808,29 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Arranca lo que el reproductor tiene cargado. Si la pista terminó sola, <c>Play</c> vuelve a abrir el archivo
+    /// y lanza cuando ya no está: aquí se avisa en lugar de dejar caer la app (docs/specs/playback-resilience.md,
+    /// criterio 1). No recarga por su cuenta, para no perder la posición de una pista cargada en pausa.
+    /// </summary>
+    private void TryPlay(TrackItemViewModel item)
+    {
+        try
+        {
+            _player.Play();
+        }
+        catch (Exception ex)
+        {
+            var exists = File.Exists(item.Track.FilePath);
+            if (!exists) MarkAvailability(item, false);
+            Status = exists ? ex.Message : NotAvailable(item);
+        }
+    }
+
     [RelayCommand]
     private void Next()
     {
-        if (MoveToAvailable(_queue.MoveNext) is { } next)
+        if (_queue.MoveNext(CheckAvailable) is { } next)
             StartPlayback(next);
     }
 
@@ -742,7 +839,7 @@ public partial class MainViewModel : ViewModelBase
     {
         // Convención habitual: pasados 3 s, "anterior" reinicia la canción actual.
         if (_player.CurrentTime > TimeSpan.FromSeconds(3)
-            || MoveToAvailable(_queue.MovePrevious) is not { } previous)
+            || _queue.MovePrevious(CheckAvailable) is not { } previous)
         {
             _player.Seek(TimeSpan.Zero);
             return;
@@ -781,12 +878,13 @@ public partial class MainViewModel : ViewModelBase
 
     private void OnTrackEnded()
     {
-        if (MoveToAvailable(_queue.MoveNextAfterEnd) is not { } next) return;
-        if (ReferenceEquals(next, CurrentTrack))
+        if (_queue.MoveNextAfterEnd(CheckAvailable) is not { } next) return;
+        if (next.Track.Id == CurrentTrack?.Track.Id)
         {
-            // "Repetir una": reinicia sin recargar el archivo, la letra ni la carátula.
+            // "Repetir una": reinicia sin recargar la letra ni la carátula. Se compara por Id: tras editar la
+            // pista que suena, la cola guarda la instancia anterior.
             _player.Seek(TimeSpan.Zero);
-            _player.Play();
+            TryPlay(next);
         }
         else
         {
@@ -798,8 +896,8 @@ public partial class MainViewModel : ViewModelBase
     private void OnTagsSaving(Track track)
     {
         _player.PrepareNext(null);
-        if (CurrentTrack?.Track.Id == track.Id)
-            ClearCurrentTrack();
+        if (CurrentTrack is { } current && current.Track.Id == track.Id)
+            InterruptForWriting(current);
     }
 
     private void OnTagsSaved(LibrarySnapshot snapshot)
@@ -824,7 +922,7 @@ public partial class MainViewModel : ViewModelBase
     {
         _player.PrepareNext(null); // suelta el archivo preparado
         if (CurrentTrack is { } current && ids.Contains(current.Track.Id))
-            ClearCurrentTrack();
+            InterruptForWriting(current);
     }
 
     [RelayCommand]
@@ -862,9 +960,22 @@ public partial class MainViewModel : ViewModelBase
 
     // ---- Barra de progreso y volumen ----
 
+    // Arrastre de la barra de progreso (docs/specs/ui-responsiveness.md, criterios 4 y 5).
+    private readonly SeekScrub _scrub = new();
+
+    /// <summary>El puntero se pulsó sobre una barra de progreso: hasta soltar no se salta ni se mueve el pulgar.</summary>
+    public void BeginScrub() => _scrub.Begin();
+
+    /// <summary>El puntero se soltó: el único salto del arrastre.</summary>
+    public void EndScrub()
+    {
+        if (_scrub.End() is { } target)
+            _player.Seek(target);
+    }
+
     private void OnTick(object? sender, EventArgs e)
     {
-        if (_player.State != PlaybackState.Playing) return;
+        if (_player.State != PlaybackState.Playing || !_scrub.TimerMayWrite) return;
 
         _isUpdatingFromTimer = true;
         try { PositionSeconds = _player.CurrentTime.TotalSeconds; }
@@ -879,9 +990,9 @@ public partial class MainViewModel : ViewModelBase
         PositionText = TimeFormatter.Format(TimeSpan.FromSeconds(value));
         UpdateRemainingText();
 
-        // Si el cambio vino del usuario (arrastrando el Slider), saltar a ese punto.
-        if (!_isUpdatingFromTimer)
-            _player.Seek(TimeSpan.FromSeconds(value));
+        // Si el cambio vino del usuario, saltar a ese punto; durante un arrastre, solo al soltar (EndScrub).
+        if (!_isUpdatingFromTimer && _scrub.Change(TimeSpan.FromSeconds(value)) is { } target)
+            _player.Seek(target);
     }
 
     // Silencio (mute): un clic deja el volumen en 0 y otro clic devuelve el nivel anterior

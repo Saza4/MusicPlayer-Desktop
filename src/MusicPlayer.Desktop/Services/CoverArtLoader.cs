@@ -16,7 +16,8 @@ public sealed class CoverArtLoader(ICoverArtProvider provider, ICoverArtCache ca
     private const int LargeWidth = 640;
 
     private readonly LruCache<string, Bitmap> _thumbnails = new(400, StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _loading = new(StringComparer.OrdinalIgnoreCase); // solo hilo de UI
+    // Qué se está cargando, qué no tiene carátula y qué se invalidó a mitad (solo hilo de UI).
+    private readonly ThumbnailRequests _requests = new(comparer: StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _gate = new(4);
 
     /// <summary>
@@ -28,8 +29,9 @@ public sealed class CoverArtLoader(ICoverArtProvider provider, ICoverArtCache ca
         if (_thumbnails.TryGet(track.FilePath, out var bitmap))
             return bitmap;
 
-        if (_loading.Add(track.FilePath))
-            _ = LoadThumbnailAsync(track, onLoaded);
+        // Null si ya se está cargando o si ya se sabe que no tiene: no se vuelve a leer el disco al desplazar.
+        if (_requests.Begin(track.FilePath) is { } ticket)
+            _ = LoadThumbnailAsync(track, ticket, onLoaded);
 
         return null;
     }
@@ -40,19 +42,15 @@ public sealed class CoverArtLoader(ICoverArtProvider provider, ICoverArtCache ca
         return bytes is null ? null : await DecodeAsync(bytes, LargeWidth, ct);
     }
 
-    private async Task LoadThumbnailAsync(Track track, Action onLoaded)
+    private async Task LoadThumbnailAsync(Track track, int ticket, Action onLoaded)
     {
+        Bitmap? bitmap = null;
         await _gate.WaitAsync();
         try
         {
             var bytes = await ReadBytesAsync(track, CancellationToken.None);
-            if (bytes is null) return;
-
-            var bitmap = await DecodeAsync(bytes, ThumbnailWidth, CancellationToken.None);
-            if (bitmap is null) return;
-
-            _thumbnails.Set(track.FilePath, bitmap);
-            onLoaded();
+            if (bytes is not null)
+                bitmap = await DecodeAsync(bytes, ThumbnailWidth, CancellationToken.None);
         }
         catch (Exception)
         {
@@ -61,8 +59,19 @@ public sealed class CoverArtLoader(ICoverArtProvider provider, ICoverArtCache ca
         finally
         {
             _gate.Release();
-            _loading.Remove(track.FilePath);
         }
+
+        // Si la carátula se invalidó mientras se cargaba, este resultado es el viejo: ni se guarda ni se avisa
+        // (docs/specs/ui-responsiveness.md, criterio 7). La fila nueva ya lanzó su propia carga.
+        if (!_requests.Complete(track.FilePath, ticket, found: bitmap is not null))
+        {
+            bitmap?.Dispose();
+            return;
+        }
+        if (bitmap is null) return;
+
+        _thumbnails.Set(track.FilePath, bitmap);
+        onLoaded();
     }
 
     // Task.Run saca toda la cadena (disco, TagLib) del hilo de UI.
@@ -87,5 +96,6 @@ public sealed class CoverArtLoader(ICoverArtProvider provider, ICoverArtCache ca
     {
         cache.Invalidate(filePath);
         _thumbnails.Remove(filePath);
+        _requests.Invalidate(filePath);
     }
 }

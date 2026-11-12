@@ -16,7 +16,9 @@ public sealed class EmbeddedCoverArtProvider : ICoverArtProvider
                 var pictures = file.Tag.Pictures;
                 var picture = pictures.FirstOrDefault(p => p.Type == TagLib.PictureType.FrontCover)
                               ?? pictures.FirstOrDefault();
-                return picture?.Data.Data;
+                // Otra herramienta puede incrustar una imagen mayor que el tope de la app: se trata como ausente
+                // (docs/specs/audit-followup.md, criterio 6).
+                return picture is null || picture.Data.Count > CoverImage.MaxBytes ? null : picture.Data.Data;
             }
             catch (Exception ex) when (ex is TagLib.CorruptFileException
                                           or TagLib.UnsupportedFormatException

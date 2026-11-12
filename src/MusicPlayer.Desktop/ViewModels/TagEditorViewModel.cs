@@ -26,6 +26,9 @@ public partial class TagEditorViewModel(
     /// <summary>Después de guardar: la biblioteca nueva, ya reordenada.</summary>
     public event Action<LibrarySnapshot>? Saved;
 
+    /// <summary>La escritura terminó, bien o mal: quien soltó el archivo en <see cref="Saving"/> puede volver a cargarlo.</summary>
+    public event Action? Finished;
+
     public event Action<string>? Notified;
 
     [ObservableProperty] private bool _isOpen;
@@ -98,11 +101,11 @@ public partial class TagEditorViewModel(
     [RelayCommand]
     private async Task ChooseCoverAsync()
     {
-        var path = await imagePicker.PickImageAsync();
-        if (path is null) return;
-
         try
         {
+            var path = await imagePicker.PickImageAsync();
+            if (path is null) return;
+
             if (new FileInfo(path).Length > CoverImage.MaxBytes)
             {
                 Error = "La imagen pesa más de 10 MB.";
@@ -196,7 +199,11 @@ public partial class TagEditorViewModel(
         {
             Error = ex.Message; // el panel sigue abierto para corregir o cancelar
         }
-        finally { _busy = false; }
+        finally
+        {
+            _busy = false;
+            Finished?.Invoke();
+        }
     }
 
     private static bool TryParse(string text, uint max, out uint value)

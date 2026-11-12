@@ -3,11 +3,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using MusicPlayer.Core.Services;
 using MusicPlayer.Desktop.Services;
 using MusicPlayer.Desktop.ViewModels;
 using MusicPlayer.Desktop.Views;
+using MusicPlayer.Infrastructure;
 
 namespace MusicPlayer.Desktop;
 
@@ -24,6 +26,21 @@ public partial class App : Application
         {
             var services = CompositionRoot.Build();
             var viewModel = services.GetRequiredService<MainViewModel>();
+
+            // Red de seguridad (docs/specs/playback-resilience.md, criterio 3): un error no controlado en el hilo
+            // de la interfaz se anota y se avisa, pero no cierra la app.
+            var errors = services.GetRequiredService<ErrorLog>();
+            Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                errors.Write("interfaz", e.Exception);
+                viewModel.Status = $"Error inesperado: {e.Exception.Message}";
+                e.Handled = true;
+            };
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+            {
+                errors.Write("tarea", e.Exception);
+                e.SetObserved();
+            };
 
             // El tema elegido se aplica antes de mostrar la ventana, para que no parpadee en Oscuro.
             viewModel.Themes.Initialize();
