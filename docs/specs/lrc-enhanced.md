@@ -11,7 +11,7 @@ Hoy `LrcLyricParser` solo reconoce las marcas de línea `[mm:ss.xx]` al inicio. 
 - Una traducción o pronunciación enhanced (hermana o incrustada) también se ve sucia, porque `LyricsMerger` copia `.Text`.
 - La incrustación no necesita cambios: guarda el archivo tal cual y al leer vuelve a pasar por el mismo parser.
 
-LrcStudio (`C:\Users\norte\LrcStudio`) produce estos archivos: lee, edita y escribe enhanced (sus specs 01, 09 y 10). Esta spec fija lo que MusicPlayer debe entender de ese formato. **No se copia su parser**: tiene defectos que aquí no se quieren heredar (ver «Diferencias con LrcStudio»).
+LrcStudio (otro proyecto del autor) produce estos archivos: lee, edita y escribe enhanced (sus specs 01, 09 y 10). Esta spec fija lo que MusicPlayer debe entender de ese formato. **No se copia su parser**: tiene defectos que aquí no se quieren heredar (ver «Diferencias con LrcStudio»).
 
 Lo que ya está preparado: `FillTextBlock` recibe el progreso como posición horizontal (RNF-5 de `lyrics-progressive.md`). `LyricLine.Words` y `LyricWord` se quitaron el 8 de noviembre de 2026 por no tener uso; ahora lo tienen y se reintroducen con otra forma.
 

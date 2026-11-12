@@ -4,7 +4,7 @@ Estado: aprobada e implementada el 11 de noviembre de 2026 (D1 a D7; en D6 se de
 las 929 pruebas (732 en Core, 197 en Infrastructure). `JsonLibraryConcurrentSaveTests` pasó 50 veces seguidas en
 Windows. Diez pruebas (las de `LibraryServiceSaveFailureTests` y cuatro de `AtomicJsonTests`) se vieron fallar
 antes del cambio; las del escáner, las de rutas y la de dos respaldos del repositorio nacieron con su código.
-**Falta la verificación manual** de D5, D1b y D6 (lista de «Verificación»): D5 no tiene prueba automática.
+**Verificación manual hecha por el autor el 11 de noviembre de 2026, en Windows: todo correcto** (no se anotó el resultado paso a paso). D5 no tiene prueba automática: depende solo de esa pasada.
 
 ## Context
 

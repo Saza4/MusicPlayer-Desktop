@@ -2,8 +2,8 @@
 
 Estado: aprobada el 11 de noviembre de 2026 con las dos decisiones propuestas (seguir abierta tras un error
 inesperado; reanudar siempre). Implementados R1 a R5; compila y pasan las 886 pruebas (704 en Core, 182 en
-Infrastructure). **Falta la verificación manual en Windows** (lista de «Verificación»): los criterios 1, 2, 4,
-5, 6, 7 y 8 solo están comprobados por lectura. R6 no se ha intentado reproducir y sigue abierto. *Nota posterior:* la segunda auditoría encontró que, al reanudar en pausa (criterios 2 y 5), la barra quedaba en 0:00; corregido en `audit-followup.md`. Pruebas:
+Infrastructure). **Verificación manual hecha por el autor el 11 de noviembre de 2026, en Windows: todo correcto** (no se anotó el resultado paso a paso). Antes de esa pasada, los criterios 1, 2, 4,
+5, 6, 7 y 8 solo estaban comprobados por lectura. R6 no se ha intentado reproducir y sigue abierto. *Nota posterior:* la segunda auditoría encontró que, al reanudar en pausa (criterios 2 y 5), la barra quedaba en 0:00; corregido en `audit-followup.md`. Pruebas:
 `PlayQueueTests` (seis nuevas) y `ErrorLogTests`. Las de la cola no se vieron fallar antes del cambio: la lógica
 anterior estaba en `MainViewModel`, sin pruebas, y los métodos nuevos no existían.
 

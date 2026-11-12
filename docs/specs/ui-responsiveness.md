@@ -3,9 +3,8 @@
 Estado: aprobada e implementada el 11 de noviembre de 2026 (U1 a U8). El congelamiento con unidades de red se
 decidió llevar a una spec propia, junto con R6. Compila y pasan las 945 pruebas (748 en Core, 197 en
 Infrastructure). Las 16 pruebas nuevas (`ThumbnailRequestsTests`, `SeekScrubTests`) nacieron con sus clases: la
-lógica anterior estaba en Desktop, sin pruebas, así que no se vieron fallar antes. **Falta toda la verificación
-manual** (lista de «Verificación»): nada de esta spec se ha visto con la app abierta, y el arrastre (U4) depende
-de cómo entrega Avalonia los eventos de puntero del `Slider`.
+lógica anterior estaba en Desktop, sin pruebas, así que no se vieron fallar antes. **Verificación manual hecha por el autor el 11 de noviembre de 2026, en Windows: todo correcto** (no se anotó el resultado paso a paso). El arrastre de la barra de progreso (U4), que dependía de
+cómo entrega Avalonia los eventos de puntero del `Slider`, funciona bien.
 
 ## Context
 
@@ -85,7 +84,7 @@ sin pelearse con ella y no repita lecturas de disco al desplazar la lista.
 - Cancelar las cargas de miniaturas de filas que ya no se ven al desplazar muy rápido: hace falta saber desde
   el cargador qué filas siguen visibles.
 - Conservar la posición del desplazamiento de la lista tras filtrar (solo se conserva la selección).
-- Conservar el álbum o artista abierto tras guardar etiquetas: va en `ux-quick-wins.md` (spec 6, todavía sin escribir).
+- Conservar el álbum o artista abierto tras guardar etiquetas: va en `docs/pendientes.md` (la spec `ux-quick-wins.md` no se llegó a escribir).
 - Liberar (`Dispose`) los `Bitmap` grandes y las suscripciones sin cancelar: va con el rendimiento.
 - Que ← y → muevan un `Slider` enfocado, y el arranque de `ThemeViewModel`: decisiones de diseño (ver arriba).
 

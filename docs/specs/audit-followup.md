@@ -4,8 +4,8 @@ Estado: implementada el 11 de noviembre de 2026, a petición del autor («encár
 aprobación previa: las decisiones tomadas están en «Decisiones» por si quiere cambiarlas. Compila con la
 advertencia CS8602 de siempre y pasan las 958 pruebas (754 en Core, 204 en Infrastructure). Las pruebas de los
 criterios 4, 5 y 6 se vieron fallar antes del cambio; las de `PlayQueue.Replace` nacieron con el método.
-**Falta la verificación manual** de los criterios 1, 2 y 3 (lista de «Verificación»): viven en `MainViewModel`,
-sin pruebas automáticas, y nada de esto se ha visto con la app abierta.
+**Verificación manual hecha por el autor el 11 de noviembre de 2026, en Windows: todo correcto** (no se anotó el resultado paso a paso). Los criterios 1, 2 y 3 viven en `MainViewModel`,
+sin pruebas automáticas: dependen solo de esa pasada.
 
 ## Context
 
@@ -46,7 +46,8 @@ CLAUDE.md. Dejó dos hallazgos de corto plazo, cuatro de largo plazo y documenta
    specs de los `.lrc` enhanced dicen que están fusionadas.
 
 ### OUT OF SCOPE
-- El plan de la auditoría y `ux-quick-wins.md` (specs 6 y 7): no están en el repositorio y hay que escribirlos.
+- El plan de la auditoría y `ux-quick-wins.md` (specs 6 y 7): no están en el repositorio. Se decidió no
+  reconstruirlos: lo que se conoce de ellos está en `docs/pendientes.md`.
 - R6 y el congelamiento con unidades de red: spec propia, como ya estaba decidido.
 - `PlaylistManager` no serializa sus operaciones (anotado en `library-data-safety-2.md`).
 - Los enfoques D, E, F y H de la auditoría (Avalonia, isla, rendimiento, higiene): no se revisaron.
@@ -75,7 +76,8 @@ CLAUDE.md. Dejó dos hallazgos de corto plazo, cuatro de largo plazo y documenta
   `ConversionService` trata ese fallo como un error más y pasa a la pista siguiente. Que llegue a lanzar otro
   proceso depende de si Avalonia sigue despachando continuaciones tras `Exit`. El paso 1 de esa spec debe hacerse
   con varias pistas, mirando el Administrador de tareas unos segundos después de cerrar.
-- **U4** (`ui-responsiveness.md`): depende de cómo entrega Avalonia los eventos de puntero del `Slider`.
+- **U4** (`ui-responsiveness.md`): dependía de cómo entrega Avalonia los eventos de puntero del `Slider`. Probado a
+  mano por el autor el 11 de noviembre de 2026: funciona bien.
 - **R6** sigue abierto.
 
 ## Verificación

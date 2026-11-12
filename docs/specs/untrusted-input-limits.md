@@ -1,8 +1,8 @@
 # Spec: límites para entradas que no controla la app (derivada de la auditoría del 11 de noviembre de 2026)
 
 Estado: aprobada e implementada el 11 de noviembre de 2026 (E1 a E5). Compila y pasan las 903 pruebas (712 en
-Core, 191 en Infrastructure). Las 12 pruebas nuevas de comportamiento se vieron fallar antes del cambio. E3 solo
-está verificado por lectura y falta la prueba manual de «Verificación».
+Core, 191 en Infrastructure). Las 12 pruebas nuevas de comportamiento se vieron fallar antes del cambio. E3 no tiene
+prueba automática. **Verificación manual hecha por el autor el 11 de noviembre de 2026, en Windows: todo correcto** (no se anotó el resultado paso a paso).
 
 **Resultado del criterio 9:** E5 sí se reproduce. Dañando bytes de los audios de prueba (12 000 variantes de MP3,
 FLAC y M4A con etiquetas), TagLib lanzó `ArgumentOutOfRangeException` con FLAC y M4A y `ArgumentException` con
