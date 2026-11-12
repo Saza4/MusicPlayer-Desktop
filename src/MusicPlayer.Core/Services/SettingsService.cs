@@ -4,9 +4,17 @@ using MusicPlayer.Core.Models;
 namespace MusicPlayer.Core.Services;
 
 /// <summary>Mantiene los ajustes en memoria y los guarda con retraso (debounce).</summary>
-public sealed class SettingsService(ISettingsRepository repository, TimeSpan? saveDelay = null)
+/// <remarks>
+/// <paramref name="delay"/> es la espera del guardado diferido; por defecto, <see cref="Task.Delay(TimeSpan, CancellationToken)"/>.
+/// Las pruebas pasan una que completan a mano, para no depender del reloj (docs/specs/test-waits-and-docs.md).
+/// </remarks>
+public sealed class SettingsService(
+    ISettingsRepository repository,
+    TimeSpan? saveDelay = null,
+    Func<TimeSpan, CancellationToken, Task>? delay = null)
 {
     private readonly TimeSpan _delay = saveDelay ?? TimeSpan.FromMilliseconds(500);
+    private readonly Func<TimeSpan, CancellationToken, Task> _wait = delay ?? Task.Delay;
     private readonly object _lock = new();
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private CancellationTokenSource? _pending;
@@ -70,7 +78,7 @@ public sealed class SettingsService(ISettingsRepository repository, TimeSpan? sa
 
     private async Task SaveAfterDelayAsync(CancellationToken ct)
     {
-        try { await Task.Delay(_delay, ct); }
+        try { await _wait(_delay, ct); }
         catch (OperationCanceledException) { return; }
 
         await SaveNowAsync();

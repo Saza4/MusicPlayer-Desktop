@@ -71,11 +71,33 @@ public class SettingsServiceTests
         Assert.Equal(0, repo.SaveCount);
     }
 
+    // Espera falsa: la prueba decide cuándo termina, así que no depende del reloj
+    // (docs/specs/test-waits-and-docs.md). Se cancela como Task.Delay, con OperationCanceledException.
+    private sealed class ManualDelay
+    {
+        private readonly List<TaskCompletionSource> _waits = new();
+
+        public int Started => _waits.Count;
+        public int Cancelled => _waits.Count(w => w.Task.IsCanceled);
+
+        public Task Wait(TimeSpan delay, CancellationToken ct)
+        {
+            // Sin RunContinuationsAsynchronously: al completarla, el guardado corre antes de que Complete vuelva.
+            var wait = new TaskCompletionSource();
+            ct.Register(() => wait.TrySetCanceled(ct));
+            _waits.Add(wait);
+            return wait.Task;
+        }
+
+        public void CompleteLast() => _waits[^1].SetResult();
+    }
+
     [Fact]
     public async Task Update_Burst_SavesOnlyOnceAfterTheDelay()
     {
         var repo = new InMemorySettingsRepository();
-        var service = new SettingsService(repo, TimeSpan.FromMilliseconds(250));
+        var delay = new ManualDelay();
+        var service = new SettingsService(repo, TimeSpan.FromMilliseconds(250), delay.Wait);
 
         for (int i = 1; i <= 5; i++)
         {
@@ -83,10 +105,51 @@ public class SettingsServiceTests
             service.Update(s => s with { Volume = volume });
         }
 
-        await Task.Delay(1500);
+        Assert.Equal(5, delay.Started);
+        Assert.Equal(4, delay.Cancelled); // cada cambio reinicia la cuenta atrás
+        Assert.Equal(0, repo.SaveCount);  // la espera no ha terminado
+
+        delay.CompleteLast();
 
         Assert.Equal(1, repo.SaveCount);
         Assert.Equal(0.5, repo.Stored.Volume);
+
+        await service.FlushAsync(); // ya no queda nada pendiente
+        Assert.Equal(1, repo.SaveCount);
+    }
+
+    private sealed class FailingOnceSaveRepository : ISettingsRepository
+    {
+        private bool _failed;
+        public AppSettings? Stored { get; private set; }
+
+        public Task<AppSettings> LoadAsync(CancellationToken ct = default) => Task.FromResult(AppSettings.Default);
+
+        public Task SaveAsync(AppSettings settings, CancellationToken ct = default)
+        {
+            if (!_failed)
+            {
+                _failed = true;
+                return Task.FromException(new IOException("disco lleno"));
+            }
+            Stored = settings;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task SaveFails_NextFlushSavesTheSameChange()
+    {
+        var repo = new FailingOnceSaveRepository();
+        var service = new SettingsService(repo, TimeSpan.FromMinutes(1), new ManualDelay().Wait);
+
+        service.Update(s => s with { Volume = 0.4 });
+        await service.FlushAsync(); // falla y no lanza: los ajustes no son críticos
+        Assert.Null(repo.Stored);
+
+        await service.FlushAsync();
+
+        Assert.Equal(0.4, repo.Stored?.Volume);
     }
 
     // Como la biblioteca y las playlists: lo que no se pudo leer no se sobrescribe

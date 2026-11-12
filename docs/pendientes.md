@@ -6,10 +6,6 @@ antes de tocar código. Estado a 11 de noviembre de 2026.
 El plan de la primera auditoría (que numeraba «siete specs») no se guardó en el repositorio y no se va a
 reconstruir. De sus specs 6 (`ux-quick-wins.md`) y 7 solo se conoce lo que aparece aquí.
 
-## Con spec propuesta
-
-- **Pruebas sin esperas reales y documentación al día:** `docs/specs/test-waits-and-docs.md`, pendiente de aprobar.
-
 ## Sin spec todavía
 
 1. **Conservar el álbum o artista abierto tras guardar etiquetas.** Hoy, al guardar, la vista vuelve a la lista.

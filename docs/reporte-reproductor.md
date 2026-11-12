@@ -607,6 +607,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | Auditoría, spec 4: interfaz (`ui-responsiveness.md`) | +16 | +0 | 748 + 197 = 945. |
 | Auditoría, spec 5: medida de CPU del relleno por palabra (`lyrics-render-perf.md`) | +0 | +0 | Sin código nuevo: solo la sonda `tools/medir-cpu.ps1` y las cifras. |
 | Segunda auditoría (`audit-followup.md`), ejecución del 11 de noviembre de 2026 (`-c Release`) | +6 | +7 | **754 + 204 = 958**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Sin CI todavía: la rama no se ha subido. |
+| Pruebas sin esperas reales (`test-waits-and-docs.md`) | +1 | +0 | **755 + 204 = 959**. La prueba del guardado diferido de los ajustes ya no depende del reloj. |
 
 La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las propiedades de la isla la desplazaron): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
@@ -730,6 +731,8 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 2. **Probar en Linux:** omitido por ahora.
 3. **v1.4.0 está publicada** (8 de noviembre de 2026). La siguiente release reunirá los `.lrc` enhanced y los arreglos de la auditoría del 11 de noviembre, cuando esté hecha su verificación manual (cada spec lista sus pasos).
 4. **Captura del README:** `docs/screenshot.png` se actualizó el 8 de noviembre de 2026 (barra superior con iconos, biblioteca vacía).
+
+Lo que falta y todavía no tiene spec está en `docs/pendientes.md`.
 
 **Deuda menor conocida:** ninguna de las anteriores sigue en pie. El 8 de noviembre de 2026 se quitó el código sin uso (ver 4.3.7). Quedan dos ayudas que solo usan las pruebas: `LyricsLayers.MainOnly` y `LyricsLanguage.KnownLanguageCount`; y un dato que se guarda pero ninguna pantalla muestra, el género (`Track.Genre`).
 

@@ -1,11 +1,14 @@
 # Spec: pruebas sin esperas reales y documentación al día
 
-Estado: **propuesta, pendiente de aprobar** (11 de noviembre de 2026). No hay código escrito.
+Estado: aprobada e implementada el 11 de noviembre de 2026, con la función inyectada. Compila y pasan las 959
+pruebas (755 en Core, 204 en Infrastructure). `SettingsServiceTests` pasó 100 veces seguidas. La prueba de la
+ráfaga se vio fallar quitando la cancelación de `_pending` (esperaba 4 cancelaciones y hubo 0). La del criterio 3
+nació en verde: cubre un comportamiento que ya existía y no tenía prueba.
 
 ## Context
 
-`dotnet test` tiene 958 pruebas y tarda pocos segundos, pero una depende del reloj real y puede fallar sin que el
-código esté mal:
+Antes de esta spec, `dotnet test` tenía 958 pruebas y una dependía del reloj real: podía fallar sin que el
+código estuviera mal.
 
 | Prueba | Qué hace | Riesgo |
 | ------ | -------- | ------ |
@@ -50,8 +53,8 @@ guardados se solaparían, y lo que se comprueba (`MaxConcurrent == 1`) no depend
   `Update_ThenFlush_SavesLatestValue`; debe seguir pasando sin tocarla).
 - **Carga fallida** (`audit-followup.md`, criterio 5): las dos pruebas existentes no cambian.
 
-## Decisión que necesita el autor
-- **Función inyectada (propuesta) o `TimeProvider`.** La función es una línea en el constructor y no añade
+## Decisión
+- **Función inyectada, no `TimeProvider`** (elegida por el autor). La función es una línea en el constructor y no añade
   paquetes. `TimeProvider` es lo habitual en .NET 8, pero su reloj falso viene en un paquete aparte.
 
 ## Verificación
