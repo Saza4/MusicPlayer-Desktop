@@ -159,6 +159,19 @@ public sealed class PlayQueue<T> where T : class
         _pendingNext = 0;
     }
 
+    /// <summary>
+    /// Cambia cada elemento por el que devuelva <paramref name="replacement"/>, sin tocar el orden, la posición ni las
+    /// pistas pendientes de «Reproducir siguiente». Sirve para que la cola no se quede con copias viejas cuando la
+    /// biblioteca se vuelve a cargar (docs/specs/audit-followup.md, criterio 2).
+    /// </summary>
+    public void Replace(Func<T, T> replacement)
+    {
+        var items = new T[_items.Length];
+        for (var i = 0; i < items.Length; i++)
+            items[i] = replacement(_items[i]);
+        _items = items;
+    }
+
     private void Insert(T item, int orderPosition)
     {
         _items = _items.Append(item).ToArray();

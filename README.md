@@ -40,7 +40,7 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 - **Letra progresiva en el modo inmersivo** (estilo Apple Music): la línea activa se rellena de izquierda a derecha según la posición real, el resto se desplaza con resorte y cascada y se atenúa con la distancia, y las pausas instrumentales largas muestran «♪». Pulsar una línea salta a ella; la rueda o un gesto desplazan a mano y a los 3 s la letra vuelve a su sitio. Las letras sin tiempos y el panel lateral siguen con la lista de siempre.
 - **Incrustar letra:** guarda en el archivo, en una sola escritura atómica y verificada, el `.lrc` principal (USLT en MP3, `LYRICS` en FLAC, `©lyr` en M4A) y su traducción y pronunciación (`cancion.<idioma>.lrc` y `cancion.rom.lrc`, en campos propios: `LYRICS_TRANSLATION_ES`, `LYRICS_PRONUNCIATION`). Así puedes quitar los `.lrc` de junto al audio. Desde el clic derecho de la lista; la línea de estado dice qué entró y qué se saltó y por qué.
 - **Capas en el modo inmersivo:** un botón arriba a la derecha (con letra sincronizada) muestra u oculta la traducción, la pronunciación y el original (las mismas opciones que el panel lateral). Con el original oculto se rellena la primera capa visible. Al final del menú, **«Incrustar traducción…» e «Incrustar pronunciación…»** abren el selector de archivos: eliges un `.lrc` de cualquier carpeta y se incrusta solo esa capa, sin tocar la letra principal y sin depender de archivos junto a la música. El idioma de la traducción sale del nombre del archivo (`algo.en.lrc`); si no lo trae, se usa el del sistema y la línea de estado lo avisa. Cancelar el selector no corta la música; al escribir, la pista se recarga en el mismo punto. Si un `.es.lrc` sigue junto al audio, ese hermano gana al leer: quítalo para ver la capa incrustada.
-- **Carátulas bajo demanda** (incrustadas o un archivo de la carpeta llamado `cover`, `folder`, `front`, `album` o `albumart`, en `.jpg`, `.jpeg` o `.png`, en ese orden de prioridad) con caché LRU.
+- **Carátulas bajo demanda** (incrustadas o un archivo de la carpeta llamado `cover`, `folder`, `front`, `album` o `albumart`, en `.jpg`, `.jpeg` o `.png`, en ese orden de prioridad) con caché LRU. Una imagen de más de 10 MB, incrustada o de la carpeta, se ignora.
 - **Carátulas editables:** elige una imagen JPG o PNG (máx. 10 MB) o quita la actual, directamente en el archivo (TagLibSharp, escritura atómica). También puedes aplicar una imagen a todo un álbum de una vez.
 - **Modo inmersivo** con fondo desenfocado a partir de la carátula (se desenfoca una sola vez, fuera del hilo de la interfaz).
 
@@ -127,7 +127,7 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 945 pruebas (748 en Core y 197 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 958 pruebas (754 en Core y 204 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco, teclado, la ventana de la isla y el dibujo de la letra progresiva), que se prueban a mano.
 De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
 De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, la atenuación y el desenfoque.

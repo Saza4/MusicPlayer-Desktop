@@ -1,6 +1,6 @@
 # Especificación: relleno por palabra (`.lrc` enhanced, Fase 2)
 
-Estado: **aprobada (10 de noviembre de 2026); M1, M2, M2b y M3 hechos; de M4, hecha la medida de CPU en Release (11 de noviembre: −0,4 puntos frente a la estimación uniforme, sin coste medible; cifras en `docs/specs/lyrics-render-perf.md`; RTL sin medir). M2b (naturalidad del relleno, 10 de noviembre) añadido tras la prueba a mano de M2.** Continúa `docs/specs/lrc-enhanced.md` (Fase 1, lectura), de donde sale el modelo `LyricWord`. Va en un PR distinto, en una rama nueva (`feature/lrc-enhanced-relleno`) que se crea cuando el PR de la Fase 1 esté fusionado.
+Estado: **aprobada (10 de noviembre de 2026); M1, M2, M2b y M3 hechos; de M4, hecha la medida de CPU en Release (11 de noviembre: −0,4 puntos frente a la estimación uniforme, sin coste medible; cifras en `docs/specs/lyrics-render-perf.md`; RTL sin medir). M2b (naturalidad del relleno, 10 de noviembre) añadido tras la prueba a mano de M2.** Continúa `docs/specs/lrc-enhanced.md` (Fase 1, lectura), de donde sale el modelo `LyricWord`. Las dos fases se fusionaron juntas en `main` el 10 de noviembre de 2026 (`3ae9ff9`, una fusión local, sin PR). De M4 queda repasar el reporte con esta función en la próxima release.
 
 ## Contexto
 

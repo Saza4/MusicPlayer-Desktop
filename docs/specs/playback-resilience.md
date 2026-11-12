@@ -3,7 +3,7 @@
 Estado: aprobada el 11 de noviembre de 2026 con las dos decisiones propuestas (seguir abierta tras un error
 inesperado; reanudar siempre). Implementados R1 a R5; compila y pasan las 886 pruebas (704 en Core, 182 en
 Infrastructure). **Falta la verificación manual en Windows** (lista de «Verificación»): los criterios 1, 2, 4,
-5, 6, 7 y 8 solo están comprobados por lectura. R6 no se ha intentado reproducir y sigue abierto. Pruebas:
+5, 6, 7 y 8 solo están comprobados por lectura. R6 no se ha intentado reproducir y sigue abierto. *Nota posterior:* la segunda auditoría encontró que, al reanudar en pausa (criterios 2 y 5), la barra quedaba en 0:00; corregido en `audit-followup.md`. Pruebas:
 `PlayQueueTests` (seis nuevas) y `ErrorLogTests`. Las de la cola no se vieron fallar antes del cambio: la lógica
 anterior estaba en `MainViewModel`, sin pruebas, y los métodos nuevos no existían.
 
@@ -11,7 +11,7 @@ anterior estaba en `MainViewModel`, sin pruebas, y los métodos nuevos no exist�
 
 La auditoría de solo lectura encontró un camino que cierra la app y varios que cortan la música o dejan la cola
 desalineada. Todos pasan por `BassAudioPlayer`, `MainViewModel` y `PlayQueue`. Esta spec es la primera de siete
-(el orden está en el plan de la auditoría); las demás cubren entradas no confiables, datos de la biblioteca,
+(el orden estaba en el plan de la auditoría, que no se guardó en el repositorio); las demás cubren entradas no confiables, datos de la biblioteca,
 fluidez de la interfaz, rendimiento de la letra, mejoras de uso y documentación.
 
 Cada hallazgo se comprobó leyendo el código que se cita. Ninguno se ha reproducido con la app abierta.

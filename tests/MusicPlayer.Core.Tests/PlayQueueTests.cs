@@ -426,4 +426,53 @@ public class PlayQueueTests
 
         Assert.Equal(new[] { "x", "y", "z" }, new[] { queue.MoveNext(), queue.MoveNext(), queue.MoveNext() });
     }
+
+    // Al recargar la biblioteca, la cola cambia sus elementos por los nuevos sin moverse
+    // (docs/specs/audit-followup.md, criterio 2).
+    [Fact]
+    public void Replace_SwapsTheItems_KeepingCurrentAndOrder()
+    {
+        var queue = Started(start: 1);
+
+        queue.Replace(s => s.ToUpperInvariant());
+
+        Assert.Equal("B", queue.Current);
+        Assert.Equal(new[] { "B", "C", "D", "E" }, PlayThrough(queue));
+        Assert.Equal("D", queue.MovePrevious());
+    }
+
+    [Fact]
+    public void Replace_Shuffled_KeepsTheSameShuffledOrder()
+    {
+        var queue = Started(start: 2, shuffle: true, seed: 5);
+        var twin = Started(start: 2, shuffle: true, seed: 5);
+
+        queue.Replace(s => s + "!");
+
+        Assert.Equal(PlayThrough(twin).Select(s => s + "!"), PlayThrough(queue));
+    }
+
+    [Fact]
+    public void Replace_KeepsThePendingPlayNextTracks_AndWhatComesNext()
+    {
+        var queue = Started();
+        queue.PlayNext("x");
+
+        queue.Replace(s => s == "x" ? "X" : s);
+        queue.PlayNext("y"); // debe ir detrás de la que ya se pidió
+
+        Assert.Equal("X", queue.PeekNextAfterEnd());
+        Assert.Equal(new[] { "X", "y", "b" }, new[] { queue.MoveNext(), queue.MoveNext(), queue.MoveNext() });
+    }
+
+    [Fact]
+    public void Replace_OnAnEmptyQueue_DoesNothing()
+    {
+        var queue = new PlayQueue<string>();
+
+        queue.Replace(s => s + "!");
+
+        Assert.Null(queue.Current);
+        Assert.Equal(0, queue.Count);
+    }
 }

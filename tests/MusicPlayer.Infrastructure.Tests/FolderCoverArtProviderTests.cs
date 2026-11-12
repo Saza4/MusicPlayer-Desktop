@@ -49,5 +49,26 @@ public class FolderCoverArtProviderTests : IDisposable
         Assert.Null(await _provider.GetCoverAsync(missingFolder));
     }
 
+    // Mismo tope que al elegir una carátula: una imagen mayor se trata como si no estuviera
+    // (docs/specs/audit-followup.md, criterio 6).
+    [Fact]
+    public async Task OversizedImage_IsIgnored_AndTheNextCandidateIsUsed()
+    {
+        using (var big = File.Create(Path.Combine(_dir, "cover.jpg")))
+            big.SetLength(CoverImage.MaxBytes + 1);
+        Write("folder.jpg", 2);
+
+        Assert.Equal(new byte[] { 2 }, await _provider.GetCoverAsync(NewTrack()));
+    }
+
+    [Fact]
+    public async Task ImageOfExactlyTheLimit_IsRead()
+    {
+        using (var big = File.Create(Path.Combine(_dir, "cover.jpg")))
+            big.SetLength(CoverImage.MaxBytes);
+
+        Assert.Equal(CoverImage.MaxBytes, (await _provider.GetCoverAsync(NewTrack()))!.Length);
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

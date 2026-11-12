@@ -11,13 +11,30 @@ public sealed class SettingsService(ISettingsRepository repository, TimeSpan? sa
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private CancellationTokenSource? _pending;
     private bool _dirty;
+    private bool _loadFailed; // la última carga falló: guardar sobrescribiría ajustes que no se pudieron leer
 
     public AppSettings Current { get; private set; } = AppSettings.Default;
 
     public async Task<AppSettings> LoadAsync(CancellationToken ct = default)
     {
-        var loaded = await repository.LoadAsync(ct);
-        lock (_lock) Current = loaded;
+        AppSettings loaded;
+        try
+        {
+            loaded = await repository.LoadAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Como la biblioteca y las playlists: lo que no se pudo leer no se sobrescribe. Los cambios de la
+            // sesión valen en memoria y no se guardan (docs/specs/audit-followup.md, criterio 5).
+            lock (_lock) _loadFailed = true;
+            throw;
+        }
+
+        lock (_lock)
+        {
+            Current = loaded;
+            _loadFailed = false;
+        }
         return loaded;
     }
 
@@ -67,7 +84,7 @@ public sealed class SettingsService(ISettingsRepository repository, TimeSpan? sa
             AppSettings snapshot;
             lock (_lock)
             {
-                if (!_dirty) return;
+                if (!_dirty || _loadFailed) return;
                 _dirty = false;
                 snapshot = Current;
             }

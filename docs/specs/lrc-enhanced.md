@@ -1,6 +1,6 @@
 # Especificación: `.lrc` enhanced (marcas `<mm:ss.xx>` por palabra)
 
-Estado: **aprobada (10 de noviembre de 2026). Fase 1 (M1 y M2) hecha en la rama `feature/lrc-enhanced-lectura`; falta la revisión del PR y la Fase 2.** Fase 1 (lectura) y Fase 2 (relleno por palabra) van en PR distintos. Fase 3 son comprobaciones de coherencia.
+Estado: **aprobada (10 de noviembre de 2026). Fases 1 y 2 hechas y fusionadas en `main` el 10 de noviembre de 2026 (`3ae9ff9`, una fusión local, sin PR).** La Fase 2 está en `lrc-enhanced-fill.md`. Fase 1 (lectura) y Fase 2 (relleno por palabra) van en PR distintos. Fase 3 son comprobaciones de coherencia.
 
 ## Contexto
 

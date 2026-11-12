@@ -272,7 +272,7 @@ public partial class MainViewModel : ViewModelBase
             var saved = AppSettings.Default;
             string? settingsProblem = null;
             try { saved = await _settings.LoadAsync(); }
-            catch (Exception ex) { settingsProblem = $"No se pudieron leer los ajustes ({ex.Message}); se usan los de siempre"; }
+            catch (Exception ex) { settingsProblem = $"No se pudieron leer los ajustes ({ex.Message}); se usan los de siempre y no se guardarán cambios hasta reiniciar"; }
             _restoring = true;
             try
             {
@@ -337,6 +337,11 @@ public partial class MainViewModel : ViewModelBase
         _allTracks = snapshot.Tracks
             .Select(t => new TrackItemViewModel(t, _covers) { IsAvailable = !_missingIds.Contains(t.Id) })
             .ToList();
+        // La cola guardaba las instancias anteriores, con las etiquetas y la ruta de antes: se cambian por las
+        // nuevas, por Id (docs/specs/audit-followup.md, criterio 2). Las que ya no están en la biblioteca se quedan.
+        var fresh = new Dictionary<Guid, TrackItemViewModel>();
+        foreach (var item in _allTracks) fresh.TryAdd(item.Track.Id, item);
+        _queue.Replace(queued => fresh.GetValueOrDefault(queued.Track.Id, queued));
         MissingCount = _missingIds.Count;
         ApplyFilter();
     }
@@ -720,9 +725,16 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private void ResumeInterrupted()
     {
-        if (_interrupted is not { } was) return;
+        // Saving soltó también la pista preparada. Si no hay nada que reanudar (se escribió en otra pista, o el
+        // usuario ya eligió otra), se vuelve a preparar la siguiente para no perder el empalme sin silencio
+        // (docs/specs/audit-followup.md, criterio 3).
+        var was = _interrupted;
         _interrupted = null;
-        if (CurrentTrack is not null) return;
+        if (was is null || CurrentTrack is not null)
+        {
+            UpdateGapless();
+            return;
+        }
 
         // Tras guardar, la biblioteca tiene una instancia nueva con las etiquetas ya cambiadas.
         var item = _allTracks.FirstOrDefault(i => i.Track.Id == was.Item.Track.Id) ?? was.Item;
@@ -744,7 +756,14 @@ public partial class MainViewModel : ViewModelBase
             _player.Load(item.Track.FilePath);
             ShowTrack(item);
             if (position > TimeSpan.Zero && position < _player.Duration)
+            {
                 _player.Seek(position);
+                // En pausa el temporizador no escribe: sin esto la barra, el tiempo y la letra quedarían en 0:00 y
+                // ← → saltarían desde el principio (docs/specs/audit-followup.md, criterio 1).
+                _isUpdatingFromTimer = true;
+                try { PositionSeconds = position.TotalSeconds; }
+                finally { _isUpdatingFromTimer = false; }
+            }
             if (play) _player.Play();
             UpdateGapless();
             IsImmersive = immersive;

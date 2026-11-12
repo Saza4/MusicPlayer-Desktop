@@ -88,4 +88,52 @@ public class SettingsServiceTests
         Assert.Equal(1, repo.SaveCount);
         Assert.Equal(0.5, repo.Stored.Volume);
     }
+
+    // Como la biblioteca y las playlists: lo que no se pudo leer no se sobrescribe
+    // (docs/specs/audit-followup.md, criterio 5).
+    private sealed class FailingLoadRepository : ISettingsRepository
+    {
+        public bool Fail { get; set; } = true;
+        public AppSettings Stored { get; } = new(Volume: 0.2, ThemeId: "medianoche");
+        public int SaveCount { get; private set; }
+
+        public Task<AppSettings> LoadAsync(CancellationToken ct = default) =>
+            Fail ? Task.FromException<AppSettings>(new IOException("en uso")) : Task.FromResult(Stored);
+
+        public Task SaveAsync(AppSettings settings, CancellationToken ct = default)
+        {
+            SaveCount++;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task LoadFails_UpdateChangesMemoryButNeverSaves()
+    {
+        var repo = new FailingLoadRepository();
+        var service = new SettingsService(repo, TimeSpan.FromMinutes(1));
+
+        await Assert.ThrowsAsync<IOException>(() => service.LoadAsync());
+        service.Update(s => s with { Volume = 0.7 });
+        await service.FlushAsync();
+
+        Assert.Equal(0.7, service.Current.Volume); // la sesión sigue funcionando
+        Assert.Equal(0, repo.SaveCount);
+    }
+
+    [Fact]
+    public async Task LoadFails_ThenLoadsFine_SavesAgain()
+    {
+        var repo = new FailingLoadRepository();
+        var service = new SettingsService(repo, TimeSpan.FromMinutes(1));
+
+        await Assert.ThrowsAsync<IOException>(() => service.LoadAsync());
+        repo.Fail = false;
+        await service.LoadAsync();
+        service.Update(s => s with { Volume = 0.7 });
+        await service.FlushAsync();
+
+        Assert.Equal("medianoche", service.Current.ThemeId);
+        Assert.Equal(1, repo.SaveCount);
+    }
 }

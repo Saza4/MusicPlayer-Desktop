@@ -85,7 +85,7 @@ sin pelearse con ella y no repita lecturas de disco al desplazar la lista.
 - Cancelar las cargas de miniaturas de filas que ya no se ven al desplazar muy rápido: hace falta saber desde
   el cargador qué filas siguen visibles.
 - Conservar la posición del desplazamiento de la lista tras filtrar (solo se conserva la selección).
-- Conservar el álbum o artista abierto tras guardar etiquetas: va en `ux-quick-wins.md`.
+- Conservar el álbum o artista abierto tras guardar etiquetas: va en `ux-quick-wins.md` (spec 6, todavía sin escribir).
 - Liberar (`Dispose`) los `Bitmap` grandes y las suscripciones sin cancelar: va con el rendimiento.
 - Que ← y → muevan un `Slider` enfocado, y el arranque de `ThemeViewModel`: decisiones de diseño (ver arriba).
 

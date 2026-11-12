@@ -61,9 +61,14 @@ public sealed class JsonThemeRepository(string folder) : IThemeRepository
             {
                 throw;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            // InvalidOperationException: un texto con un sustituto UTF-16 suelto escapado («\uD800») pasa el
+            // análisis y lanza al leerlo (docs/specs/audit-followup.md, criterio 4).
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException
+                                          or InvalidOperationException)
             {
-                errors.Add(new ThemeIssue(file, ex is JsonException ? "JSON mal formado" : $"no se pudo leer ({ex.Message})"));
+                errors.Add(new ThemeIssue(file, ex is IOException or UnauthorizedAccessException
+                    ? $"no se pudo leer ({ex.Message})"
+                    : "JSON mal formado"));
             }
         }
 
