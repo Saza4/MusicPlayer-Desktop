@@ -1,7 +1,7 @@
 # MusicPlayer-Desktop — Documento maestro y reporte de novedades
 
 > Reproductor de música local, ligero y multiplataforma. **C# · .NET 8 · Avalonia UI 11**.
-> Estado a **11 de noviembre de 2026** · última release publicada: **v1.4.0** (8 de noviembre de 2026: letra progresiva, capas de letra, botones de acción y limpieza de código). Después de v1.4.0 y sin release todavía: lectura y relleno por palabra de los `.lrc` enhanced y los arreglos de la auditoría del 11 de noviembre (specs en `docs/specs/`), que tienen pendiente la verificación manual.
+> Estado a **12 de noviembre de 2026** · última release publicada: **v1.4.0** (8 de noviembre de 2026). **v1.5.0** (letra por palabra de los `.lrc` enhanced y arreglos de las dos auditorías) está preparada: notas y zip listos y revisados con una auditoría previa de solo lectura; falta crear el borrador en GitHub y que el autor lo publique (spec `docs/specs/release-v1.5.0.md`).
 
 Este documento reúne en un solo lugar: la visión y la especificación del proyecto, el reporte de todo lo implementado durante el desarrollo, el historial de versiones tal como se publicó en GitHub Releases, las decisiones de diseño, las limitaciones conocidas y la hoja de ruta. Al final, como anexos, se conserva la especificación original y el prompt maestro.
 
@@ -165,6 +165,8 @@ Reglas finas del código que no aparecen en otras secciones (verificadas contra 
 | 15  | Capas de letra: traducción y pronunciación incrustadas, y menú de capas en el inmersivo | Core, Infrastructure, Desktop | Hecho: pruebas en MP3, FLAC y M4A, comprobado en la app por UI Automation y probado a mano por el autor en copias | v1.4.0 (PR #5) |
 | 16  | Botones de acción: estilo tonal con icono en la barra superior y en el «+» de COLECCIONES | Desktop                       | Hecho: capturas en Windows (Oscuro, Claro y un tema de usuario, a 640, 960 y 1200 px), hover y foco; CI del PR #6 en verde. Sin probar: `Tab` real, pressed y deshabilitado | v1.4.0 (PR #6) |
 | 17  | Limpieza de código sin uso (`IAudioPlayer.Stop`, `LyricLine.Words`, `LibrarySnapshot.Folders`, `ViewLocator`…) | Core, Audio, Infrastructure, Desktop | Hecho: build sin errores, 640 + 173 pruebas, la app arranca igual | v1.4.0 (PR #7) |
+| 18  | `.lrc` enhanced: lectura de las marcas por palabra y relleno por palabra en el inmersivo | Core, Desktop | Hecho: pruebas con letra sintética, probado a mano y medido en Windows (sin coste de CPU medible). Sin probar con texto de derecha a izquierda | v1.5.0 (PR #9) |
+| 19  | Arreglos de dos auditorías: reproducción, entradas no confiables, datos de la biblioteca e interfaz | Core, Audio, Infrastructure, Desktop | Hecho: 959 pruebas y pasada manual del autor en Windows el 11 de noviembre de 2026 (sin detalle paso a paso) | v1.5.0 (PR #10) |
 
 ### 4.2 Novedades de la serie v1.1.0
 
@@ -321,6 +323,18 @@ Se quitó lo que ningún camino de la app ejecutaba. Cada pieza se comprobó con
 - **Desktop:** `ViewLocator.cs` y su `DataTemplate` en `App.axaml` (de la plantilla de Avalonia; la interfaz no usa ViewModels como contenido), la entrada `<Folder Include="Models"/>` del `.csproj`, la referencia a `Avalonia.Diagnostics` (sin llamar a `AttachDevTools`) y el comentario de la plantilla sobre `DisableAvaloniaDataAnnotationValidation`. También se recolocó un comentario de `MainWindow.axaml.cs` que había quedado encima del menú de capas en lugar de encima de `OwnsKeyboard`.
 - **Se conserva a propósito:** `Track.Genre` (dato de las etiquetas que se guarda en la biblioteca; no tiene lógica propia) y dos ayudas de prueba (`LyricsLayers.MainOnly`, `LyricsLanguage.KnownLanguageCount`).
 - **Verificación:** `dotnet build` y `dotnet build -c Release` sin errores (mismo aviso CS8602), 640 + 173 pruebas en verde y captura de la app arrancando igual en Windows. CI del PR #7 en verde en Windows y Ubuntu. El `library.json` real del autor no se tocó.
+
+### 4.3.8 Letra por palabra y arreglos de las auditorías (v1.5.0)
+
+Cada cambio tiene su spec en `docs/specs/`, con criterios, casos límite y cómo se verificó.
+
+- **`.lrc` enhanced** (`lrc-enhanced.md`, `lrc-enhanced-fill.md`, `lyrics-render-perf.md`): `LrcLyricParser` lee las marcas `<mm:ss.xx>` a `LyricLine.Words` y `LyricsTiming.FillPoint` da el punto de relleno; la vista lo convierte en una posición horizontal y la suaviza con un resorte.
+- **Reproducción** (`playback-resilience.md`, `audit-followup.md`): reproducir sin archivo no cierra la app, la pista se reanuda tras escribir en ella, la cola no se queda en una pista ausente y se renueva al recargar la biblioteca, y hay una red de seguridad con `errores.log`.
+- **Entradas no confiables** (`untrusted-input-limits.md`, `audit-followup.md`): tope de 1 MB al leer letras y de 10 MB al leer carátulas, 32 marcas por línea, y un escaneo que omite el archivo con etiquetas dañadas.
+- **Datos** (`library-data-safety.md`, `library-data-safety-2.md`, `audit-followup.md`): no se guarda tras una carga fallida (biblioteca, playlists y ajustes), la memoria solo cambia si el guardado sale bien, respaldos `.corrupt-<fecha>`, `ffmpeg` termina con la app y los temporales antiguos se borran al escanear.
+- **Interfaz** (`ui-responsiveness.md`): el buscador no filtra solo, la selección sobrevive al filtro, el arrastre de la barra hace un solo salto y Espacio mantenido cuenta una vez.
+- **Pruebas** (`test-waits-and-docs.md`): el guardado diferido de los ajustes se prueba sin reloj.
+- **Lo que queda:** `docs/pendientes.md`.
 
 ### 4.4 Base anterior: lo que ya contenía v1.0.0
 
@@ -487,7 +501,7 @@ SHA-256: `FE5640786A3E63AC2B70F806FF4CBB6229AC5E7DEF7D10DBEB7EC8D4AD8ABE6C`
 
 ### MusicPlayer-Desktop v1.4.0
 
-_Fuente del texto: `docs/notas-de-version/v1.4.0.md` (spec: `docs/specs/release-v1.4.0.md`). Borrador preparado el 8 de noviembre de 2026; la publica el autor._
+_Fuente del texto: `docs/notas-de-version/v1.4.0.md` (spec: `docs/specs/release-v1.4.0.md`). Publicada el 8 de noviembre de 2026._
 
 Tres novedades: una **letra progresiva** en el modo inmersivo (estilo Apple Music), **traducción y pronunciación incrustadas** en el propio archivo de audio, y **botones de acción con icono** en la barra superior.
 
@@ -499,7 +513,7 @@ Tres novedades: una **letra progresiva** en el modo inmersivo (estilo Apple Musi
 - Pulsar una línea (o «♪») salta a ella. La rueda del ratón o un gesto desplazan a mano, y a los 3 s sin tocar nada la letra vuelve a su sitio.
 - Cuesta poco: reloj propio a 30 fotogramas por segundo pedidos (~24 reales) que solo corre mientras hay algo que mover; en pausa, 0 fotogramas. La carátula del fondo se desenfoca una sola vez, fuera del hilo de la interfaz.
 - **No cambia** el panel lateral ni las letras sin tiempos: siguen con la lista de siempre. No hay ajuste para volver al estilo anterior en el inmersivo.
-- **Limitación:** los `.lrc` normales solo traen el inicio de cada línea, así que el relleno avanza uniforme durante una duración estimada. Los `.lrc` enhanced (`<mm:ss.xx>` por palabra) se leen sin mostrar sus etiquetas (Fase 1, `docs/specs/lrc-enhanced.md`) y el relleno de la fila original sigue sus tiempos por palabra (Fase 2, `docs/specs/lrc-enhanced-fill.md`): máximo acumulado de los inicios para no retroceder, tramo continuo hasta la palabra siguiente salvo pausas de más de 250 ms, velocidad uniforme en x y un resorte corto (con adelanto de 60 ms) que suaviza los cambios de ritmo. La pronunciación y la traducción siguen la fracción de la línea. Las medidas de CPU en Release de la Fase 2 están pendientes (M4).
+- **Limitación:** los `.lrc` solo traen el inicio de cada línea, así que no hay sincronía por palabra: el relleno avanza uniforme durante una duración estimada.
 
 #### Traducción y pronunciación incrustadas
 
@@ -571,6 +585,106 @@ SHA256: 811541779C14A2D45508C97121EDCE76AD8181C0F28825E2F573A72C2C9AE5FC
 
 **Historial completo:** https://github.com/Saza4/MusicPlayer-Desktop/compare/v1.3.0...v1.4.0
 
+### MusicPlayer-Desktop v1.5.0
+
+_Fuente del texto: `docs/notas-de-version/v1.5.0.md` (spec: `docs/specs/release-v1.5.0.md`). Preparado el 11 de noviembre de 2026 y corregido el 12 tras la auditoría previa; la publica el autor._
+
+Una novedad y muchos arreglos: la letra del modo inmersivo sigue ahora los **tiempos por palabra** de los `.lrc` enhanced, y dos auditorías del código dejan una app que **no se cierra por un archivo ausente**, **no corta la música al editar la pista que suena** y **cuida mejor tus datos**.
+
+#### Letra por palabra (`.lrc` enhanced)
+
+- Los `.lrc` enhanced, con marcas `<mm:ss.xx>` por palabra, se leen sin mostrar esas marcas en ninguna pantalla. Antes se veían como texto dentro de la letra.
+- En el modo inmersivo, el relleno de la línea activa **sigue el tiempo de cada palabra**. Avanza de forma continua y suavizada: no se detiene en los espacios y solo espera cuando el archivo marca una pausa de más de un cuarto de segundo.
+- Vale igual para la letra incrustada en el audio (MP3, FLAC y M4A) y para las sílabas pegadas (`Hel<00:52.30>lo` se muestra como «Hello»).
+- Las líneas sin tiempos por palabra siguen como antes, también dentro de un mismo archivo. La traducción y la pronunciación avanzan de forma uniforme con su línea.
+- No cuesta más: medido en Windows, el relleno por palabra usa la misma CPU que el anterior (11,5 % frente a 11,9 % de un núcleo).
+- **Limitaciones:** con texto de derecha a izquierda (árabe, hebreo) el relleno sigue barriendo de izquierda a derecha. `[offset:]` no se aplica. La app no crea ni edita tiempos por palabra.
+
+#### Reproducción
+
+- **Reproducir una pista cuyo archivo ya no está no cierra la app.** La pista se marca como no disponible y la línea de estado lo dice. Antes, pulsar Reproducir o Espacio sobre una pista terminada cuyo archivo se había movido cerraba la app.
+- **Editar la pista que suena ya no te deja en silencio.** Al guardar etiquetas, carátula, carátula de álbum, autocompletado o letra, la pista se vuelve a cargar en el mismo punto, sonando o en pausa como estaba, con sus datos nuevos. Se nota un corte breve. El modo inmersivo vuelve solo si estaba abierto.
+- Los paneles «Editar etiquetas» y «Limpiar etiquetas» todavía dicen que la canción «se detendrá». Ese texto quedó de la versión anterior: la pista se reanuda.
+- En pausa, la barra de progreso, el tiempo y la letra se quedan en ese punto tras guardar.
+- «Anterior» y «Siguiente» no dejan la cola apuntando a una pista ausente cuando no hay otra disponible en esa dirección.
+- La cola usa los datos nuevos tras editar una pista en espera: «ahora suena» y la isla muestran el título recién guardado.
+- Escribir en una pista que no es la que suena ya no deja un hueco en el paso a la siguiente.
+- **Red de seguridad:** un error inesperado de la interfaz ya no cierra la app. Se avisa en la línea de estado («Error inesperado: …») y se anota en `%APPDATA%\MusicPlayer\errores.log`, un archivo de texto local de 256 KB como mucho. No se envía a ningún sitio.
+
+#### Tus datos
+
+- Si guardar la biblioteca falla, la lista en pantalla ya no muestra un cambio que no llegó al disco. Si «Eliminar del disco…» borra el archivo y después no se puede guardar, la línea de estado lo dice y la pista queda marcada como no disponible.
+- Si `library.json`, `playlists.json` o `settings.json` no se pueden leer al arrancar (por ejemplo, porque otro programa los tiene abiertos), la app **no guarda encima** hasta que los lea bien. Los cambios de esa sesión no se conservan. La línea de estado lo avisa al arrancar para la biblioteca y los ajustes; con las playlists, el aviso aparece al intentar cambiarlas.
+- Un archivo de datos dañado se aparta como `<nombre>.corrupt-<fecha>` y se guardan los cinco últimos. Antes había una sola copia y un segundo fallo la pisaba.
+- **Cerrar la app durante una conversión** termina `ffmpeg` y borra su archivo temporal. Antes `ffmpeg` seguía trabajando y dejaba un `~conv-…` junto a la música.
+- Un solo audio con etiquetas dañadas ya no impide agregar el resto de la carpeta: ese archivo se omite.
+
+#### Interfaz
+
+- Arrastrar la barra de progreso hace un solo salto, al soltar. Antes saltaba en cada paso intermedio y el pulgar volvía atrás cada cuarto de segundo.
+- La canción seleccionada se conserva después de buscar, de borrar la búsqueda o de cambiar de playlist.
+- Mantener pulsada la barra espaciadora alterna reproducir y pausar una sola vez.
+- Al arrancar, la línea de estado pasa de «Cargando…» al resumen de la biblioteca sin mensajes intermedios.
+- La lista lee menos del disco al desplazarse: las pistas sin carátula se recuerdan, y una carátula recién cambiada ya no se queda con la miniatura vieja.
+
+#### Límites nuevos al leer
+
+- Un `.lrc`, una traducción, una pronunciación o una letra incrustada de **más de 1 MB** se ignora, como si no estuviera. Es el mismo tope que ya había al incrustar.
+- Un archivo binario renombrado a `.lrc` (con caracteres nulos) no se muestra como letra.
+- Una carátula de **más de 10 MB**, incrustada por otra herramienta o en la carpeta (`cover.jpg`), se ignora. Es el mismo tope que ya había al elegirla.
+- Un tema de usuario con un carácter Unicode incompleto escrito como `\uD800` ya no impide cargar los demás temas.
+
+#### Al actualizar
+
+- Tus ajustes, tu biblioteca y tus playlists siguen funcionando sin cambios. No hay ajustes nuevos.
+- **La app borra ahora archivos por su cuenta, en un solo caso.** Al usar «Agregar carpeta», se borran los temporales que la propia app dejó en esa carpeta tras un cierre brusco: archivos llamados exactamente `~conv-` o `~tags-` más 32 dígitos hexadecimales, con extensión de audio y más de 24 horas sin modificarse. La línea de estado dice cuántos («3 temporales antiguos eliminados»). Si tienes música tuya con un nombre así, cámbiale el nombre antes.
+- Si tienes una carátula de más de 10 MB o una letra de más de 1 MB, dejará de verse.
+- En la carpeta de datos (`%APPDATA%\MusicPlayer`) pueden aparecer `errores.log` y archivos `.corrupt-<fecha>`. Un `.corrupt` de versiones anteriores no se toca.
+
+#### Requisitos
+
+- Windows x64 y el [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+- El zip incluye las bibliotecas de BASS (`bass.dll`, `bass_aac.dll`, `bassflac.dll` y `bassmix.dll`). BASS es de [Un4seen Developments](https://www.un4seen.com) y es gratuito solo para uso no comercial.
+- `ffmpeg` es opcional y no se incluye: solo hace falta para convertir formatos.
+
+#### Qué se probó y qué no
+
+- **959 pruebas automáticas** (755 en la lógica y 204 en repositorios, proveedores y escritores), 146 más que en v1.4.0. Cubren la lectura y el relleno por palabra, la cola, los guardados y sus fallos, los respaldos, los límites de tamaño y la limpieza de temporales. La interfaz, el audio y el dibujo de la letra no tienen pruebas automáticas.
+- **Probado a mano por el autor en Windows** (11 de noviembre de 2026), siguiendo la lista de pasos de cada cambio y con resultado correcto: reproducir sin archivo, editar la pista que suena y la que está en pausa, la cola con pistas ausentes y editadas, el arrastre de la barra de progreso, la selección tras filtrar, Espacio mantenido, y cerrar la app durante una conversión de varias pistas sin que quede ningún `ffmpeg` ni temporal. No se anotó el resultado paso a paso.
+- **Relleno por palabra:** probado a mano con letra sintética y medido en Windows (CPU con una línea, con varios renglones y con latín y CJK mezclados).
+- **Zip publicado:** el ejecutable arranca y cierra con código 0 sin modificar los datos del usuario.
+- **Sin probar:** el relleno por palabra con texto de derecha a izquierda; el arrastre con el dedo o el lápiz en una pantalla táctil; y **Linux** (la app compila y pasa las pruebas en CI, pero el audio y la interfaz no se han probado allí).
+- **Pendiente conocido:** con la música en una unidad de red que no responde, la ventana se puede congelar al cambiar de pista. Y un posible salto doble de pista, visto solo al leer el código, no se ha conseguido reproducir y no se ha tocado.
+- **Fallos conocidos, sin pérdida de datos** (vistos al leer el código el 12 de noviembre de 2026, sin arreglar): en pausa, «Anterior» o pulsar una línea de la letra saltan a ese punto, pero la barra de progreso y el tiempo no se mueven hasta reanudar. Un archivo cuyo nombre empieza por un número escrito con dígitos que no son `0`-`9` (por ejemplo `０１ - título.mp3`) hace fallar «Limpiar etiquetas» para toda la lista visible, y un `.lrc` con esos dígitos en sus marcas de tiempo no se muestra.
+
+#### Verificar la descarga
+
+El zip no está firmado. Antes de ejecutarlo, comprueba que es el publicado aquí:
+
+```powershell
+Get-FileHash .\MusicPlayer-v1.5.0-win-x64.zip -Algorithm SHA256
+```
+
+El resultado debe ser exactamente:
+
+```
+SHA256: B0E5A7FEB3B282FA9389CADFC218E87FF8F960C400636CC90EE9AD4CCCED34BA
+```
+
+- Descárgalo solo desde esta página de Releases. GitHub calcula además el `sha256` de cada archivo adjunto, que puedes ver con `gh release view v1.5.0 --json assets`.
+- Windows puede mostrar un aviso de SmartScreen porque el ejecutable no tiene firma digital.
+- Si prefieres no fiarte del binario, compila tú mismo: `git checkout v1.5.0` y las instrucciones del [README](https://github.com/Saza4/MusicPlayer-Desktop#compilar-y-ejecutar). El zip pesa 11,8 MB, muy por debajo del límite de 2 GiB por archivo de GitHub.
+
+#### Descarga
+
+**`MusicPlayer-v1.5.0-win-x64.zip`**: descomprime y ejecuta `win-x64\MusicPlayer.Desktop.exe`.
+
+#### Contribuyentes
+
+@Saza4
+
+**Historial completo:** https://github.com/Saza4/MusicPlayer-Desktop/compare/v1.4.0...v1.5.0
+
 ## 6. Observaciones sobre las notas de release
 
 Puntos para pulir el texto publicado, sin cambiar el código.
@@ -581,6 +695,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 4. **v1.1.0** no menciona el botón **Convertir lo que veo…**, que convierte toda la lista visible, ni que los archivos convertidos se agregan a la biblioteca.
 5. **v1.3.0** se escribió para no repetir lo anterior: describe solo lo que el código hace (teclas y botones con su nombre real), avisa de que la isla viene **activada por defecto** también para quien actualiza, tiene un apartado «Al actualizar» y separa lo probado automáticamente, lo probado a mano y lo que no se probó (Linux y el recorrido completo con el tema Claro y con temas propios). Los temas que se ven en las capturas de desarrollo (Papel, Medianoche, etc.) son archivos del autor en `%APPDATA%\MusicPlayer\themes`, no temas de serie, y las notas solo anuncian Sistema, Oscuro y Claro.
 6. **v1.4.0** sigue el mismo criterio que v1.3.0: nombres reales de botones y menús, apartado «Al actualizar» (sin ajustes nuevos; un `.es.lrc` junto al audio gana a la capa incrustada), avisa de lo que se pierde al convertir con ffmpeg y separa lo probado de lo no probado (`Tab` real, pressed y deshabilitado de los botones, táctil y Linux). Añade una sección «Verificar la descarga» con el SHA-256 y avisa de que el zip no está firmado. El texto dice «letra progresiva» sin sincronía por palabra, porque los `.lrc` solo traen el inicio de cada línea.
+7. **v1.5.0** separa la novedad (letra por palabra) de los arreglos, que agrupa por lo que nota el usuario y no por spec. «Al actualizar» avisa de lo único que puede sorprender: el borrado automático de temporales antiguos y los topes de 1 MB y 10 MB al leer. «Qué se probó y qué no» dice que la pasada manual se dio por buena entera sin anotar cada paso, y deja escritos los dos pendientes conocidos (unidades de red y R6). La auditoría previa del 12 de noviembre de 2026 corrigió dos promesas (el aviso de `playlists.json` ilegible solo se ve al intentar un cambio; los paneles de edición aún dicen «se detendrá») y añadió los fallos menores que encontró.
 
 ## 7. Pruebas y calidad
 
@@ -606,7 +721,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | Auditoría, spec 3: datos de la biblioteca, segunda parte (`library-data-safety-2.md`) | +20 | +6 | 732 + 197 = 929. |
 | Auditoría, spec 4: interfaz (`ui-responsiveness.md`) | +16 | +0 | 748 + 197 = 945. |
 | Auditoría, spec 5: medida de CPU del relleno por palabra (`lyrics-render-perf.md`) | +0 | +0 | Sin código nuevo: solo la sonda `tools/medir-cpu.ps1` y las cifras. |
-| Segunda auditoría (`audit-followup.md`), ejecución del 11 de noviembre de 2026 (`-c Release`) | +6 | +7 | **754 + 204 = 958**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Sin CI todavía: la rama no se ha subido. |
+| Segunda auditoría (`audit-followup.md`), ejecución del 11 de noviembre de 2026 (`-c Release`) | +6 | +7 | **754 + 204 = 958**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). CI del PR #10 en verde en Windows y Ubuntu. |
 | Pruebas sin esperas reales (`test-waits-and-docs.md`) | +1 | +0 | **755 + 204 = 959**. La prueba del guardado diferido de los ajustes ya no depende del reloj. |
 
 La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las propiedades de la isla la desplazaron): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
@@ -651,6 +766,11 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - El género se lee de las etiquetas pero no se muestra ni se puede editar.
 - El editor de etiquetas cubre título, artista, artista del álbum, álbum, año, pista y disco; no el género.
 - La ventana tiene un tamaño mínimo de 640×400; con menos de 1100 px de ancho los botones de la barra superior quedan solo con icono (ver 4.3.6).
+- Si `playlists.json` no se puede leer al arrancar, el aviso se pisa enseguida con el resumen de la biblioteca (`MainViewModel.InitializeAsync`): el motivo solo se ve al intentar cambiar una playlist. Los avisos de `library.json` y `settings.json` sí se quedan.
+
+**Reproducción**
+
+- En pausa, «Anterior» (pasados 3 s) y pulsar una línea de la letra saltan en el reproductor, pero la barra de progreso, el tiempo y el punto de partida de `←` `→` no cambian hasta reanudar: el temporizador no escribe en pausa y esos dos saltos no pasan por `PositionSeconds` (`MainViewModel.Previous`, `LyricsViewModel.SeekTo`).
 
 **Carátulas y etiquetas**
 
@@ -659,6 +779,8 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - La carátula de álbum aplica el criterio de «mismo álbum». Un recopilatorio sin «artista del álbum» se separa por artista.
 - Si suena una pista al escribir en su archivo (etiquetas, carátula, carátula de álbum, autocompletar o letra), se descarga para escribir y se vuelve a cargar en el mismo punto, sonando o en pausa como estaba (spec `docs/specs/playback-resilience.md`): se nota un corte breve. Las miniaturas de la lista se refrescan.
 - La carátula de álbum no tiene botón para cancelar ni para quitar la imagen de todo el álbum.
+- Los paneles «Editar etiquetas» y «Limpiar etiquetas» todavía dicen «se detendrá» (`MainWindow.axaml`): el texto es anterior a la reanudación.
+- «Limpiar etiquetas» falla para toda la lista visible («No se pudo revisar: …») si un archivo empieza por un número escrito con dígitos que no son `0`-`9` (`０１ - título.mp3`): `FileNameParser` los reconoce como número de pista y no los sabe convertir.
 
 **Conversión**
 
@@ -671,6 +793,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 - USLT es texto _sin sincronizar_ por especificación. Los tiempos `[mm:ss.xx]` viajan dentro del texto. La app los interpreta, pero un reproductor estricto los mostrará como texto. No se escribe SYLT, el marco sincronizado del estándar.
 - Solo UTF-8, de hasta 1 MB, al incrustar y al leer (spec `docs/specs/untrusted-input-limits.md`): un `.lrc`, un hermano o una letra incrustada mayor se ignora; un texto con caracteres nulos no se toma por letra; de una línea se usan como mucho 32 marcas de tiempo iniciales.
+- Un `.lrc` (o una letra incrustada) con marcas de tiempo escritas con dígitos que no son `0`-`9` (`[０１:２３.００]`) no se muestra, e «Incrustar letra (.lrc)…» falla con un mensaje en inglés: `LrcLyricParser` reconoce la marca y no sabe convertirla.
 - Sustituye la letra incrustada anterior sin preguntar y no hay botón para quitarla.
 - La traducción y la pronunciación incrustadas (`LYRICS_TRANSLATION_<CÓDIGO>`, `LYRICS_PRONUNCIATION`) solo las muestra esta app; otros reproductores ven solo la principal. En WAV, OGG u Opus solo se incrusta la principal.
 - Con el clic derecho («Incrustar letra (.lrc)…») hace falta la letra principal: con solo `.es.lrc` y `.rom.lrc` no se incrusta nada. Desde el inmersivo, «Incrustar traducción…» e «Incrustar pronunciación…» eligen el archivo con el selector y no necesitan `cancion.lrc` ni hermanos, pero sí que la pista ya tenga letra sincronizada (sin ella, el botón de capas del inmersivo no aparece y la capa no se vería).
@@ -729,7 +852,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 1. **Integración con el sistema:** SMTC en Windows y MPRIS en Linux.
 2. **Probar en Linux:** omitido por ahora.
-3. **v1.4.0 está publicada** (8 de noviembre de 2026). La siguiente release reunirá los `.lrc` enhanced y los arreglos de la auditoría del 11 de noviembre, cuando esté hecha su verificación manual (cada spec lista sus pasos).
+3. **Publicar v1.5.0:** notas y zip preparados (spec `docs/specs/release-v1.5.0.md`); falta crear el borrador en GitHub y que el autor lo publique. Después, R6 y el congelamiento con unidades de red, con spec propia.
 4. **Captura del README:** `docs/screenshot.png` se actualizó el 8 de noviembre de 2026 (barra superior con iconos, biblioteca vacía).
 
 Lo que falta y todavía no tiene spec está en `docs/pendientes.md`.
