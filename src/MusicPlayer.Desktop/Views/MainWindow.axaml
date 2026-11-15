@@ -56,6 +56,14 @@
         <Style Selector="Border#PlayerBar:not(.narrow) Button.volume-narrow">
             <Setter Property="IsVisible" Value="False" />
         </Style>
+        <Style Selector="TextBlock.settings-title">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="TextBlock.settings-help">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
         <Style Selector="Grid.missing">
             <Setter Property="Opacity" Value="0.45" />
         </Style>
@@ -139,6 +147,19 @@
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <PathIcon Data="M18 12l4-4-4-4v3H3v2h15v3zM6 12l-4 4 4 4v-3h15v-2H6v-3z" />
                             <TextBlock Classes="label" Text="Convertir lo que veo…" />
+                        </StackPanel>
+                    </Button>
+                    <!--  Configuración: abre y cierra la vista que cubre la zona central (docs/specs/settings-panel.md)  -->
+                    <Button
+                        Margin="8,0,0,0"
+                        AutomationProperties.Name="Configuración"
+                        Classes="action"
+                        Command="{Binding Settings.ToggleOpenCommand}"
+                        DockPanel.Dock="Right"
+                        ToolTip.Tip="Configuración">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                            <TextBlock Classes="label" Text="Configuración" />
                         </StackPanel>
                     </Button>
                     <!--  Tema: la lista previsualiza al pasar el cursor o con las flechas; clic o Enter confirma  -->
@@ -294,7 +315,7 @@
                     <TextBlock
                         FontSize="12"
                         Opacity="0.6"
-                        Text="Se escribe en los archivos. Si suena alguna de estas canciones, se detendrá. Podrás deshacerlo después."
+                        Text="Se escribe en los archivos. Si suena alguna de estas canciones, se notará un corte breve. Podrás deshacerlo después."
                         TextWrapping="Wrap" />
 
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -509,7 +530,7 @@
                     <TextBlock
                         FontSize="12"
                         Opacity="0.6"
-                        Text="Se escribe en el archivo. Si esta canción suena, se detendrá. Un campo vacío borra la etiqueta."
+                        Text="Se escribe en el archivo. Si esta canción suena, se notará un corte breve. Un campo vacío borra la etiqueta."
                         TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button Command="{Binding TagEditor.SaveCommand}" Content="Guardar" />
@@ -878,6 +899,7 @@
                             x:Name="SongList"
                             ContextRequested="OnTrackListContextRequested"
                             DoubleTapped="OnTrackDoubleTapped"
+                            Tapped="OnTrackTapped"
                             IsVisible="{Binding ShowSongs}"
                             ItemsSource="{Binding Tracks}"
                             SelectedItem="{Binding SelectedTrack}">
@@ -1043,6 +1065,88 @@
                             SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
                             Tapped="OnLyricTapped" />
                     </DockPanel>
+                </Border>
+
+                <!--
+                    Configuración (docs/specs/settings-panel.md): una capa sobre la zona central, no una ventana. Cada
+                    opción se guarda al cambiarla. Solo CheckBox, ComboBox y Button, para no ampliar OwnsKeyboard.
+                -->
+                <Border
+                    Grid.ColumnSpan="3"
+                    Background="{DynamicResource ThemeBackgroundBrush}"
+                    IsVisible="{Binding Settings.IsOpen}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel
+                            MaxWidth="560"
+                            Margin="24,16"
+                            HorizontalAlignment="Left"
+                            Spacing="20">
+                            <DockPanel>
+                                <Button
+                                    Command="{Binding Settings.CloseCommand}"
+                                    Content="Cerrar"
+                                    DockPanel.Dock="Right"
+                                    ToolTip.Tip="Cerrar la configuración (Esc)" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="20"
+                                    FontWeight="SemiBold"
+                                    Text="Configuración" />
+                            </DockPanel>
+
+                            <StackPanel Classes="settings-section" Spacing="8">
+                                <TextBlock Classes="settings-title" Text="APARIENCIA" />
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock VerticalAlignment="Center" Text="Tema" />
+                                    <ComboBox
+                                        MinWidth="200"
+                                        AutomationProperties.Name="Tema"
+                                        ItemsSource="{Binding Themes.Items}"
+                                        SelectedItem="{Binding Themes.CommittedChoice}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ThemeChoice">
+                                                <TextBlock Text="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Classes="settings-section" Spacing="8">
+                                <TextBlock Classes="settings-title" Text="REPRODUCCIÓN" />
+                                <CheckBox Content="Reproducir con un solo clic" IsChecked="{Binding Settings.PlayOnSingleClick}" />
+                                <TextBlock
+                                    Classes="settings-help"
+                                    Text="Desactivado, un clic selecciona la canción y el doble clic la reproduce. Con Ctrl o Mayús el clic solo selecciona."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel
+                                Classes="settings-section"
+                                IsVisible="{Binding Settings.IsWindows}"
+                                Spacing="8">
+                                <TextBlock Classes="settings-title" Text="ISLA FLOTANTE" />
+                                <CheckBox Content="Mostrar la isla flotante" IsChecked="{Binding ShowIsland}" />
+                                <TextBlock
+                                    Classes="settings-help"
+                                    Text="Una pastilla arriba al centro de la pantalla muestra lo que suena cuando el reproductor está minimizado o detrás de otra ventana."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel Classes="settings-section" Spacing="8">
+                                <TextBlock Classes="settings-title" Text="DATOS" />
+                                <TextBlock
+                                    Classes="settings-help"
+                                    Text="La biblioteca, las playlists, los ajustes y los temas se guardan en esta carpeta:"
+                                    TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Settings.DataFolder}" TextWrapping="Wrap" />
+                                <Button
+                                    HorizontalAlignment="Left"
+                                    Click="OnOpenDataFolder"
+                                    Content="Abrir carpeta" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Border>
             </Grid>
 

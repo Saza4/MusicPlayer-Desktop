@@ -90,6 +90,7 @@ public static class CompositionRoot
         services.AddSingleton<LyricsViewModel>();
         services.AddSingleton<TagEditorViewModel>();
         services.AddSingleton<TagAutoFixViewModel>();
+        services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<IslandController>(); // isla flotante de «ahora suena» (solo Windows)
 

@@ -106,7 +106,7 @@ Reglas finas del código que no aparecen en otras secciones (verificadas contra 
 
 - **Aleatorio (`PlayQueue`):** una vuelta nueva evita empezar por la última pista de la anterior. Si se quita la pista en curso, «Siguiente» sigue desde la anterior.
 - **Anterior:** reinicia la pista si ya van más de 3 s; si no, retrocede.
-- **Ratón y teclado:** doble clic en una canción la reproduce; `Esc` cierra el modo inmersivo (con el modo inmersivo la ventana pasa a pantalla completa y recuerda su estado anterior).
+- **Ratón y teclado:** doble clic en una canción la reproduce (o un solo clic, con el ajuste «Reproducir con un solo clic» de Configuración; spec `docs/specs/settings-panel.md`); `Esc` cierra también la vista de Configuración; `Esc` cierra el modo inmersivo (con el modo inmersivo la ventana pasa a pantalla completa y recuerda su estado anterior).
 - **Ajustes (`SettingsService`):** el guardado se aplaza 500 ms; si falla, se reintenta en el siguiente cambio o al cerrar (`FlushAsync`). Si `settings.json` no se pudo leer al arrancar (error de E/S), no se guarda nada hasta una carga correcta, para no sobrescribirlo.
 - **Cierre (`App.axaml.cs`):** la app termina al cerrar la ventana principal (`ShutdownMode.OnMainWindowClose`), no la última, porque la isla es una segunda ventana. Al salir guarda los ajustes pendientes y libera el contenedor (y con él BASS).
 - **Reloj de la barra:** un temporizador de 250 ms actualiza la posición mientras suena; `_isUpdatingFromTimer` evita que esa actualización vuelva a llamar a `Seek`.
@@ -779,7 +779,6 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - La carátula de álbum aplica el criterio de «mismo álbum». Un recopilatorio sin «artista del álbum» se separa por artista.
 - Si suena una pista al escribir en su archivo (etiquetas, carátula, carátula de álbum, autocompletar o letra), se descarga para escribir y se vuelve a cargar en el mismo punto, sonando o en pausa como estaba (spec `docs/specs/playback-resilience.md`): se nota un corte breve. Las miniaturas de la lista se refrescan.
 - La carátula de álbum no tiene botón para cancelar ni para quitar la imagen de todo el álbum.
-- Los paneles «Editar etiquetas» y «Limpiar etiquetas» todavía dicen «se detendrá» (`MainWindow.axaml`): el texto es anterior a la reanudación.
 - «Limpiar etiquetas» falla para toda la lista visible («No se pudo revisar: …») si un archivo empieza por un número escrito con dígitos que no son `0`-`9` (`０１ - título.mp3`): `FileNameParser` los reconoce como número de pista y no los sabe convertir.
 
 **Conversión**

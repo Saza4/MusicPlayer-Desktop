@@ -79,6 +79,17 @@ public class JsonSettingsRepositoryTests : IDisposable
 
         Assert.Equal("negro-puro", loaded.ThemeId);
         Assert.True(loaded.Shuffle);
+        Assert.False(loaded.PlayOnSingleClick); // docs/specs/settings-panel.md, criterio 12: lo nuevo, con su valor de siempre
+    }
+
+    [Fact]
+    public async Task SaveThenLoad_KeepsPlayOnSingleClick()
+    {
+        var repository = new JsonSettingsRepository(FilePath);
+
+        await repository.SaveAsync(AppSettings.Default with { PlayOnSingleClick = true });
+
+        Assert.True((await repository.LoadAsync()).PlayOnSingleClick);
     }
 
     // Ajustes retirados de la letra progresiva (spec, M5 y M6): un settings.json que aún los tenga carga bien.
