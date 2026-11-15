@@ -12,11 +12,12 @@ reconstruir. De sus specs 6 (`ux-quick-wins.md`) y 7 solo se conoce lo que apare
 
 Salen del feedback de uso y de la tercera auditoría de solo lectura.
 
-- `docs/specs/audit-3.md`: arreglos de la auditoría. **Código hecho** (tres ramas, una por hito); falta la
-  verificación manual del autor de M2 (audio) y de H11 y H12. Resolvió los antiguos puntos 4 (`HideFaded`) y 8
+- `docs/specs/audit-3.md`: arreglos de la auditoría. **Hecho y verificado a mano por el autor** el 15 de
+  noviembre de 2026 (PR #13, #14 y #15). Resolvió los antiguos puntos 4 (`HideFaded`) y 8
   (aviso de `playlists.json`) de la lista de abajo, que ya no están.
 - `docs/specs/settings-panel.md`: área de Configuración y reproducir con un clic.
-- `docs/specs/responsive-layout.md`: nada se recorta entre 640×400 y pantalla completa.
+- `docs/specs/responsive-layout.md`: nada se recorta entre 640×400 y pantalla completa. **Hecho y verificado
+  a mano por el autor** el 15 de noviembre de 2026 (PR #16).
 - `docs/specs/island-title-and-close.md`: título desplazable y botones de ocultar y salir en la isla.
 - `docs/specs/background-playback.md`: cerrar oculta a la bandeja, e instancia única.
 - `docs/specs/lyrics-online-translation.md`: traducir la letra en línea, opt-in.

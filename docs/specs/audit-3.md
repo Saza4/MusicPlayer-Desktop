@@ -334,11 +334,11 @@ archivos.
   limpieza ya no lanza), y los `catch` de H8 (no hay forma portable de provocar `UnauthorizedAccessException` ni
   un fallo de `Kill`). Las líneas de H8 en `FfmpegAudioConverter` se confirmaron al implementar.
 - **M2:** H1 y H2 (reproducción). **Código hecho el 15 de noviembre de 2026** (rama
-  `fix/audit-3-reproduccion`); **falta la verificación manual del autor en Windows**: elegir otra pista justo al
-  final de una, incrustar letra en la pista que suena con «repetir una», y una pasada normal de empalmes sin
-  silencio (varias pistas seguidas, «Reproducir siguiente», aleatorio y repetir). Compila con la CS8602 de siempre,
-  pasan 966 pruebas (760 en Core, 206 en Infrastructure) y la app arranca y se cierra sin anotar nada en
-  `errores.log`; no se probó el audio.
+  `fix/audit-3-reproduccion`). **Verificación manual hecha por el autor el 15 de noviembre de 2026, en Windows:
+  todo correcto** (no se anotó el resultado paso a paso). La pasada era: elegir otra pista justo al final de una,
+  incrustar letra en la pista que suena con «repetir una», y empalmes sin silencio (varias pistas seguidas,
+  «Reproducir siguiente», aleatorio y repetir). Compila con la CS8602 de siempre y pasan 966 pruebas (760 en
+  Core, 206 en Infrastructure).
   - **H1:** `PlaybackEpoch` (Core, 4 pruebas) cuenta las órdenes de carga y descarga; `MainViewModel` la avanza
     justo después de `Load` y de `Unload`, y cada aviso de BASS anota la cuenta al salir y se descarta si cambió.
   - **H2:** un candado (`_sync`) en `BassAudioPlayer` para `_mixer`, `_current`, `_chained` y `_next`. El cambio de
@@ -352,6 +352,6 @@ archivos.
   `fix/audit-3-resto`): compila con la CS8602 de siempre y pasan 969 pruebas (761 en Core, 208 en
   Infrastructure). Pruebas nuevas, vistas fallar antes del cambio: la traducción preferida inválida con otra
   válida (H9) y el suscriptor que lanza en `Begin()` (H10); una más cubre que sin ninguna traducción válida el
-  original queda igual. H11 y H12 son código de vista, sin prueba automática: **falta comprobarlos a mano**
-  (arrancar con un `ThemeId` inexistente y ver el aviso al terminar la carga; cerrar la app con la isla
-  desvaneciéndose). Los avisos del arranque se muestran juntos, separados por « · ».
+  original queda igual. H11 y H12 son código de vista, sin prueba automática: **comprobados a mano por el
+  autor el 15 de noviembre de 2026** (arrancar con un `ThemeId` inexistente y ver el aviso al terminar la carga;
+  cerrar la app con la isla desvaneciéndose), sin detalle paso a paso. Los avisos del arranque se muestran juntos, separados por « · ».

@@ -765,7 +765,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - Las carpetas no se vigilan: si copias música nueva a una carpeta ya agregada, hay que pulsar «Agregar carpeta» y elegirla otra vez. Tampoco hay forma de quitar una carpeta: solo canciones sueltas («Quitar de la biblioteca» o «Eliminar del disco…») o las no disponibles (el botón «Quitar de la biblioteca…» de la barra de aviso).
 - El género se lee de las etiquetas pero no se muestra ni se puede editar.
 - El editor de etiquetas cubre título, artista, artista del álbum, álbum, año, pista y disco; no el género.
-- La ventana tiene un tamaño mínimo de 640×400; con menos de 1100 px de ancho los botones de la barra superior quedan solo con icono (ver 4.3.6).
+- La ventana tiene un tamaño mínimo de 640×400; con menos de 1100 px de ancho los botones de la barra superior quedan solo con icono (ver 4.3.6) y, con menos de 800, el volumen pasa a un desplegable y la barra lateral se pliega (spec `docs/specs/responsive-layout.md`). Los umbrales son constantes (`LayoutBreakpoints`), no se mide el texto.
 - Los avisos del arranque (`playlists.json` ilegible, un tema que no se pudo cargar, ajustes ilegibles) se muestran juntos en la línea de estado al terminar la carga, en lugar del resumen de la biblioteca (spec `docs/specs/audit-3.md`, H11).
 
 **Reproducción**

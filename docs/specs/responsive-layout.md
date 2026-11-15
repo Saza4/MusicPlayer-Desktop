@@ -1,6 +1,8 @@
 # Spec: diseño adaptable de la ventana principal
 
-Estado: **aprobada por el autor el 15 de noviembre de 2026**. Sin código todavía.
+Estado: **implementada y verificada el 15 de noviembre de 2026** (rama `feat/responsive-layout`, PR #16). Compila
+con la CS8602 de siempre y pasan 986 pruebas (778 en Core, 208 en Infrastructure). El autor la probó a mano en
+Windows (ver «Resultado»).
 
 ## Context
 
@@ -66,6 +68,46 @@ cortado por el borde derecho. Las otras dos siguen sin captura:
 - **Ventana maximizada y luego restaurada a un tamaño pequeño:** las clases se recalculan en `SizeChanged`, como
   hoy la de la barra superior.
 - **Fuera de Windows:** el botón de la isla no existe; el grupo derecho mide menos y los umbrales valen igual.
+
+## Resultado
+
+**M0 (capturas de antes, tema Oscuro, escala 100 %):** a 640 el deslizador de volumen no se ve; a 960 se ve
+cortado por el borde derecho; a 1100 cabe entero. Coincide con el cálculo y con la captura del autor.
+
+**Decisiones tomadas al implementar (revisables):**
+
+1. **Dos umbrales**, en `LayoutBreakpoints`: por debajo de **1100** la barra superior queda solo con iconos (como
+   antes) y la barra de reproducción da a su grupo derecho el ancho que necesita (la tercera columna pasa de `*` a
+   `Auto`); por debajo de **800** el volumen pasa al desplegable y la barra lateral se pliega. A 1100 o más, la
+   barra de reproducción es la de siempre (`*,2*,*`, controles centrados en la ventana).
+2. **Criterio 3, el volumen estrecho:** un botón «Volumen» cuyo clic abre un desplegable con el botón de silencio
+   y el deslizador. Se eligió el clic (y no el clic derecho) porque es lo único que se descubre solo. Al abrirse,
+   el foco va al deslizador y las flechas cambian el volumen. La rueda sobre el botón de volumen (en los dos
+   modos) lo sube o lo baja un paso sin abrir nada. `M` y `Ctrl+↑` `Ctrl+↓` no cambian.
+3. **Criterio 5:** el botón de la barra lateral va en la barra superior, a la izquierda, solo con la ventana
+   estrecha. Lo que el usuario elija se conserva mientras la ventana siga estrecha; al ensancharla, la barra
+   lateral vuelve a verse siempre.
+4. **Criterio 6:** el botón que vuelve a la lista es el de «Letra» de la barra de reproducción, que ya cierra el
+   panel.
+5. **Criterio 7:** el alto máximo de los tres paneles es el alto de la ventana menos 224 (las dos barras y un
+   resto de lista), con un mínimo de 120.
+6. **Criterio 8:** `LayoutBreakpoints.For` recibe solo el ancho; el alto se usa aparte en `EditPanelMaxHeight`.
+
+**Verificado con capturas en Windows** (Oscuro, escala 100 %, `settings.json` intacto por hash): a 640×400,
+640×600, 800×600, 960×600 y 1100×600 se ven enteros todos los botones de la barra de reproducción; a 960 el
+deslizador de volumen ya no se corta; a 640 y 800 el volumen es un botón y la barra lateral está plegada; a 1100
+todo es igual que antes. Por UI Automation, a 640×480: el botón «Colecciones» despliega la barra lateral y el
+botón «Volumen» abre el desplegable con el foco en el deslizador.
+
+**Prueba a mano del autor (15 de noviembre de 2026, Windows): todo correcto.** Con la ventana pequeña, la barra
+de reproducción cabe entera (aleatorio, anterior, reproducir, siguiente, repetir, letra, inmersivo, isla y
+volumen completo). La pasada cubría lo que no se pudo capturar: el panel de letra ocupando el sitio de la lista,
+los paneles de edición a 640×400, el volumen con teclado y rueda, y los temas Claro y de usuario. No se anotó el
+resultado paso a paso.
+
+**Sin verificar:** escalas de pantalla distintas de 100 % y Linux.
+
+**Nota:** los umbrales comparan el ancho interior de la ventana, unos 16 px menor que el exterior en Windows 11.
 
 ## Hitos
 
