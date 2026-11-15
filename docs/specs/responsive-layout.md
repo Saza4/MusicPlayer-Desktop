@@ -1,8 +1,8 @@
 # Spec: diseño adaptable de la ventana principal
 
-Estado: **implementada el 15 de noviembre de 2026** (rama `feat/responsive-layout`), a falta de la prueba a mano
-del autor de lo que no se pudo capturar (ver «Resultado»). Compila con la CS8602 de siempre y pasan 986 pruebas
-(778 en Core, 208 en Infrastructure).
+Estado: **implementada y verificada el 15 de noviembre de 2026** (rama `feat/responsive-layout`, PR #16). Compila
+con la CS8602 de siempre y pasan 986 pruebas (778 en Core, 208 en Infrastructure). El autor la probó a mano en
+Windows (ver «Resultado»).
 
 ## Context
 
@@ -99,17 +99,13 @@ deslizador de volumen ya no se corta; a 640 y 800 el volumen es un botón y la b
 todo es igual que antes. Por UI Automation, a 640×480: el botón «Colecciones» despliega la barra lateral y el
 botón «Volumen» abre el desplegable con el foco en el deslizador.
 
-**Sin verificar (falta la prueba a mano del autor):**
+**Prueba a mano del autor (15 de noviembre de 2026, Windows): todo correcto.** Con la ventana pequeña, la barra
+de reproducción cabe entera (aleatorio, anterior, reproducir, siguiente, repetir, letra, inmersivo, isla y
+volumen completo). La pasada cubría lo que no se pudo capturar: el panel de letra ocupando el sitio de la lista,
+los paneles de edición a 640×400, el volumen con teclado y rueda, y los temas Claro y de usuario. No se anotó el
+resultado paso a paso.
 
-- El panel de letra ocupando el sitio de la lista (criterio 6) y el desplazamiento de «Convertir», «Limpiar
-  etiquetas» y «Editar etiquetas» a 640×400 (criterio 7): hacen falta una pista con letra y el menú contextual.
-- Las flechas y la rueda sobre el volumen con un teclado y un ratón reales (las teclas sintéticas no mueven el
-  foco).
-- Un título de «ahora suena» largo con una pista cargada (criterio 4): en las capturas, «Nada en reproducción» se
-  recorta con «…» sin tocar los controles.
-- Los temas Claro y de usuario (M5 pedía los tres): no se cambió el tema para no tocar el `settings.json` real;
-  el cambio no añade colores.
-- Escalas distintas de 100 % y Linux.
+**Sin verificar:** escalas de pantalla distintas de 100 % y Linux.
 
 **Nota:** los umbrales comparan el ancho interior de la ventana, unos 16 px menor que el exterior en Windows 11.
 
