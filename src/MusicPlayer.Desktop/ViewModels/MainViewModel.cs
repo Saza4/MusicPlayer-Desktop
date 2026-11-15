@@ -251,7 +251,7 @@ public partial class MainViewModel : ViewModelBase
         _searchDebounce.Stop();
 
         Playlists.Changed += (_, _) => ApplyFilter();
-        Playlists.Notified += message => Status = message;
+        Playlists.Notified += Notify;
         TagEditor.Saving += OnTagsSaving;
         TagEditor.Saved += OnTagsSaved;
         TagEditor.Finished += ResumeInterrupted;
@@ -269,7 +269,26 @@ public partial class MainViewModel : ViewModelBase
         EmbedLyrics.Notified += message => Status = message;
         EmbedLyrics.Saving += OnTagsSaving;
         EmbedLyrics.Finished += ResumeInterrupted;
-        Themes.Notified += message => Status = message;
+        Themes.Notified += Notify;
+    }
+
+    // Avisos que llegan mientras la app arranca (un tema que no se pudo cargar, playlists.json ilegible): la carga
+    // escribe después en la línea de estado y los pisaba. Se guardan y se muestran al terminar
+    // (docs/specs/audit-3.md, H11).
+    private List<string>? _startupNotices = new();
+
+    private void Notify(string message)
+    {
+        if (_startupNotices is { } pending) pending.Add(message);
+        else Status = message;
+    }
+
+    private void ShowStartupNotices()
+    {
+        var pending = _startupNotices;
+        _startupNotices = null;
+        if (pending is { Count: > 0 })
+            Status = string.Join(" · ", pending);
     }
 
     // ---- Biblioteca ----
@@ -306,10 +325,12 @@ public partial class MainViewModel : ViewModelBase
                 SelectedTrack = _allTracks.FirstOrDefault(i => i.Track.Id == lastId);
 
             _ = CheckAvailabilityAsync(); // en segundo plano: no retrasa el arranque
-            if (settingsProblem is not null) Status = settingsProblem;
+            if (settingsProblem is not null) Notify(settingsProblem);
+            ShowStartupNotices();
         }
         catch (Exception ex)
         {
+            _startupNotices = null; // este aviso es el que importa
             Status = $"No se pudo cargar la biblioteca: {ex.Message}. No se guardará nada hasta reiniciar, para no perder tus datos";
         }
     }

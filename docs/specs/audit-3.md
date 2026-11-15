@@ -348,4 +348,10 @@ archivos.
   - **Sin cubrir:** si la pista avanzó sola y su aviso aún no se atendió, `OnTagsSaving` compara con la pista
     anterior y no descarga la nueva: escribir en ella falla con el archivo abierto (el original queda intacto y el
     aviso lo dice). No hay pruebas automáticas de `BassAudioPlayer` (el proyecto no tiene pruebas de Audio).
-- **M3:** H9 a H13 y los puntos 4 y 8 de `pendientes.md`.
+- **M3:** H9 a H13 y los puntos 4 y 8 de `pendientes.md`. **Hecho el 15 de noviembre de 2026** (rama
+  `fix/audit-3-resto`): compila con la CS8602 de siempre y pasan 969 pruebas (761 en Core, 208 en
+  Infrastructure). Pruebas nuevas, vistas fallar antes del cambio: la traducción preferida inválida con otra
+  válida (H9) y el suscriptor que lanza en `Begin()` (H10); una más cubre que sin ninguna traducción válida el
+  original queda igual. H11 y H12 son código de vista, sin prueba automática: **falta comprobarlos a mano**
+  (arrancar con un `ThemeId` inexistente y ver el aviso al terminar la carga; cerrar la app con la isla
+  desvaneciéndose). Los avisos del arranque se muestran juntos, separados por « · ».

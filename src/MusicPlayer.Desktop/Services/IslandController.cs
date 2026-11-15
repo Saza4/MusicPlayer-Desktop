@@ -33,6 +33,7 @@ public sealed class IslandController : IDisposable
         _viewModel = viewModel;
         _modals = modals;
         _settle = new DispatcherTimer(IslandMetrics.VisibilityDelay, DispatcherPriority.Normal, (_, _) => Apply());
+        _settle.Stop(); // ese constructor lo deja en marcha: solo debe correr tras un cambio (Schedule)
     }
 
     public void Attach(Window main)

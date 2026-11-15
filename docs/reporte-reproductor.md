@@ -766,7 +766,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - El género se lee de las etiquetas pero no se muestra ni se puede editar.
 - El editor de etiquetas cubre título, artista, artista del álbum, álbum, año, pista y disco; no el género.
 - La ventana tiene un tamaño mínimo de 640×400; con menos de 1100 px de ancho los botones de la barra superior quedan solo con icono (ver 4.3.6).
-- Si `playlists.json` no se puede leer al arrancar, el aviso se pisa enseguida con el resumen de la biblioteca (`MainViewModel.InitializeAsync`): el motivo solo se ve al intentar cambiar una playlist. Los avisos de `library.json` y `settings.json` sí se quedan.
+- Los avisos del arranque (`playlists.json` ilegible, un tema que no se pudo cargar, ajustes ilegibles) se muestran juntos en la línea de estado al terminar la carga, en lugar del resumen de la biblioteca (spec `docs/specs/audit-3.md`, H11).
 
 **Reproducción**
 
@@ -827,7 +827,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - Los hover y pulsado de los botones de icono usan un gris fijo.
 - Con los temas Claro y de usuario puede haber controles que no se hayan revisado a fondo (el tema Claro no se usa a diario).
 - Los sliders toman el acento del tema también en hover y pulsado (antes Fluent usaba tonos distintos).
-- El aviso de un tema que no se pudo cargar puede quedar tapado por el mensaje de «Cargando…» al arrancar; se repite al abrir el selector.
+- El aviso de un tema que no se pudo cargar se muestra al terminar la carga y se repite al abrir el selector.
 - Las flechas de la lista de temas las atiende la ventana (el foco se queda en el botón «Tema»), no la lista.
 - El botón «Carpeta de temas» no es enfocable con el teclado (así `Enter` confirma siempre el tema resaltado).
 - No hay recarga automática: los cambios en un archivo de tema se ven al volver a abrir el selector.
