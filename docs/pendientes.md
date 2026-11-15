@@ -16,7 +16,8 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
   verificación manual del autor de M2 (audio) y de H11 y H12. Resolvió los antiguos puntos 4 (`HideFaded`) y 8
   (aviso de `playlists.json`) de la lista de abajo, que ya no están.
 - `docs/specs/settings-panel.md`: área de Configuración y reproducir con un clic.
-- `docs/specs/responsive-layout.md`: nada se recorta entre 640×400 y pantalla completa.
+- `docs/specs/responsive-layout.md`: nada se recorta entre 640×400 y pantalla completa. **Código hecho**; falta la
+  prueba a mano del autor de lo que no se pudo capturar (lista en la spec, «Resultado»).
 - `docs/specs/island-title-and-close.md`: título desplazable y botones de ocultar y salir en la isla.
 - `docs/specs/background-playback.md`: cerrar oculta a la bandeja, e instancia única.
 - `docs/specs/lyrics-online-translation.md`: traducir la letra en línea, opt-in.

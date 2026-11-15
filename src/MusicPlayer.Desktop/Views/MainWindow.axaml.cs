@@ -54,7 +54,7 @@ public partial class MainWindow : Window
         AddHandler(PointerReleasedEvent, (_, _) => EndProgressScrub(), RoutingStrategies.Tunnel);
         AddHandler(PointerCaptureLostEvent, (_, _) => EndProgressScrub(), RoutingStrategies.Bubble, handledEventsToo: true);
         Deactivated += (_, _) => EndProgressScrub();
-        SizeChanged += (_, e) => UpdateTopBarCompact(e.NewSize.Width);
+        SizeChanged += (_, _) => ApplyLayout();
 
         DataContextChanged += (_, _) =>
         {
@@ -64,23 +64,76 @@ public partial class MainWindow : Window
             vm.Playlists.PropertyChanged += OnPlaylistsPropertyChanged;
             vm.Lyrics.PropertyChanged += OnLyricsPropertyChanged;
             FillLayersMenu();
+            ApplyLayout();
         };
     }
 
-    // Al abrir: la ventana toma el foco del teclado y el foco lógico queda en la lista, no en el aire.
-    // Por debajo de este ancho los botones de acción de la barra superior quedan solo con icono (spec action-buttons).
-    private const double TopBarCompactBelowWidth = 1100;
+    // ---- Diseño adaptable (docs/specs/responsive-layout.md) ----
 
-    // Solo visual: la clase «compact» de la barra oculta el texto de los botones de acción (ver ActionButtonStyles.axaml).
-    private void UpdateTopBarCompact(double width)
+    // Con la ventana estrecha la barra lateral arranca plegada; su botón de la barra superior la muestra.
+    private bool _sidebarOpenWhenNarrow;
+
+    // Solo visual: los umbrales salen de Core (LayoutBreakpoints) y aquí se aplican clases, anchos y visibilidad.
+    //  · Barra superior «compact»: los botones de acción quedan solo con icono (ActionButtonStyles.axaml).
+    //  · Barra de reproducción: el grupo derecho recibe el ancho que necesita y, más estrecha aún («narrow»), el
+    //    deslizador de volumen pasa a un desplegable.
+    //  · Zona central: la barra lateral se pliega y el panel de letra ocupa el sitio de la lista si no caben los dos.
+    //  · Paneles de edición: se desplazan cuando no caben a lo alto.
+    private void ApplyLayout()
     {
-        if (this.FindControl<Border>("TopBar") is { } bar)
-            bar.Classes.Set("compact", width < TopBarCompactBelowWidth);
+        var width = ClientSize.Width;
+        var layout = LayoutBreakpoints.For(width);
+
+        TopBar.Classes.Set("compact", layout.TopBarCompact);
+
+        PlayerGrid.ColumnDefinitions[2].Width =
+            layout.PlayerBarCompact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        PlayerBar.Classes.Set("narrow", layout.VolumeInFlyout);
+        if (!layout.VolumeInFlyout) VolumeButton.Flyout?.Hide();
+
+        var sidebarVisible = !layout.SidebarCollapsible || _sidebarOpenWhenNarrow;
+        SidebarButton.IsVisible = layout.SidebarCollapsible;
+        Sidebar.IsVisible = sidebarVisible;
+        CentralGrid.ColumnDefinitions[0].Width = new GridLength(sidebarVisible ? LayoutBreakpoints.SidebarWidth : 0);
+
+        var lyricsOnly = DataContext is MainViewModel { Lyrics.ShowPanel: true }
+                         && LayoutBreakpoints.LyricsReplacesList(width, sidebarVisible);
+        ListArea.IsVisible = !lyricsOnly;
+        CentralGrid.ColumnDefinitions[1].Width = lyricsOnly ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        CentralGrid.ColumnDefinitions[2].Width = lyricsOnly ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+        LyricsPanel.Width = lyricsOnly ? double.NaN : LayoutBreakpoints.LyricsPanelWidth;
+        LyricsPanel.Margin = lyricsOnly ? new Thickness(8) : new Thickness(0, 8, 8, 8);
+
+        var panelHeight = LayoutBreakpoints.EditPanelMaxHeight(ClientSize.Height);
+        ConvertScroll.MaxHeight = AutoFixScroll.MaxHeight = TagEditorScroll.MaxHeight = panelHeight;
     }
 
+    private void OnSidebarButtonClick(object? sender, RoutedEventArgs e)
+    {
+        _sidebarOpenWhenNarrow = !_sidebarOpenWhenNarrow;
+        ApplyLayout();
+    }
+
+    // La rueda sobre el botón de volumen lo sube o lo baja un paso, sin abrir nada.
+    private void OnVolumeWheel(object? sender, PointerWheelEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || e.Delta.Y == 0) return;
+        vm.ChangeVolume(e.Delta.Y > 0 ? +1 : -1);
+        e.Handled = true;
+    }
+
+    // El foco va al deslizador: las flechas cambian el volumen desde el primer momento.
+    private void OnVolumeFlyoutOpened(object? sender, EventArgs e) =>
+        Dispatcher.UIThread.Post(() => VolumeFlyoutSliderOf(sender)?.Focus(NavigationMethod.Tab));
+
+    // El contenido del desplegable no forma parte del árbol de la ventana: se busca desde él.
+    private static Slider? VolumeFlyoutSliderOf(object? flyout) =>
+        ((flyout as Flyout)?.Content as Panel)?.Children.OfType<Slider>().FirstOrDefault();
+
+    // Al abrir: la ventana toma el foco del teclado y el foco lógico queda en la lista, no en el aire.
     private void OnOpened(object? sender, EventArgs e)
     {
-        UpdateTopBarCompact(ClientSize.Width);
+        ApplyLayout();
         Activate();
         this.FindControl<ListBox>("SongList")?.Focus();    }
 
@@ -252,6 +305,9 @@ public partial class MainWindow : Window
     // Otra pista (o la misma sin capas): el menú abierto se cierra en lugar de quedar con opciones viejas.
     private void OnLyricsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // Abrir o cerrar el panel de letra puede cambiar quién ocupa la zona central.
+        if (e.PropertyName is nameof(LyricsViewModel.ShowPanel)) ApplyLayout();
+
         if (_layersMenuOpen && e.PropertyName is nameof(LyricsViewModel.Lines) or nameof(LyricsViewModel.ShowLayersButton))
         {
             LayersButton.Flyout?.Hide();
@@ -376,6 +432,13 @@ public partial class MainWindow : Window
         if (e.PropertyName != nameof(PlaylistViewModel.IsNameInput)
             || sender is not PlaylistViewModel { IsNameInput: true })
             return;
+
+        // El cuadro del nombre vive en la barra lateral: si está plegada (ventana estrecha), se despliega.
+        if (!_sidebarOpenWhenNarrow)
+        {
+            _sidebarOpenWhenNarrow = true;
+            ApplyLayout();
+        }
 
         // Se espera a que el cuadro sea visible antes de enfocarlo.
         Dispatcher.UIThread.Post(() =>
