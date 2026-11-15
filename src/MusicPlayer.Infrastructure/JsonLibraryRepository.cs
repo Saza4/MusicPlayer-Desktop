@@ -74,13 +74,19 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
             try
             {
                 await using (var stream = File.Create(tempPath))
+                {
                     await JsonSerializer.SerializeAsync(stream, file, JsonOptions, ct);
+                    // A disco antes de renombrar (docs/specs/audit-3.md, H3), como AtomicJson.
+                    await stream.FlushAsync(ct);
+                    stream.Flush(flushToDisk: true);
+                }
 
                 File.Move(tempPath, filePath, overwrite: true);
             }
             finally
             {
-                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (IOException) { }
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
             }
         }
         finally

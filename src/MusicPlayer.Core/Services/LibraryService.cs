@@ -90,10 +90,15 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             relocated++;
         }
 
-        // Temporales de la app que quedaron de un cierre brusco (criterio 7).
-        var cleaned = await scanner.CleanStaleTemporariesAsync(folder, ct);
-
+        // Primero se guarda lo escaneado; la limpieza va después y no puede echarlo a perder
+        // (docs/specs/audit-3.md, H4).
         var saved = await CommitAsync(new LibrarySnapshot(TrackSorter.Sort(byPath.Values)), ct);
+
+        // Temporales de la app que quedaron de un cierre brusco (library-data-safety-2.md, criterio 7).
+        var cleaned = 0;
+        try { cleaned = await scanner.CleanStaleTemporariesAsync(folder, ct); }
+        catch (OperationCanceledException) { } // cancelar la limpieza no deshace el guardado ya hecho
+
         return new AddFolderResult(saved, relocated, cleaned);
     }
 

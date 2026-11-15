@@ -326,7 +326,13 @@ H5 y H6 se arreglan en `settings-panel.md` y `responsive-layout.md`.
 Cada hito va en su propio PR, para poder revertir los de reproducción (M2, los delicados) sin perder los de
 archivos.
 
-- **M1:** H3, H4, H7, H8 (archivos), con sus pruebas.
+- **M1:** H3, H4, H7, H8 (archivos), con sus pruebas. **Hecho el 15 de noviembre de 2026** (rama
+  `fix/audit-3-archivos`): compila con la CS8602 de siempre y pasan 962 pruebas (756 en Core, 206 en
+  Infrastructure). Tres pruebas nuevas, vistas fallar antes del cambio: la limpieza con la carpeta inaccesible
+  (H4) y las dos de `SafeFileEditTests` (H7). Sin prueba automática: el vaciado a disco (H3, no se puede
+  comprobar sin cortar la corriente), el orden «guardar y luego limpiar» de `LibraryService` (H4; lo cubre que la
+  limpieza ya no lanza), y los `catch` de H8 (no hay forma portable de provocar `UnauthorizedAccessException` ni
+  un fallo de `Kill`). Las líneas de H8 en `FfmpegAudioConverter` se confirmaron al implementar.
 - **M2:** H1 y H2 (reproducción). Verificación manual en Windows: elegir otra pista justo al final de una,
   incrustar letra en la pista que suena con «repetir una», y pasada normal de empalmes sin silencio.
 - **M3:** H9 a H13 y los puntos 4 y 8 de `pendientes.md`.

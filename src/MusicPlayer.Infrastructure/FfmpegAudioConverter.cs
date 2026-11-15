@@ -48,8 +48,15 @@ public sealed class FfmpegAudioConverter : IAudioConverter, IDisposable
                 }
                 catch (OperationCanceledException)
                 {
-                    try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
-                    process.WaitForExit(2000);
+                    // Matar el árbol puede fallar de varias formas (ya terminó, acceso denegado a un hijo): nada
+                    // de eso debe sustituir a la cancelación (docs/specs/audit-3.md, H8).
+                    try
+                    {
+                        process.Kill(entireProcessTree: true);
+                        process.WaitForExit(2000);
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException
+                                                   or System.ComponentModel.Win32Exception or AggregateException) { }
                     throw;
                 }
 
@@ -66,7 +73,8 @@ public sealed class FfmpegAudioConverter : IAudioConverter, IDisposable
         }
         finally
         {
-            try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { }
+            try { if (File.Exists(temp)) File.Delete(temp); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         }
     }
 

@@ -39,7 +39,8 @@ public sealed partial class LibraryScanner(ITrackMetadataReader reader)
 
     /// <summary>
     /// Borra los temporales abandonados de la carpeta y sus subcarpetas, y devuelve cuántos. Uno que no se pueda
-    /// borrar se deja donde está.
+    /// borrar se deja donde está, y si la carpeta deja de ser accesible se devuelve lo borrado hasta entonces
+    /// (docs/specs/audit-3.md, H4): la limpieza nunca hace fallar a quien la llama, salvo por cancelación.
     /// </summary>
     public Task<int> CleanStaleTemporariesAsync(string rootFolder, CancellationToken ct = default) =>
         Task.Run(() =>
@@ -47,19 +48,26 @@ public sealed partial class LibraryScanner(ITrackMetadataReader reader)
             var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
             var now = DateTime.UtcNow;
             var removed = 0;
-            foreach (var path in Directory.EnumerateFiles(rootFolder, "~*", options))
+            try
             {
-                ct.ThrowIfCancellationRequested();
-                try
+                foreach (var path in Directory.EnumerateFiles(rootFolder, "~*", options))
                 {
-                    if (!IsStaleTemporary(path, File.GetLastWriteTimeUtc(path), now)) continue;
-                    File.Delete(path);
-                    removed++;
+                    ct.ThrowIfCancellationRequested();
+                    try
+                    {
+                        if (!IsStaleTemporary(path, File.GetLastWriteTimeUtc(path), now)) continue;
+                        File.Delete(path);
+                        removed++;
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        // En uso o sin permiso: se queda.
+                    }
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    // En uso o sin permiso: se queda.
-                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // La carpeta dejó de estar accesible (unidad desconectada) a mitad del recorrido.
             }
             return removed;
         }, ct);
