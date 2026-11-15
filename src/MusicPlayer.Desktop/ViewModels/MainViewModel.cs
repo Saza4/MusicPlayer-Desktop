@@ -26,6 +26,9 @@ public partial class MainViewModel : ViewModelBase
     private readonly CoverArtLoader _covers;
     private readonly SettingsService _settings;
     private bool _restoring;
+    // Órdenes de carga y descarga dadas al reproductor. Se avanza justo DESPUÉS de cada una: el reproductor cambia
+    // de pista y avisa en un solo paso, así que un aviso anterior a la orden siempre anota la cuenta vieja.
+    private readonly PlaybackEpoch _epoch = new();
     private CancellationTokenSource? _coverCts;
 
     [ObservableProperty] private Bitmap? _nowPlayingCover;
@@ -224,10 +227,18 @@ public partial class MainViewModel : ViewModelBase
         // BASS dispara estos eventos desde su propio hilo: hay que volver al hilo de la UI.
         _player.StateChanged += (_, state) =>
             Dispatcher.UIThread.Post(() => IsPlaying = state == PlaybackState.Playing);
+        // Cada aviso anota la cuenta de órdenes del momento en que sale: si al atenderlo el usuario ya cargó otra
+        // pista o se descargó la actual, es un aviso viejo y no debe mover la cola (docs/specs/audit-3.md, H1).
         _player.TrackEnded += (_, _) =>
-            Dispatcher.UIThread.Post(() => OnTrackEnded());
+        {
+            var stamp = _epoch.Current;
+            Dispatcher.UIThread.Post(() => { if (_epoch.IsCurrent(stamp)) OnTrackEnded(); });
+        };
         _player.AdvancedToNext += (_, path) =>
-            Dispatcher.UIThread.Post(() => OnAdvancedToNext(path));
+        {
+            var stamp = _epoch.Current;
+            Dispatcher.UIThread.Post(() => { if (_epoch.IsCurrent(stamp)) OnAdvancedToNext(path); });
+        };
 
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, OnTick);
         _timer.Start();
@@ -542,6 +553,7 @@ public partial class MainViewModel : ViewModelBase
         _scrub.Abandon();
         Lyrics.Clear();
         _player.Unload();
+        _epoch.Advance();
         _isUpdatingFromTimer = true;
         try
         {
@@ -589,6 +601,7 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             _player.Load(item.Track.FilePath);
+            _epoch.Advance();
             MarkAvailability(item, true);
             ShowTrack(item);
             _player.Play();
@@ -754,6 +767,7 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             _player.Load(item.Track.FilePath);
+            _epoch.Advance();
             ShowTrack(item);
             if (position > TimeSpan.Zero && position < _player.Duration)
             {

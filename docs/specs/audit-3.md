@@ -333,6 +333,19 @@ archivos.
   comprobar sin cortar la corriente), el orden «guardar y luego limpiar» de `LibraryService` (H4; lo cubre que la
   limpieza ya no lanza), y los `catch` de H8 (no hay forma portable de provocar `UnauthorizedAccessException` ni
   un fallo de `Kill`). Las líneas de H8 en `FfmpegAudioConverter` se confirmaron al implementar.
-- **M2:** H1 y H2 (reproducción). Verificación manual en Windows: elegir otra pista justo al final de una,
-  incrustar letra en la pista que suena con «repetir una», y pasada normal de empalmes sin silencio.
+- **M2:** H1 y H2 (reproducción). **Código hecho el 15 de noviembre de 2026** (rama
+  `fix/audit-3-reproduccion`); **falta la verificación manual del autor en Windows**: elegir otra pista justo al
+  final de una, incrustar letra en la pista que suena con «repetir una», y una pasada normal de empalmes sin
+  silencio (varias pistas seguidas, «Reproducir siguiente», aleatorio y repetir). Compila con la CS8602 de siempre,
+  pasan 966 pruebas (760 en Core, 206 en Infrastructure) y la app arranca y se cierra sin anotar nada en
+  `errores.log`; no se probó el audio.
+  - **H1:** `PlaybackEpoch` (Core, 4 pruebas) cuenta las órdenes de carga y descarga; `MainViewModel` la avanza
+    justo después de `Load` y de `Unload`, y cada aviso de BASS anota la cuenta al salir y se descarta si cambió.
+  - **H2:** un candado (`_sync`) en `BassAudioPlayer` para `_mixer`, `_current`, `_chained` y `_next`. El cambio de
+    pista y su aviso salen juntos dentro del candado; las llamadas que liberan en BASS van siempre fuera (BASS
+    espera al callback en curso, que podría estar esperando el candado). La pista encadenada se publica antes de
+    añadirla al mezclador, así que `PrepareNext(null)` siempre la ve.
+  - **Sin cubrir:** si la pista avanzó sola y su aviso aún no se atendió, `OnTagsSaving` compara con la pista
+    anterior y no descarga la nueva: escribir en ella falla con el archivo abierto (el original queda intacto y el
+    aviso lo dice). No hay pruebas automáticas de `BassAudioPlayer` (el proyecto no tiene pruebas de Audio).
 - **M3:** H9 a H13 y los puntos 4 y 8 de `pendientes.md`.
