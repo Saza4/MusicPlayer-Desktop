@@ -163,6 +163,15 @@ public class LibraryScannerTests : IDisposable
         Assert.True(File.Exists(path));
     }
 
+    // docs/specs/audit-3.md, H4: la carpeta deja de estar accesible entre el escaneo y la limpieza.
+    [Fact]
+    public async Task CleanStaleTemporaries_FolderGone_ReturnsZeroInsteadOfThrowing()
+    {
+        var gone = Path.Combine(_root, "desconectada");
+
+        Assert.Equal(0, await new LibraryScanner(new FakeReader()).CleanStaleTemporariesAsync(gone));
+    }
+
     [Fact]
     public void IsStaleTemporary_NeedsMoreThanADay_AndIgnoresFutureDates()
     {

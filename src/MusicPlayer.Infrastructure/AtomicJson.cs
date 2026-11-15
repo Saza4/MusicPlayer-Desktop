@@ -47,13 +47,21 @@ internal static class AtomicJson
             try
             {
                 await using (var stream = File.Create(tempPath))
+                {
                     await JsonSerializer.SerializeAsync(stream, value, Options, ct);
+                    // A disco antes de renombrar: si no, tras un corte de luz el renombrado puede quedar hecho y
+                    // los datos no (docs/specs/audit-3.md, H3).
+                    await stream.FlushAsync(ct);
+                    stream.Flush(flushToDisk: true);
+                }
 
                 File.Move(tempPath, path, overwrite: true);
             }
             finally
             {
-                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (IOException) { }
+                // Un fallo al borrar el temporal no debe tapar el error de la escritura (audit-3.md, H8).
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
             }
         }
         finally

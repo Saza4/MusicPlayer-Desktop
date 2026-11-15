@@ -8,6 +8,17 @@ auditoría de solo lectura previa a la release v1.5.0, que sale con ellos sin ar
 El plan de la primera auditoría (que numeraba «siete specs») no se guardó en el repositorio y no se va a
 reconstruir. De sus specs 6 (`ux-quick-wins.md`) y 7 solo se conoce lo que aparece aquí.
 
+## Con spec aprobada (15 de noviembre de 2026, camino a v1.6.0)
+
+Salen del feedback de uso y de la tercera auditoría de solo lectura. En curso: `audit-3.md`.
+
+- `docs/specs/audit-3.md`: arreglos de la auditoría (incluye los puntos 4 y 8 de abajo).
+- `docs/specs/settings-panel.md`: área de Configuración y reproducir con un clic.
+- `docs/specs/responsive-layout.md`: nada se recorta entre 640×400 y pantalla completa.
+- `docs/specs/island-title-and-close.md`: título desplazable y botones de ocultar y salir en la isla.
+- `docs/specs/background-playback.md`: cerrar oculta a la bandeja, e instancia única.
+- `docs/specs/lyrics-online-translation.md`: traducir la letra en línea, opt-in.
+
 ## Sin spec todavía
 
 1. **Conservar el álbum o artista abierto tras guardar etiquetas.** Hoy, al guardar, la vista vuelve a la lista.

@@ -18,12 +18,19 @@ internal static class SafeFileEdit
         try
         {
             File.Copy(filePath, temp);
+            // La copia hereda la fecha del original: sin esto, el temporal de un archivo antiguo parece abandonado
+            // (más de 24 h) y un escaneo simultáneo podría borrarlo (docs/specs/audit-3.md, H7).
+            try { File.SetLastWriteTimeUtc(temp, DateTime.UtcNow); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
             editCopy(temp);
             File.Replace(temp, filePath, destinationBackupFileName: null);
         }
         finally
         {
-            if (File.Exists(temp)) File.Delete(temp);
+            // Si el borrado falla (el antivirus retiene el temporal), no debe tapar el error de la edición. El
+            // temporal que quede se limpia al escanear la carpeta pasadas 24 h.
+            try { if (File.Exists(temp)) File.Delete(temp); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         }
     }
 }
