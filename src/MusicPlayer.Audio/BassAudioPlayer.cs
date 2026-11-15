@@ -22,6 +22,12 @@ public sealed class BassAudioPlayer : IAudioPlayer
     private readonly SyncProcedure _heardEndSync;
     private readonly object _stateLock = new();
 
+    // Protege los cambios de _mixer, _current, _chained y _next entre el hilo de la interfaz y los callbacks de BASS
+    // (docs/specs/audit-3.md, H2). Dentro solo se cambian campos y se disparan los avisos de fin de pista (quien
+    // los escucha solo encola trabajo): nunca se llama a BASS para liberar, porque BASS espera a que termine el
+    // callback en curso y ese callback podría estar esperando este candado.
+    private readonly object _sync = new();
+
     private volatile int _mixer;
     private volatile Source? _current;   // la pista que se oye ahora
     private Source? _chained;            // ya está en el mezclador, pero todavía no se oye
@@ -112,9 +118,12 @@ public sealed class BassAudioPlayer : IAudioPlayer
 
         Bass.ChannelSetAttribute(mixer, ChannelAttribute.Volume, _volume);
 
-        _mixer = mixer;
-        _current = source;
-        _lastPath = filePath;
+        lock (_sync)
+        {
+            _mixer = mixer;
+            _current = source;
+            _lastPath = filePath;
+        }
         Watch(source.Stream);
 
         SetState(CorePlaybackState.Stopped);
@@ -129,8 +138,17 @@ public sealed class BassAudioPlayer : IAudioPlayer
             // Cancelar suelta todo lo preparado, también lo que ya entró al mezclador: quien lo pide va a
             // escribir o borrar ese archivo. Al terminar la actual se dispara TrackEnded y la cola sigue
             // por el camino normal (docs/specs/playback-resilience.md, criterio 4).
-            Discard(Interlocked.Exchange(ref _next, null));
-            if (Interlocked.Exchange(ref _chained, null) is { } chained)
+            Source? pending, chained;
+            lock (_sync)
+            {
+                pending = _next;
+                _next = null;
+                chained = _chained;
+                _chained = null;
+            }
+
+            Discard(pending);
+            if (chained is not null)
             {
                 BassMix.MixerRemoveChannel(chained.Stream);
                 Bass.StreamFree(chained.Stream);
@@ -140,20 +158,34 @@ public sealed class BassAudioPlayer : IAudioPlayer
 
         // Ya hay una pista añadida al mezclador y a punto de oírse: la siguiente de esa se prepara
         // cuando llegue AdvancedToNext.
-        if (Volatile.Read(ref _chained) is not null) return;
+        Source? stale;
+        bool hasCurrent;
+        lock (_sync)
+        {
+            if (_chained is not null) return;
+            if (_next is { } existing && string.Equals(existing.FilePath, filePath, StringComparison.OrdinalIgnoreCase))
+                return;
 
-        var existing = Volatile.Read(ref _next);
-        if (existing is not null && string.Equals(existing.FilePath, filePath, StringComparison.OrdinalIgnoreCase))
-            return;
+            stale = _next;
+            _next = null;
+            hasCurrent = _current is not null;
+        }
 
-        Discard(Interlocked.Exchange(ref _next, null));
-        if (_current is null) return;
+        Discard(stale);
+        if (!hasCurrent) return;
 
         // Si no se puede abrir, no pasa nada: al terminar la actual se usará el camino normal.
         var next = Open(filePath);
         if (next is null) return;
 
-        Discard(Interlocked.Exchange(ref _next, next));
+        // Mientras se abría, la actual pudo terminar (ya no hay a qué encadenarla): entonces se suelta.
+        bool keep;
+        lock (_sync)
+        {
+            keep = _current is not null && _chained is null && _next is null;
+            if (keep) _next = next;
+        }
+        if (!keep) Discard(next);
     }
 
     public void Play()
@@ -181,7 +213,7 @@ public sealed class BassAudioPlayer : IAudioPlayer
     public void Unload()
     {
         Release();
-        _lastPath = null;
+        lock (_sync) _lastPath = null; // un fin de pista en curso no debe reponerla después
         SetState(CorePlaybackState.Stopped);
     }
 
@@ -207,19 +239,33 @@ public sealed class BassAudioPlayer : IAudioPlayer
     // es el momento de añadir la siguiente para que continúe sin hueco.
     private void OnMixedEnd(int handle, int channel, int data, IntPtr user)
     {
-        var mixer = _mixer;
-        if (mixer == 0 || Volatile.Read(ref _chained) is not null) return;
+        int mixer;
+        Source? next;
+        lock (_sync)
+        {
+            mixer = _mixer;
+            if (mixer == 0 || _chained is not null) return;
 
-        var next = Interlocked.Exchange(ref _next, null);
-        if (next is null) return;
+            next = _next;
+            if (next is null) return;
+            _next = null;
+            // Se publica antes de añadirla: si PrepareNext(null) o Release llegan ahora, la ven y la sueltan
+            // (antes podía quedar abierta tras pedir que se soltara).
+            _chained = next;
+        }
 
         if (!BassMix.MixerAddChannel(mixer, next.Stream, BassFlags.AutoFree))
         {
-            Bass.StreamFree(next.Stream);
+            // Si entretanto alguien se la llevó, ya la liberó (por eso falló): no se libera dos veces.
+            bool mine;
+            lock (_sync)
+            {
+                mine = ReferenceEquals(_chained, next);
+                if (mine) _chained = null;
+            }
+            if (mine) Bass.StreamFree(next.Stream);
             return;
         }
-
-        Volatile.Write(ref _chained, next);
 
         // Los syncs de la nueva fuente se registran fuera del callback.
         Task.Run(() => Watch(next.Stream));
@@ -228,23 +274,29 @@ public sealed class BassAudioPlayer : IAudioPlayer
     // Se ejecuta cuando el final de la pista ya se oyó.
     private void OnHeardEnd(int handle, int channel, int data, IntPtr user)
     {
-        var current = _current;
-        if (current is null || channel != current.Stream) return;
-
-        var chained = Interlocked.Exchange(ref _chained, null);
-        if (chained is not null)
+        // El cambio de pista y su aviso van juntos dentro del candado: así Load y Unload ocurren del todo antes o
+        // del todo después, y quien escucha puede saber si el aviso es anterior a su última orden.
+        lock (_sync)
         {
-            _current = chained;
-            _lastPath = chained.FilePath;
-            AdvancedToNext?.Invoke(this, chained.FilePath);
-            return;
-        }
+            var current = _current;
+            if (current is null || channel != current.Stream) return;
 
-        // No había siguiente preparada: la reproducción terminó de verdad.
-        _lastPath = current.FilePath;
-        _current = null;
-        SetState(CorePlaybackState.Stopped);
-        TrackEnded?.Invoke(this, EventArgs.Empty);
+            var chained = _chained;
+            if (chained is not null)
+            {
+                _chained = null;
+                _current = chained;
+                _lastPath = chained.FilePath;
+                AdvancedToNext?.Invoke(this, chained.FilePath);
+                return;
+            }
+
+            // No había siguiente preparada: la reproducción terminó de verdad.
+            _lastPath = current.FilePath;
+            _current = null;
+            SetState(CorePlaybackState.Stopped);
+            TrackEnded?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     // ---- Internos ----
@@ -273,12 +325,19 @@ public sealed class BassAudioPlayer : IAudioPlayer
 
     private void Release()
     {
-        var mixer = _mixer;
-        _mixer = 0;
-        var current = _current;
-        _current = null;
-        var chained = Interlocked.Exchange(ref _chained, null);
-        var next = Interlocked.Exchange(ref _next, null);
+        int mixer;
+        Source? current, chained, next;
+        lock (_sync)
+        {
+            mixer = _mixer;
+            _mixer = 0;
+            current = _current;
+            _current = null;
+            chained = _chained;
+            _chained = null;
+            next = _next;
+            _next = null;
+        }
 
         if (mixer != 0) Bass.StreamFree(mixer);
 
