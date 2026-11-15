@@ -54,6 +54,15 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
 9. **Quitar una pista con el guardado fallido deja un hueco en el empalme.** `MainViewModel.RemoveTrackAsync`
    llama a `PrepareNext(null)` al empezar y solo vuelve a `UpdateGapless()` si todo sale bien; en el `catch` no.
 
+## Decidido el 15 de noviembre de 2026
+
+- **Escribir en una pista tras un avance automático** (hueco anotado en `audit-3.md`, M2): si la pista avanzó sola
+  y su aviso aún no se atendió, `OnTagsSaving` compara con la pista anterior, no descarga la nueva y la escritura
+  falla con el archivo abierto (el original queda intacto). **No entra en `background-playback.md`**: no tiene que
+  ver con la ventana oculta, y esa spec ya cambia el ciclo de vida de la app. Va como arreglo pequeño aparte:
+  que `OnTagsSaving` pregunte al reproductor qué archivo tiene abierto (una propiedad nueva en `IAudioPlayer`) en
+  lugar de fiarse de `CurrentTrack`.
+
 ## Aplazado a propósito
 
 - **R6 y el congelamiento con unidades de red** (`playback-resilience.md`, `ui-responsiveness.md`): spec propia,
