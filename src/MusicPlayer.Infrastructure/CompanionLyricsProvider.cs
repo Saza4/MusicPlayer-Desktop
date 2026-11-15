@@ -32,12 +32,22 @@ public sealed class CompanionLyricsProvider(
         var siblings = LyricsSiblingFiles.Find(track.FilePath, systemLanguage);
         var layers = await Task.Run(() => embedded.Read(track.FilePath), ct);
 
-        var code = LyricsLanguage.Pick(
-            siblings.Where(s => s.Kind == LyricsLayerKind.Translation).Select(s => s.Language!)
-                    .Concat(layers.Where(l => l.Kind == LyricsLayerKind.Translation).Select(l => l.Language!)),
-            _culture);
+        // Se prueban los idiomas por orden de preferencia hasta dar con una traducción que sirva: si la preferida
+        // está pero no vale (sin marcas con un original sincronizado, ilegible, enorme), se pasa a la siguiente en
+        // lugar de quedarse sin ninguna (docs/specs/audit-3.md, H9).
+        var candidates = siblings.Where(s => s.Kind == LyricsLayerKind.Translation).Select(s => s.Language!)
+            .Concat(layers.Where(l => l.Kind == LyricsLayerKind.Translation).Select(l => l.Language!))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        var translation = code is null ? null : await LayerAsync(original.Kind, LyricsLayerKind.Translation, code, siblings, layers, ct);
+        string? code = null;
+        LyricBlock? translation = null;
+        while (translation is null && LyricsLanguage.Pick(candidates, _culture) is { } preferred)
+        {
+            translation = await LayerAsync(original.Kind, LyricsLayerKind.Translation, preferred, siblings, layers, ct);
+            code = preferred;
+            candidates.RemoveAll(c => Same(c, preferred));
+        }
         var pronunciation = await LayerAsync(original.Kind, LyricsLayerKind.Pronunciation, null, siblings, layers, ct);
 
         return translation is null && pronunciation is null

@@ -78,4 +78,21 @@ public class ModalTrackerTests
 
         Assert.False(modals.IsOpen);
     }
+
+    // docs/specs/audit-3.md, H10: si quien escucha falla al abrirse el primero, el contador no se queda subido.
+    [Fact]
+    public void Begin_WhenASubscriberThrows_DoesNotStayOpen()
+    {
+        var modals = new ModalTracker();
+        var fail = true;
+        modals.Changed += (_, _) => { if (fail) throw new InvalidOperationException("fallo"); };
+
+        Assert.Throws<InvalidOperationException>(() => modals.Begin());
+        Assert.False(modals.IsOpen);
+
+        fail = false;
+        using (modals.Begin())
+            Assert.True(modals.IsOpen);
+        Assert.False(modals.IsOpen);
+    }
 }

@@ -33,6 +33,7 @@ public partial class IslandWindow : Window
 
     private bool _hitAreaExpanded; // si la zona de clics cubre la ventana entera o solo la pastilla colapsada
     private int _fadeVersion; // invalida un ocultado pendiente si la isla vuelve a mostrarse
+    private bool _closed;     // tras cerrarse, ningún temporizador ni fundido pendiente toca la ventana
 
     // Onda: temporizador propio a pocos fotogramas por segundo. Una animación de Avalonia pedía un fotograma
     // en cada refresco de pantalla y la CPU pasaba del 8 % al 27 % (medido en M7).
@@ -375,8 +376,11 @@ public partial class IslandWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _closed = true;
         if (_viewModel is not null) _viewModel.PropertyChanged -= OnViewModelChanged;
         _waveTimer.Stop();
+        _collapseDelay.Stop();
+        _collapseEnd.Stop();
         base.OnClosed(e);
     }
 
@@ -424,7 +428,7 @@ public partial class IslandWindow : Window
         var version = ++_fadeVersion;
         Root.Opacity = 0;
         await Task.Delay(IslandMetrics.FadeDuration);
-        if (version != _fadeVersion) return; // alguien la volvió a mostrar mientras se desvanecía
+        if (_closed || version != _fadeVersion) return; // se cerró, o alguien la volvió a mostrar mientras se desvanecía
         Hide();
         Run(_hover.Reset(), animate: false); // la próxima vez aparece colapsada
     }

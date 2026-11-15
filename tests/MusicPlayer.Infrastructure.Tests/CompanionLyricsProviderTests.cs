@@ -50,6 +50,31 @@ public class CompanionLyricsProviderTests : IDisposable
         Assert.Equal("Bonjour", block.Lines[0].Translation);
     }
 
+    // docs/specs/audit-3.md, H9: la preferida no sirve (sin marcas, con un original sincronizado) y hay otra válida.
+    [Fact]
+    public async Task PreferredTranslationUnusable_FallsBackToTheNextValidOne()
+    {
+        await Write("song.es.lrc", "Hola\nMundo");
+        await Write("song.en.lrc", "[00:01.00]Hi\n[00:03.00]World again");
+
+        var block = await NewProvider(Original(), "es", "es-MX").GetLyricsAsync(NewTrack());
+
+        Assert.Equal("Hi", block.Lines[0].Translation);
+        Assert.Equal("en", block.TranslationLanguage);
+    }
+
+    [Fact]
+    public async Task NoUsableTranslation_LeavesTheOriginalAlone()
+    {
+        await Write("song.es.lrc", "Hola\nMundo");
+        await Write("song.en.lrc", "Hi\nWorld");
+
+        var block = await NewProvider(Original(), "es", "es-MX").GetLyricsAsync(NewTrack());
+
+        Assert.Null(block.Lines[0].Translation);
+        Assert.Null(block.TranslationLanguage);
+    }
+
     [Fact]
     public async Task SeveralTranslations_PrefersTheSystemLanguage()
     {

@@ -16,9 +16,21 @@ public sealed class ModalTracker
 
     public IDisposable Begin()
     {
-        if (++_depth == 1)
+        var scope = new Scope(this);
+        if (++_depth != 1) return scope;
+
+        try
+        {
             Changed?.Invoke(this, EventArgs.Empty);
-        return new Scope(this);
+        }
+        catch
+        {
+            // Quien llama no llega a recibir el Scope: sin esto el contador se quedaría subido para siempre
+            // (docs/specs/audit-3.md, H10).
+            _depth--;
+            throw;
+        }
+        return scope;
     }
 
     private void End()

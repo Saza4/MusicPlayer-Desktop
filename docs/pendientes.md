@@ -10,9 +10,11 @@ reconstruir. De sus specs 6 (`ux-quick-wins.md`) y 7 solo se conoce lo que apare
 
 ## Con spec aprobada (15 de noviembre de 2026, camino a v1.6.0)
 
-Salen del feedback de uso y de la tercera auditoría de solo lectura. En curso: `audit-3.md`.
+Salen del feedback de uso y de la tercera auditoría de solo lectura.
 
-- `docs/specs/audit-3.md`: arreglos de la auditoría (incluye los puntos 4 y 8 de abajo).
+- `docs/specs/audit-3.md`: arreglos de la auditoría. **Código hecho** (tres ramas, una por hito); falta la
+  verificación manual del autor de M2 (audio) y de H11 y H12. Resolvió los antiguos puntos 4 (`HideFaded`) y 8
+  (aviso de `playlists.json`) de la lista de abajo, que ya no están.
 - `docs/specs/settings-panel.md`: área de Configuración y reproducir con un clic.
 - `docs/specs/responsive-layout.md`: nada se recorta entre 640×400 y pantalla completa.
 - `docs/specs/island-title-and-close.md`: título desplazable y botones de ocultar y salir en la isla.
@@ -34,10 +36,6 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura. En curso: 
    quita) y una carátula grande que llega tras cancelarse su carga quedan para el recolector. No es una fuga, pero
    la memoria nativa tarda en devolverse y no se ha medido cuánto. Antes de cambiar nada, medir: un `Dispose` de
    un bitmap que una fila todavía dibuja es peor que el problema.
-4. **`IslandWindow.HideFaded` es `async void` con una espera.** Si la ventana se cierra durante el fundido (salir
-   de la app con la isla ocultándose), la continuación llama a `Hide()` sobre una ventana cerrada. No verificable
-   por lectura: depende de si Avalonia sigue despachando tras `Exit`. Si se confirma, basta comprobar un indicador
-   de «cerrada» tras el `await`.
 5. **Los paneles de edición dicen «se detendrá».** `MainWindow.axaml`, en «Editar etiquetas» («Si esta canción
    suena, se detendrá») y en «Limpiar etiquetas» («Si suena alguna de estas canciones, se detendrá»). Desde
    `playback-resilience.md` la pista se reanuda: el texto debe decir que se nota un corte breve.
@@ -52,10 +50,6 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura. En curso: 
    expresiones de marcas `[mm:ss.xx]` y `ToTimeSpan`) lanza con `[０１:２３.００]`: la pista se queda sin letra e
    «Incrustar letra (.lrc)…» falla con un mensaje en inglés. Arreglo: `[0-9]`, como ya hace la marca por palabra
    (`WordTag`), con una prueba en Core por cada parser.
-8. **El aviso de `playlists.json` ilegible se pisa al arrancar.** `MainViewModel.InitializeAsync` llama a
-   `Playlists.InitializeAsync()` (que avisa por `Notified`) y enseguida a `ApplySnapshot`, que escribe el resumen
-   de la biblioteca en la línea de estado. El motivo solo se ve al intentar cambiar una playlist. Arreglo: guardar
-   el aviso y escribirlo al final, como ya se hace con `settingsProblem`.
 9. **Quitar una pista con el guardado fallido deja un hueco en el empalme.** `MainViewModel.RemoveTrackAsync`
    llama a `PrepareNext(null)` al empezar y solo vuelve a `UpdateGapless()` si todo sale bien; en el `catch` no.
 
