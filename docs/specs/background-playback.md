@@ -1,6 +1,8 @@
 # Spec: seguir sonando al cerrar la ventana (bandeja del sistema)
 
-Estado: **aprobada por el autor el 15 de noviembre de 2026**. Sin código todavía. Depende de `settings-panel.md`.
+Estado: **implementada el 15 de noviembre de 2026** (rama `feat/background-playback`), a falta de la prueba a mano
+del autor (ver «Resultado»). Compila con la CS8602 de siempre y pasan 1030 pruebas (819 en Core, 211 en
+Infrastructure). Depende de `settings-panel.md`.
 
 ## Context
 
@@ -94,6 +96,56 @@ dos procesos escribiendo los mismos JSON)
 - `Services/SingleInstance.cs` (Desktop, Windows): `Mutex` con nombre por usuario y un `EventWaitHandle` con
   nombre que la primera instancia escucha en un hilo de fondo; al recibirlo, `Dispatcher.UIThread.Post` de
   `BringMainToFront`. Se comprueba en `Program.Main`, antes de arrancar Avalonia.
+
+## Resultado
+
+**M0 (spike), comprobado en Avalonia 11.2.5 y Windows 11:** `Hide()` dentro de `Closing` con `e.Cancel = true`
+no dispara `Closed` y el proceso sigue vivo; `Show()` devuelve la ventana. Un `Shutdown()` llega a `Closing` con
+`WindowCloseReason.ApplicationShutdown`. El apagado real de Windows (`OSShutdown`) no se probó.
+
+**Decisiones tomadas al implementar (revisables):**
+
+1. **Todo el ciclo de cierre está en `App.SetUpBackground`.** `main.Closing` consulta `CloseBehavior.Decide`;
+   `main.Closed` y «Salir» llaman al mismo `Exit()`, que hace `desktop.Shutdown()` una sola vez (el `Exit` de
+   siempre guarda los ajustes y libera el contenedor).
+2. **El `TrayIcon` se crea en código**, no en `App.axaml`: así va detrás de `OperatingSystem.IsWindows()` y un
+   fallo al crearlo deja `supported = false` (cerrar termina la app y la línea de estado lo dice).
+3. **Criterio 9, el aviso:** `TrayIcon` de Avalonia no tiene notificaciones de globo, así que se usa la segunda
+   opción del criterio: la primera vez que la ventana vuelve de la bandeja, la línea de estado dice «El
+   reproductor siguió abierto en la bandeja. Para cerrarlo del todo: clic derecho en su icono y «Salir»». Además,
+   el texto bajo la casilla de Configuración lo explica antes de activarla.
+4. **Estado «ventana oculta»:** `MainViewModel.IsMainWindowHidden`, que App fija al cambiar `IsVisible` de la
+   ventana. El botón «Salir del reproductor» de la isla se enlaza a él y llama a `ExitCommand` (evento
+   `ExitRequested`).
+5. **Instancia única:** `Local\MusicPlayer.Desktop.Instancia` (mutex) y `Local\MusicPlayer.Desktop.Mostrar`
+   (evento), por sesión de Windows. La segunda instancia reintenta abrir el evento durante 1 s y termina. Si los
+   objetos con nombre no se pueden crear, la app arranca sin instancia única, como antes. Debug y Release
+   comparten nombre: no se pueden tener los dos abiertos a la vez.
+6. **Con la isla desactivada y la ventana oculta** queda solo el icono de la bandeja, como dice la spec.
+
+**Verificado:**
+
+- 8 pruebas nuevas en Core (`CloseBehaviorTests`, todas las combinaciones) y 1 en Infrastructure (guardar y leer
+  el ajuste; un `settings.json` de la v1.3.0 lo carga desactivado).
+- Prueba real en Windows con un script (volumen a 0; `settings.json` cambiado con copia previa y restaurado,
+  intacto por hash), cerrando con `WM_CLOSE` como la X:
+  - Ajuste encendido: tras cerrar, el proceso sigue vivo, la ventana no es visible y la isla aparece.
+  - Segunda instancia: termina sola en menos de 8 s, queda un solo proceso y la ventana de la primera vuelve a
+    verse, con el aviso del criterio 9 en la línea de estado.
+  - Botón «Salir del reproductor» de la isla (visible solo con la ventana oculta): el proceso termina con código
+    0 y `settings.json` queda guardado.
+  - Ajuste apagado: cerrar termina el proceso con código 0.
+
+**Sin verificar (falta la prueba a mano del autor):**
+
+- **El icono de la bandeja:** que aparece al ocultar y desaparece al volver, el clic que abre la ventana y su
+  menú («Abrir», «Reproducir» o «Pausar», «Siguiente», «Salir»). No se pudo capturar ni pulsar desde un script.
+- Alt+F4, cerrar con el modo inmersivo abierto y con Configuración o un panel abiertos.
+- Volver desde la bandeja con la ventana maximizada (criterio 8).
+- La casilla de Configuración y que `settings.json` guarda lo último tras «Salir» de la bandeja.
+- Apagado o cierre de sesión de Windows con el ajuste activado.
+- Segunda instancia mientras la primera arranca o está colgada.
+- Linux: la sección no aparece y cerrar termina la app (el CI de Ubuntu solo compila).
 
 ## Hitos
 

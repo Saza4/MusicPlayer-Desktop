@@ -56,7 +56,7 @@ public static class IslandMetrics
     public const double TitleFontSize = 14;
     public const double ArtistFontSize = 12;
     public const double TimeFontSize = 11;
-    public const double HideButtonSize = 24;         // «Ocultar isla», arriba a la derecha de la cabecera
+    public const double HideButtonSize = 24;         // «Ocultar isla» y «Salir», arriba a la derecha de la cabecera
 
     // Sombra: solo con la pastilla expandida. La ventana deja este margen a los lados y debajo.
     public const double ExpandedShadowMargin = 16;

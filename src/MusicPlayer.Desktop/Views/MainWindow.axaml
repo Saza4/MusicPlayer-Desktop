@@ -1127,6 +1127,18 @@
                                     TextWrapping="Wrap" />
                             </StackPanel>
 
+                            <StackPanel
+                                Classes="settings-section"
+                                IsVisible="{Binding Settings.IsWindows}"
+                                Spacing="8">
+                                <TextBlock Classes="settings-title" Text="SEGUNDO PLANO" />
+                                <CheckBox Content="Seguir sonando al cerrar la ventana" IsChecked="{Binding Settings.KeepRunningOnClose}" />
+                                <TextBlock
+                                    Classes="settings-help"
+                                    Text="Al cerrar la ventana, el reproductor se queda en la bandeja del sistema (junto al reloj) y la música sigue. Un clic en su icono vuelve a abrirlo; para cerrarlo del todo, clic derecho en el icono y «Salir», o el botón «Salir» de la isla flotante."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+
                             <StackPanel Classes="settings-section" Spacing="8">
                                 <TextBlock Classes="settings-title" Text="DATOS" />
                                 <TextBlock

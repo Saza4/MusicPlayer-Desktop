@@ -12,7 +12,8 @@ public sealed record AppSettings(
     string ThemeId = "dark",
     bool ShowIsland = true, // al final: los settings.json anteriores la reciben activada
     bool PlayOnSingleClick = false, // docs/specs/settings-panel.md: lo nuevo, siempre al final y con su valor de siempre
-    bool IslandShowTitle = false) // docs/specs/island-title-and-close.md: título desplazable en la isla colapsada
+    bool IslandShowTitle = false, // docs/specs/island-title-and-close.md: título desplazable en la isla colapsada
+    bool KeepRunningOnClose = false) // docs/specs/background-playback.md: cerrar oculta a la bandeja (solo Windows)
 {
     public static AppSettings Default { get; } = new();
 }

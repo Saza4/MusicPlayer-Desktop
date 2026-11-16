@@ -60,7 +60,8 @@ public sealed class IslandController : IDisposable
 
     private void OnMainWindowChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.Property == WindowBase.IsActiveProperty || e.Property == Window.WindowStateProperty)
+        if (e.Property == WindowBase.IsActiveProperty || e.Property == Window.WindowStateProperty
+            || e.Property == Visual.IsVisibleProperty)
             Schedule();
     }
 
@@ -77,7 +78,8 @@ public sealed class IslandController : IDisposable
         _settle.Stop();
         if (_main is null) return;
 
-        var mainActive = _main.IsActive && _main.WindowState != WindowState.Minimized;
+        // Oculta en la bandeja (docs/specs/background-playback.md) cuenta como no activa.
+        var mainActive = _main.IsVisible && _main.IsActive && _main.WindowState != WindowState.Minimized;
 #if DEBUG
         // Solo en Debug (no se compila en Release): MUSICPLAYER_ISLAND_FORCE=1 muestra la isla aunque la
         // ventana principal esté activa, para probar el hover a mano y tomar capturas. El resto de la regla
@@ -100,16 +102,17 @@ public sealed class IslandController : IDisposable
     private IslandWindow CreateIsland()
     {
         var island = new IslandWindow { DataContext = _viewModel };
-        island.OpenMainRequested += (_, _) => BringMainToFront();
+        island.OpenMainRequested += (_, _) => ShowMain();
         return island;
     }
 
     /// <summary>
-    /// Clic en la carátula o el título de la isla: restaura la ventana principal si está minimizada (a su
+    /// Clic en la carátula o el título de la isla, en el icono de la bandeja, o aviso de una segunda instancia: restaura la ventana principal si está minimizada (a su
     /// estado anterior, maximizada incluida) y la activa. Si Windows no le da el primer plano con Activate(),
-    /// lo pide directamente (plan B). Al activarse, la regla de visibilidad oculta la isla.
+    /// lo pide directamente (plan B). Al activarse, la regla de visibilidad oculta la isla. Si estaba oculta en la
+    /// bandeja, Show() la devuelve con el estado que tenía.
     /// </summary>
-    private void BringMainToFront()
+    public void ShowMain()
     {
         if (_main is null) return;
         if (_main.WindowState == WindowState.Minimized && !WindowNative.Restore(_main))
