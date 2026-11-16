@@ -1,6 +1,11 @@
 # Spec: traducir la letra con un traductor en línea (opt-in)
 
-Estado: **aprobada por el autor el 15 de noviembre de 2026**. Sin código todavía. Depende de `settings-panel.md`.
+Estado: **descartada por el autor el 15 de noviembre de 2026. No se implementa.** Motivo: la app es 100 % local y
+no usa la red, y traducir en línea rompe esa regla aunque sea opcional. No hay código de esta spec en el
+repositorio (ni `ILyricsTranslator`, ni `HttpLyricsTranslator`, ni ajustes). El documento se conserva como
+registro de la decisión y del estudio de servicios (M0); no lo uses como plan.
+
+Estado anterior: aprobada por el autor el 15 de noviembre de 2026, sin código. Dependía de `settings-panel.md`.
 
 ## Context
 

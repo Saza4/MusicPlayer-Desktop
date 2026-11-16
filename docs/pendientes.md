@@ -25,7 +25,8 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
   pidió además 30 fps y poder arrastrar la barra de progreso de la isla (hechos).
 - `docs/specs/background-playback.md`: cerrar oculta a la bandeja, e instancia única. **Código hecho**; falta la
   prueba a mano del autor (lista en la spec, «Resultado»), sobre todo el icono de la bandeja y su menú.
-- `docs/specs/lyrics-online-translation.md`: traducir la letra en línea, opt-in.
+- `docs/specs/lyrics-online-translation.md`: traducir la letra en línea, opt-in. **Descartada por el autor** el
+  15 de noviembre de 2026: la app sigue siendo 100 % local y sin red. No se implementa.
 
 ## Sin spec todavía
 
