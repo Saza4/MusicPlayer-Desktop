@@ -120,6 +120,46 @@ falta: nada en la app escribe un `.lrc`, y no hay ninguna interfaz de traductor.
 4. **Aviso la primera vez.** Si basta el texto de Configuración (criterio 2) o hace falta confirmar en el primer
    uso.
 
+## Resultado de M0 (15 de noviembre de 2026): qué servicio
+
+Leída la documentación publicada de cada servicio ese día. **No se llamó a ninguna API**: lo que la
+documentación no dice queda marcado como «por comprobar».
+
+| | MyMemory (`api.mymemory.translated.net/get`) | LibreTranslate, instancia oficial | LibreTranslate, instancia propia |
+| --- | --- | --- | --- |
+| Clave | No hace falta | Obligatoria y de pago (desde 29 USD al mes; sin plan gratuito) | No hace falta |
+| Límite diario | 5 000 caracteres al día sin identificarse; 50 000 dando un correo de contacto | Sin límite diario | El que ponga quien la aloja |
+| Por petición | `q` de 500 bytes como máximo | 2 000 caracteres | Configurable |
+| Idioma de origen automático | No aparece en la documentación: **por comprobar** | Sí (`source: "auto"`) | Sí |
+| Formato de la respuesta | No aparece en la página de la especificación: **por comprobar** | Objeto con `translatedText` | Igual |
+| Lo que exige al usuario | Nada | Pagar | Instalar y mantener un servidor |
+
+**Recomendación: MyMemory sin identificarse**, sabiendo lo que cuesta:
+
+- **5 000 caracteres al día** son una o dos letras, según su largo. El tope diario lo impone el servicio y cuenta
+  por conexión, no por app: la spec no puede subirlo. No se envía el correo del usuario para llegar a 50 000 (es
+  un dato personal y el criterio 4 lo excluye).
+- **500 bytes por petición** obligan a enviar la letra **línea a línea** (juntar varias líneas en una petición
+  rompería la correspondencia línea a línea del criterio 12). Una letra de 50 líneas distintas son 50
+  peticiones: el tope propio por sesión (criterio 13) se fija con esa cuenta.
+- Antes de pedir nada, la app calcula los caracteres de la letra y, si pasan de lo que queda del día (lo que la
+  propia app lleva enviado en la sesión), avisa y no empieza: una traducción a medias no se guarda.
+- Una línea de más de 500 bytes hace que la letra no se pueda traducir (se avisa); no se parte.
+
+**Alternativa que no se recomienda de entrada:** un campo «Servidor de LibreTranslate» en Configuración para quien
+tenga una instancia propia. No tiene límites y detecta el idioma, pero casi nadie tiene un servidor; se puede
+añadir después sin cambiar el diseño, porque el traductor ya va detrás de `ILyricsTranslator`.
+
+**Decisiones abiertas, tras M0:**
+
+1. **Servicio:** pendiente de que el autor acepte MyMemory con ese límite diario, o prefiera otra vía.
+2. **Idioma de origen:** como la detección automática no está documentada, M1 empieza con una comprobación
+   manual de una sola petición. Si no existe, hace falta un ajuste «Idioma de las letras» o preguntar al traducir.
+3. **Formato de la respuesta y código de «cuota agotada»:** se comprueban en esa misma petición.
+
+Fuentes: `mymemory.translated.net/doc/usagelimits.php`, `mymemory.translated.net/doc/spec.php`,
+`docs.libretranslate.com/guides/api_usage/`, `portal.libretranslate.com`.
+
 ## Diseño
 
 - `Core/Interfaces/ILyricsTranslator.cs`: `Task<IReadOnlyList<string>> TranslateAsync(IReadOnlyList<string>
