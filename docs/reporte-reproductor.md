@@ -106,7 +106,7 @@ Reglas finas del código que no aparecen en otras secciones (verificadas contra 
 
 - **Aleatorio (`PlayQueue`):** una vuelta nueva evita empezar por la última pista de la anterior. Si se quita la pista en curso, «Siguiente» sigue desde la anterior.
 - **Anterior:** reinicia la pista si ya van más de 3 s; si no, retrocede.
-- **Ratón y teclado:** doble clic en una canción la reproduce; `Esc` cierra el modo inmersivo (con el modo inmersivo la ventana pasa a pantalla completa y recuerda su estado anterior).
+- **Ratón y teclado:** doble clic en una canción la reproduce (o un solo clic, con el ajuste «Reproducir con un solo clic» de Configuración; spec `docs/specs/settings-panel.md`); `Esc` cierra también la vista de Configuración; `Esc` cierra el modo inmersivo (con el modo inmersivo la ventana pasa a pantalla completa y recuerda su estado anterior).
 - **Ajustes (`SettingsService`):** el guardado se aplaza 500 ms; si falla, se reintenta en el siguiente cambio o al cerrar (`FlushAsync`). Si `settings.json` no se pudo leer al arrancar (error de E/S), no se guarda nada hasta una carga correcta, para no sobrescribirlo.
 - **Cierre (`App.axaml.cs`):** la app termina al cerrar la ventana principal (`ShutdownMode.OnMainWindowClose`), no la última, porque la isla es una segunda ventana. Al salir guarda los ajustes pendientes y libera el contenedor (y con él BASS).
 - **Reloj de la barra:** un temporizador de 250 ms actualiza la posición mientras suena; `_isUpdatingFromTimer` evita que esa actualización vuelva a llamar a `Seek`.
@@ -254,7 +254,7 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 
 ### 4.3.2 Temas de la interfaz (v1.3.0)
 
-- **Selector:** botón «Tema» en la barra superior con una lista (Sistema, Oscuro, Claro y los temas de usuario). Mover el cursor o las flechas por la lista **previsualiza** el tema en toda la app sin guardar nada; clic o `Enter` lo confirma y lo guarda en los ajustes (`ThemeId`); `Esc` o cerrar la lista restaura el tema confirmado. Mientras la lista está abierta no actúan los atajos globales de teclado.
+- **Selector:** botón «Tema» en la vista de Configuración (estuvo en la barra superior hasta la v1.5.0) con una lista (Sistema, Oscuro, Claro y los temas de usuario). Mover el cursor o las flechas por la lista **previsualiza** el tema en toda la app sin guardar nada; clic o `Enter` lo confirma y lo guarda en los ajustes (`ThemeId`); `Esc` o cerrar la lista restaura el tema confirmado. Mientras la lista está abierta no actúan los atajos globales de teclado.
 - **Tema por defecto:** Oscuro, con los colores exactos que tenía la interfaz. *Sistema* sigue el tema de Windows y reacciona si cambia con la app abierta.
 - **Recursos del tema (nueve colores):** `background`, `surface`, `overlay`, `primary`, `onPrimary`, `accent` (opcional: si falta, el acento del sistema), `danger`, `success` y `warning`. Los velos translúcidos (hover, selección, bordes) son `overlay` con una escalera fija de opacidades: las mismas del diseño anterior. El texto no es configurable: sigue la variante de Fluent (clara u oscura) de la `base`.
 - **Cómo se aplica:** `ThemeService` fija la variante de Fluent y escribe los nueve `Color` en los recursos de la aplicación; los pinceles de `Themes/ThemeBrushes.axaml` y las claves de Fluent de `Themes/FluentOverrides.axaml` los leen con `DynamicResource`, así que el cambio es inmediato. `App.axaml.cs` aplica el tema guardado antes de mostrar la ventana.
@@ -307,7 +307,7 @@ Especificación, decisiones y resultado de cada hito (M0-M7): `docs/specs/lyrics
 
 Especificación, decisiones y resultado de cada hito (M0-M6): `docs/specs/action-buttons.md`.
 
-- **Qué es:** «Agregar carpeta», «Limpiar etiquetas», «Convertir lo que veo…», «Tema» y el «+» de COLECCIONES comparten un estilo propio: píldora tonal (velo del tema, sin borde visible), con un icono vectorial de 16 px a la izquierda del texto. El «+» es solo icono (círculo de 28 px) y ahora tiene `ToolTip` y `AutomationProperties.Name` («Nueva playlist»). Es solo visual: comandos, bindings y comportamiento no cambian.
+- **Qué es:** «Agregar carpeta», «Limpiar etiquetas», «Convertir lo que veo…», «Configuración», «Tema» (ahora dentro de Configuración) y el «+» de COLECCIONES comparten un estilo propio: píldora tonal (velo del tema, sin borde visible), con un icono vectorial de 16 px a la izquierda del texto. El «+» es solo icono (círculo de 28 px) y ahora tiene `ToolTip` y `AutomationProperties.Name` («Nueva playlist»). Es solo visual: comandos, bindings y comportamiento no cambian.
 - **Es opt-in:** se activa con `Classes="action"` (y `only` para solo icono) en `Themes/ActionButtonStyles.axaml`; no toca los `ButtonBackground*` globales, así que los demás botones (Guardar, Cancelar, Renombrar, Eliminar, «Carpeta de temas», inmersivo, isla) se ven igual.
 - **Estados:** reposo `ThemeOverlayHoverBrush`; hover `ThemeOverlaySelectedHoverBrush`; pressed `ThemeOverlaySelectedBrush` y escala 0,97; deshabilitado al 50 %. El foco con teclado dibuja un anillo de 2 px que no mueve el diseño, con el pincel `ThemeFocusRingBrush` (el color de texto de la variante, en `FluentOverrides.axaml`). No usa el acento porque `ThemeFactory` solo le garantiza 3:1 contra el velo negro del inmersivo, no contra el fondo. Se anula el adorno rectangular de Fluent, que no seguía la píldora.
 - **Reglas de `diseño.md`:** ese documento solo trae principios (familiaridad, simplicidad, constancia, accesibilidad…), no reglas de botón; la spec deriva de ellos las reglas concretas y el lenguaje de `.icon`, y las marca como decisiones propias.
@@ -779,7 +779,6 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - La carátula de álbum aplica el criterio de «mismo álbum». Un recopilatorio sin «artista del álbum» se separa por artista.
 - Si suena una pista al escribir en su archivo (etiquetas, carátula, carátula de álbum, autocompletar o letra), se descarga para escribir y se vuelve a cargar en el mismo punto, sonando o en pausa como estaba (spec `docs/specs/playback-resilience.md`): se nota un corte breve. Las miniaturas de la lista se refrescan.
 - La carátula de álbum no tiene botón para cancelar ni para quitar la imagen de todo el álbum.
-- Los paneles «Editar etiquetas» y «Limpiar etiquetas» todavía dicen «se detendrá» (`MainWindow.axaml`): el texto es anterior a la reanudación.
 - «Limpiar etiquetas» falla para toda la lista visible («No se pudo revisar: …») si un archivo empieza por un número escrito con dígitos que no son `0`-`9` (`０１ - título.mp3`): `FileNameParser` los reconoce como número de pista y no los sabe convertir.
 
 **Conversión**

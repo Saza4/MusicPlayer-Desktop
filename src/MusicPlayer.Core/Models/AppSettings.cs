@@ -10,7 +10,8 @@ public sealed record AppSettings(
     bool Shuffle = false,
     RepeatMode Repeat = RepeatMode.Off,
     string ThemeId = "dark",
-    bool ShowIsland = true) // al final: los settings.json anteriores la reciben activada
+    bool ShowIsland = true, // al final: los settings.json anteriores la reciben activada
+    bool PlayOnSingleClick = false) // docs/specs/settings-panel.md: lo nuevo, siempre al final y con su valor de siempre
 {
     public static AppSettings Default { get; } = new();
 }

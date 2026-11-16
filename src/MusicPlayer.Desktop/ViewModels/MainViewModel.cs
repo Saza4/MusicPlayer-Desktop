@@ -208,8 +208,9 @@ public partial class MainViewModel : ViewModelBase
                          SettingsService settings, TagEditorViewModel tagEditor,
                          TagAutoFixViewModel autoFix, ConvertViewModel conversion,
                          AlbumCoverViewModel albumCover, EmbedLyricsViewModel embedLyrics,
-                         ThemeViewModel themes)
+                         ThemeViewModel themes, SettingsViewModel settingsPanel)
     {
+        Settings = settingsPanel;
         _covers = covers;
         _settings = settings;
         Lyrics = lyrics;
@@ -270,6 +271,25 @@ public partial class MainViewModel : ViewModelBase
         EmbedLyrics.Saving += OnTagsSaving;
         EmbedLyrics.Finished += ResumeInterrupted;
         Themes.Notified += Notify;
+
+        // Configuración (docs/specs/settings-panel.md) se cierra si se abre un panel de edición, que ocupa la misma zona.
+        TagEditor.PropertyChanged += ClosePanelSettingsWhenOpened;
+        AutoFix.PropertyChanged += ClosePanelSettingsWhenOpened;
+        Conversion.PropertyChanged += ClosePanelSettingsWhenOpened;
+    }
+
+    public SettingsViewModel Settings { get; }
+
+    private void ClosePanelSettingsWhenOpened(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != "IsOpen") return;
+        if (TagEditor.IsOpen || AutoFix.IsOpen || Conversion.IsOpen)
+            Settings.IsOpen = false;
+    }
+
+    partial void OnIsImmersiveChanged(bool value)
+    {
+        if (value) Settings.IsOpen = false; // el inmersivo lo tapa todo: al volver, Configuración está cerrada
     }
 
     // Avisos que llegan mientras la app arranca (un tema que no se pudo cargar, playlists.json ilegible): la carga
@@ -311,6 +331,7 @@ public partial class MainViewModel : ViewModelBase
                 Repeat = saved.Repeat;
                 ShowIsland = saved.ShowIsland;
                 Lyrics.Restore(saved);
+                Settings.Restore(saved);
             }
             finally
             {

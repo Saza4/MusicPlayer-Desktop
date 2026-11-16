@@ -32,7 +32,8 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 - **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
 - **Playlists:** crear, renombrar, eliminar, agregar y quitar canciones.
 - **Detecta archivos movidos o borrados:** se marcan como no disponibles, se saltan al reproducir y se pueden limpiar de la biblioteca y las playlists. Al agregar la carpeta nueva, las pistas movidas se reconocen por título, artista, álbum y duración y conservan sus playlists.
-- **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir, última canción, tema e isla flotante.
+- **Ajustes persistentes:** volumen, opciones de letra, aleatorio, repetir, última canción, tema, isla flotante y reproducir con un clic.
+- **Configuración:** el botón del engranaje abre una vista con el botón «Tema» (ya no está en la barra superior), «Reproducir con un solo clic» (por defecto hace falta doble clic), la isla flotante y la carpeta de datos. Cada opción se guarda al cambiarla; `Esc` la cierra.
 
 **Letras y carátulas**
 
@@ -46,9 +47,9 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 
 **Temas**
 
-- **Claro, oscuro y modo del sistema** desde el botón «Tema». La lista previsualiza en vivo toda la app al pasar el cursor o moverse con las flechas; clic o `Enter` confirma y `Esc` vuelve al tema anterior. El tema por defecto es Oscuro.
+- **Claro, oscuro y modo del sistema** desde el botón «Tema» de Configuración. La lista previsualiza en vivo toda la app al pasar el cursor o moverse con las flechas; clic o `Enter` confirma y `Esc` vuelve al tema anterior. El tema por defecto es Oscuro.
 - **Temas propios:** archivos `.json` en `%APPDATA%\MusicPlayer\themes` (`~/.config/MusicPlayer/themes` en Linux), solo datos y sin código. Ver [Temas de usuario](#temas-de-usuario).
-- **Botones de acción con icono** en la barra superior («Agregar carpeta», «Limpiar etiquetas», «Convertir lo que veo…» y «Tema») y el «+» de COLECCIONES, con el color del tema y un anillo de foco visible con el teclado. Con la ventana estrecha (menos de 1100 px) quedan solo con icono; el nombre sigue en el globo al pasar el cursor.
+- **Botones de acción con icono** en la barra superior («Agregar carpeta», «Limpiar etiquetas», «Convertir lo que veo…» y «Configuración») y el «+» de COLECCIONES, con el color del tema y un anillo de foco visible con el teclado. Con la ventana estrecha (menos de 1100 px) quedan solo con icono; el nombre sigue en el globo al pasar el cursor.
 
 **Herramientas de etiquetas y archivos**
 
@@ -127,7 +128,7 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 986 pruebas (778 en Core y 208 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 996 pruebas (787 en Core y 209 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco, teclado, la ventana de la isla y el dibujo de la letra progresiva), que se prueban a mano.
 De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
 De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, la atenuación y el desenfoque.
@@ -153,7 +154,7 @@ o `~/.config/MusicPlayer` (Linux). En la misma carpeta, `errores.log` anota los 
 
 ## Temas de usuario
 
-Un tema es un archivo `.json` en la carpeta `themes` (el botón «Tema» tiene un acceso a ella). El nombre del archivo es su identificador, y la lista se vuelve a leer cada vez que se abre el selector.
+Un tema es un archivo `.json` en la carpeta `themes` (el botón «Tema» de Configuración tiene un acceso a ella). El nombre del archivo es su identificador, y la lista se vuelve a leer cada vez que se abre el selector.
 
 ```json
 {

@@ -15,7 +15,9 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
 - `docs/specs/audit-3.md`: arreglos de la auditoría. **Hecho y verificado a mano por el autor** el 15 de
   noviembre de 2026 (PR #13, #14 y #15). Resolvió los antiguos puntos 4 (`HideFaded`) y 8
   (aviso de `playlists.json`) de la lista de abajo, que ya no están.
-- `docs/specs/settings-panel.md`: área de Configuración y reproducir con un clic.
+- `docs/specs/settings-panel.md`: área de Configuración y reproducir con un clic. **Código hecho**; falta la
+  prueba a mano del autor (lista en la spec, «Resultado»). Resolvió también el antiguo punto 5 de abajo (los
+  paneles de edición decían «se detendrá»).
 - `docs/specs/responsive-layout.md`: nada se recorta entre 640×400 y pantalla completa. **Hecho y verificado
   a mano por el autor** el 15 de noviembre de 2026 (PR #16).
 - `docs/specs/island-title-and-close.md`: título desplazable y botones de ocultar y salir en la isla.
@@ -37,9 +39,6 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
    quita) y una carátula grande que llega tras cancelarse su carga quedan para el recolector. No es una fuga, pero
    la memoria nativa tarda en devolverse y no se ha medido cuánto. Antes de cambiar nada, medir: un `Dispose` de
    un bitmap que una fila todavía dibuja es peor que el problema.
-5. **Los paneles de edición dicen «se detendrá».** `MainWindow.axaml`, en «Editar etiquetas» («Si esta canción
-   suena, se detendrá») y en «Limpiar etiquetas» («Si suena alguna de estas canciones, se detendrá»). Desde
-   `playback-resilience.md` la pista se reanuda: el texto debe decir que se nota un corte breve.
 6. **En pausa, dos saltos no mueven la barra.** `MainViewModel.Previous` (`_player.Seek(TimeSpan.Zero)`) y
    `LyricsViewModel.SeekTo` saltan en el reproductor sin pasar por `PositionSeconds`, y `OnTick` no escribe en
    pausa: la barra, el tiempo y el punto de partida de ← → se quedan donde estaban hasta reanudar. Es la misma

@@ -342,11 +342,12 @@ public partial class MainWindow : Window
     private static ListBox? ThemeListOf(object? flyout) =>
         ((flyout as Flyout)?.Content as Panel)?.Children.OfType<ListBox>().FirstOrDefault();
 
-    // Se cerró sin confirmar (Esc o clic fuera): se vuelve al tema elegido. El foco regresa a la lista de canciones.
+    // Se cerró sin confirmar (Esc o clic fuera): se vuelve al tema elegido. El foco regresa al botón «Tema», que
+    // está en Configuración (la lista de canciones queda tapada por esa vista).
     private void OnThemeFlyoutClosed(object? sender, EventArgs e)
     {
         if (DataContext is MainViewModel vm) vm.Themes.Close();
-        Dispatcher.UIThread.Post(() => this.FindControl<ListBox>("SongList")?.Focus());
+        Dispatcher.UIThread.Post(() => this.FindControl<Button>("ThemeButton")?.Focus());
     }
 
     private void OnThemeListPointerMoved(object? sender, PointerEventArgs e)
@@ -383,8 +384,12 @@ public partial class MainWindow : Window
             case Key.Enter when vm.Themes.SelectedChoice is { } choice:
                 ConfirmTheme(vm, choice);
                 break;
+            case Key.Escape:
+                // Solo cierra la lista: sin esto, el mismo Esc llegaría a OnKeyDown y cerraría también Configuración.
+                this.FindControl<Button>("ThemeButton")?.Flyout?.Hide();
+                break;
             default:
-                return; // Esc cierra el Flyout por sí solo
+                return;
         }
 
         e.Handled = true;
@@ -407,6 +412,20 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainViewModel vm)
                 vm.Status = $"Carpeta de temas: {AppPaths.Themes}";
+        }
+    }
+
+    private async void OnOpenDataFolder(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.DataDirectory);
+            await Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(AppPaths.DataDirectory));
+        }
+        catch (Exception)
+        {
+            if (DataContext is MainViewModel vm)
+                vm.Status = $"Carpeta de datos: {AppPaths.DataDirectory}";
         }
     }
 
@@ -458,6 +477,15 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Configuración se cierra con Esc. El inmersivo va antes (y al abrirse ya la cierra); un cuadro de texto o
+        // una lista desplegable que usan Esc para lo suyo marcan la tecla como atendida y no se llega aquí.
+        if (e.Key == Key.Escape && DataContext is MainViewModel { Settings.IsOpen: true } open)
+        {
+            open.Settings.CloseCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         base.OnKeyDown(e);
     }
 
@@ -478,11 +506,24 @@ public partial class MainWindow : Window
         }
     }
 
-    // Puro código de vista: delega toda la lógica en el ViewModel.
-    private void OnTrackDoubleTapped(object? sender, TappedEventArgs e)
+    // Clic y doble clic en la lista de canciones. Puro código de vista: si reproduce o no lo decide Core
+    // (TrackClick, docs/specs/settings-panel.md, criterios 9 y 10) y reproducir es cosa del ViewModel.
+    private void OnTrackTapped(object? sender, TappedEventArgs e) => OnTrackClicked(e, clickCount: 1);
+
+    private void OnTrackDoubleTapped(object? sender, TappedEventArgs e) => OnTrackClicked(e, clickCount: 2);
+
+    private void OnTrackClicked(TappedEventArgs e, int clickCount)
     {
-        if (DataContext is MainViewModel vm && vm.SelectedTrack is { } track)
-            vm.PlayTrackCommand.Execute(track);
+        // Solo cuenta la fila pulsada: la barra de desplazamiento o el hueco vacío de la lista no reproducen nada
+        // (antes el doble clic ahí reproducía la pista seleccionada; docs/specs/audit-3.md, H5).
+        if (DataContext is not MainViewModel vm
+            || e.Source is not Control { DataContext: TrackItemViewModel item })
+            return;
+
+        var playingThis = vm.IsPlaying && vm.CurrentTrack?.Track.Id == item.Track.Id;
+        var modifier = (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Shift)) != 0;
+        if (TrackClick.ShouldPlay(vm.Settings.PlayOnSingleClick, clickCount, isLeftButton: true, modifier, playingThis))
+            vm.PlayTrackCommand.Execute(item);
     }
 
     private void OnLyricTapped(object? sender, TappedEventArgs e)
