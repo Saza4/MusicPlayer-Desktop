@@ -41,6 +41,7 @@ public partial class IslandWindow : Window
     private readonly System.Diagnostics.Stopwatch _waveClock = new();
     private MainViewModel? _viewModel;
     private TimeSpan _titleStart; // lectura de _waveClock cuando el título actual empezó a mostrarse
+    private bool _seeking;        // arrastrando la barra de progreso: la isla no se colapsa hasta soltar
     private bool _skipWave;       // a 30 fps (título desplazándose), la onda se actualiza un fotograma de cada dos
 
     /// <summary>Clic en la carátula o el título: el controlador trae la ventana principal al frente.</summary>
@@ -53,7 +54,7 @@ public partial class IslandWindow : Window
         _collapseDelay = new DispatcherTimer(IslandMetrics.CollapseDelay, DispatcherPriority.Normal, (_, _) =>
         {
             _collapseDelay!.Stop();
-            Run(_hover.CollapseDelayElapsed(IsPointerOverPill()));
+            Run(_hover.CollapseDelayElapsed(_seeking || IsPointerOverPill()));
         });
         _collapseEnd = new DispatcherTimer(IslandMetrics.CollapseDuration, DispatcherPriority.Normal, (_, _) =>
         {
@@ -171,16 +172,50 @@ public partial class IslandWindow : Window
     }
 
     /// <summary>
-    /// Clic en la barra de progreso: un solo seek a esa fracción. La barra se enlaza solo para leer
-    /// (OneWay), así que el refresco del temporizador nunca provoca otro seek.
+    /// Barra de progreso: clic o arrastre, como la de la ventana principal. Mientras se arrastra, la barra y los
+    /// tiempos siguen al cursor y el audio no salta; al soltar hay un único seek (BeginScrub y EndScrub del
+    /// ViewModel, los mismos que usa la barra principal). La barra se enlaza solo para leer (OneWay), así que el
+    /// refresco del temporizador nunca provoca otro seek.
     /// </summary>
     private void OnSeekPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(SeekArea).Properties.IsLeftButtonPressed) return;
-        var width = ProgressBar.Bounds.Width;
-        if (width <= 0) return;
-        (DataContext as MainViewModel)?.SeekToFraction(e.GetPosition(ProgressBar).X / width);
+        if (DataContext is not MainViewModel vm || ProgressBar.Bounds.Width <= 0) return;
+
+        _seeking = true;
+        vm.BeginScrub();
+        e.Pointer.Capture(SeekArea);
+        SeekTo(vm, e);
         e.Handled = true;
+    }
+
+    private void OnSeekMoved(object? sender, PointerEventArgs e)
+    {
+        if (_seeking && DataContext is MainViewModel vm) SeekTo(vm, e);
+    }
+
+    private void OnSeekReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_seeking) return;
+        e.Pointer.Capture(null); // PointerCaptureLost termina el arrastre
+        e.Handled = true;
+    }
+
+    // Aquí acaba todo arrastre: al soltar, o si Windows quita la captura (otra ventana, Alt+Tab).
+    private void OnSeekCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (!_seeking) return;
+        _seeking = false;
+        (DataContext as MainViewModel)?.EndScrub();
+        // Si el cursor salió de la pastilla durante el arrastre, no habrá otro aviso de salida: se pide ahora.
+        if (!IsPointerOverPill()) Run(_hover.PointerExited());
+    }
+
+    // Fuera de la barra, el arrastre se queda en el extremo (SeekToFraction acota la fracción).
+    private void SeekTo(MainViewModel vm, PointerEventArgs e)
+    {
+        var width = ProgressBar.Bounds.Width;
+        if (width > 0) vm.SeekToFraction(e.GetPosition(ProgressBar).X / width);
     }
 
     private void OnOpenMainPressed(object? sender, PointerPressedEventArgs e)

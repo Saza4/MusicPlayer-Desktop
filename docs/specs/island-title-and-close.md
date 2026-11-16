@@ -1,7 +1,7 @@
 # Spec: título desplazable y botones de ocultar y salir en la isla
 
 Estado: **M1 a M3 implementados el 15 de noviembre de 2026** (rama `feat/island-title-and-close`): título
-desplazable y «Ocultar isla». Falta M4 («Salir», después de `background-playback.md`) y la prueba a mano del autor
+desplazable y «Ocultar isla». Probado a mano por el autor. Falta M4 («Salir», después de `background-playback.md`)
 (ver «Resultado»). Compila con la CS8602 de siempre y pasan 1021 pruebas (811 en Core, 210 en Infrastructure). Depende de `settings-panel.md` (la casilla vive en
 Configuración) y, para el botón «Salir», de `background-playback.md`.
 
@@ -133,7 +133,18 @@ barra de reproducción de la ventana principal. Especificación original: `docs/
   el precio de la fluidez, aceptado al pedir 30 fps. Solo se paga con el ajuste activado, la isla a la vista, la
   pista sonando y un título que no cabe.
 
-**Sin verificar (falta la prueba a mano del autor):**
+**Añadido a petición del autor (15 de noviembre de 2026), fuera de los criterios de arriba: la barra de progreso
+de la isla se arrastra.** Mismo aspecto que antes (era solo clic). Usa `BeginScrub` y `EndScrub` de
+`MainViewModel`, como la barra principal: durante el arrastre la barra y los tiempos siguen al cursor y el audio
+no salta; al soltar hay un único salto. La isla no se colapsa mientras se arrastra, aunque el cursor salga de la
+pastilla; al soltar fuera, se colapsa. Comprobado con un arrastre de ratón simulado y capturas (barra siguiendo
+al cursor, isla expandida con el cursor fuera y el botón pulsado, colapso al soltar). Arrastrar hasta el final y
+soltar termina la pista, igual que en la barra principal.
+
+**Prueba a mano del autor (15 de noviembre de 2026):** título, casilla y «Ocultar isla» correctos; pidió 30 fps
+(hecho) y el arrastre de la barra (hecho, sin su prueba a mano todavía).
+
+**Sin verificar:**
 
 - El aspecto del desplazamiento en movimiento (velocidad, pausa y hueco son cuestión de gusto: se cambian en
   `IslandMetrics`).

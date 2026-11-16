@@ -185,7 +185,7 @@
                                 </Button>
                             </Grid>
 
-                            <!--  Progreso: transcurrido, barra (clic = seek) y restante con signo menos  -->
+                            <!--  Progreso: transcurrido, barra (clic o arrastre = seek) y restante con signo menos  -->
                             <Grid
                                 x:Name="Progress"
                                 Grid.Row="1"
@@ -201,7 +201,10 @@
                                     Grid.Column="1"
                                     Background="Transparent"
                                     Cursor="Hand"
-                                    PointerPressed="OnSeekPressed">
+                                    PointerCaptureLost="OnSeekCaptureLost"
+                                    PointerMoved="OnSeekMoved"
+                                    PointerPressed="OnSeekPressed"
+                                    PointerReleased="OnSeekReleased">
                                     <ProgressBar
                                         x:Name="ProgressBar"
                                         AutomationProperties.Name="Progreso"
