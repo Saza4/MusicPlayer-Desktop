@@ -24,6 +24,9 @@ public partial class SettingsViewModel(SettingsService settings) : ObservableObj
     /// <summary>La isla colapsada muestra «título — artista», desplazándose si no cabe.</summary>
     [ObservableProperty] private bool _islandShowTitle;
 
+    /// <summary>Cerrar la ventana la oculta a la bandeja y la música sigue (solo Windows).</summary>
+    [ObservableProperty] private bool _keepRunningOnClose;
+
     /// <summary>Las secciones de la isla y del segundo plano solo existen en Windows.</summary>
     public bool IsWindows { get; } = OperatingSystem.IsWindows();
 
@@ -47,6 +50,12 @@ public partial class SettingsViewModel(SettingsService settings) : ObservableObj
             settings.Update(s => s with { IslandShowTitle = value });
     }
 
+    partial void OnKeepRunningOnCloseChanged(bool value)
+    {
+        if (!_restoring)
+            settings.Update(s => s with { KeepRunningOnClose = value });
+    }
+
     /// <summary>Al arrancar: pone las opciones como estaban guardadas, sin volver a guardarlas.</summary>
     public void Restore(AppSettings saved)
     {
@@ -55,6 +64,7 @@ public partial class SettingsViewModel(SettingsService settings) : ObservableObj
         {
             PlayOnSingleClick = saved.PlayOnSingleClick;
             IslandShowTitle = saved.IslandShowTitle;
+            KeepRunningOnClose = saved.KeepRunningOnClose;
         }
         finally
         {

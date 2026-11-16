@@ -81,6 +81,17 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.True(loaded.Shuffle);
         Assert.False(loaded.PlayOnSingleClick); // docs/specs/settings-panel.md, criterio 12: lo nuevo, con su valor de siempre
         Assert.False(loaded.IslandShowTitle);   // docs/specs/island-title-and-close.md, criterio 1
+        Assert.False(loaded.KeepRunningOnClose); // docs/specs/background-playback.md, criterio 1
+    }
+
+    [Fact]
+    public async Task SaveThenLoad_KeepsKeepRunningOnClose()
+    {
+        var repository = new JsonSettingsRepository(FilePath);
+
+        await repository.SaveAsync(AppSettings.Default with { KeepRunningOnClose = true });
+
+        Assert.True((await repository.LoadAsync()).KeepRunningOnClose);
     }
 
     [Fact]

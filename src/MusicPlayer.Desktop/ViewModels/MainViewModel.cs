@@ -1000,6 +1000,18 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleIsland() => ShowIsland = !ShowIsland;
 
+    /// <summary>
+    /// La ventana principal está oculta en la bandeja (docs/specs/background-playback.md). Lo fija App al ocultarla
+    /// o mostrarla; la isla lo usa para enseñar su botón «Salir».
+    /// </summary>
+    [ObservableProperty] private bool _isMainWindowHidden;
+
+    /// <summary>Alguien pidió salir de verdad (botón «Salir» de la isla): App termina la app por el camino normal.</summary>
+    public event Action? ExitRequested;
+
+    [RelayCommand]
+    private void Exit() => ExitRequested?.Invoke();
+
     /// <summary>Botón «Ocultar isla» de la propia isla: la música sigue y la línea de estado dice dónde reactivarla.</summary>
     [RelayCommand]
     private void HideIsland()

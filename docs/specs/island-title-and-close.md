@@ -1,7 +1,7 @@
 # Spec: título desplazable y botones de ocultar y salir en la isla
 
 Estado: **M1 a M3 implementados el 15 de noviembre de 2026** (rama `feat/island-title-and-close`): título
-desplazable y «Ocultar isla». Probado a mano por el autor. Falta M4 («Salir», después de `background-playback.md`)
+desplazable y «Ocultar isla». Probado a mano por el autor. M4 («Salir del reproductor») se hizo con `background-playback.md`: el botón aparece junto a «Ocultar isla» solo con la ventana oculta en la bandeja
 (ver «Resultado»). Compila con la CS8602 de siempre y pasan 1021 pruebas (811 en Core, 210 en Infrastructure). Depende de `settings-panel.md` (la casilla vive en
 Configuración) y, para el botón «Salir», de `background-playback.md`.
 

@@ -150,6 +150,8 @@ public partial class IslandWindow : Window
         ArtistText.FontSize = IslandMetrics.ArtistFontSize;
         HideButton.Width = HideButton.Height = IslandMetrics.HideButtonSize;
         HideButton.Margin = new Thickness(IslandMetrics.HeaderSpacing / 2, 0, 0, 0);
+        ExitButton.Width = ExitButton.Height = IslandMetrics.HideButtonSize;
+        ExitButton.Margin = HideButton.Margin;
 
         // Progreso
         Progress.Margin = new Thickness(0, IslandMetrics.HeaderToProgress, 0, 0);
