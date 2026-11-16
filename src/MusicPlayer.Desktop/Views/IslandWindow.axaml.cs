@@ -41,6 +41,7 @@ public partial class IslandWindow : Window
     private readonly System.Diagnostics.Stopwatch _waveClock = new();
     private MainViewModel? _viewModel;
     private TimeSpan _titleStart; // lectura de _waveClock cuando el título actual empezó a mostrarse
+    private bool _skipWave;       // a 30 fps (título desplazándose), la onda se actualiza un fotograma de cada dos
 
     /// <summary>Clic en la carátula o el título: el controlador trae la ventana principal al frente.</summary>
     public event EventHandler? OpenMainRequested;
@@ -349,6 +350,19 @@ public partial class IslandWindow : Window
     /// </summary>
     private void OnWaveFrame(object? sender, EventArgs e)
     {
+        // Solo un título que se desplaza necesita 30 fps; sin él (oculto, o cabe), todo sigue a los 15 de la onda.
+        var scrolling = CollapsedTitle.IsVisible && !Marquee.Fits(CollapsedTitle.TextWidth, CollapsedTitle.Bounds.Width);
+        var interval = scrolling ? IslandMetrics.MarqueeFrameInterval : IslandMetrics.WaveFrameInterval;
+        if (_waveTimer.Interval != interval) _waveTimer.Interval = interval;
+
+        if (scrolling)
+            CollapsedTitle.Offset = Marquee.Offset(_waveClock.Elapsed - _titleStart, CollapsedTitle.TextWidth,
+                CollapsedTitle.Bounds.Width, IslandMetrics.MarqueeSpeed, IslandMetrics.MarqueeStartPause,
+                IslandMetrics.MarqueeGap);
+
+        _skipWave = scrolling && !_skipWave;
+        if (_skipWave) return;
+
         var t = _waveClock.Elapsed.TotalMilliseconds;
         var periods = IslandMetrics.WaveBarPeriods;
         foreach (var wave in new[] { CollapsedWave, ExpandedWave })
@@ -359,13 +373,6 @@ public partial class IslandWindow : Window
                 ((ScaleTransform)wave.Children[i].RenderTransform!).ScaleY =
                     IslandMetrics.WaveMinScale + (1 - IslandMetrics.WaveMinScale) * level;
             }
-
-        // El título se mueve con el mismo temporizador (ninguno más). Si está oculto o cabe, el desplazamiento
-        // no cambia de 0 y no se repinta nada.
-        if (CollapsedTitle.IsVisible)
-            CollapsedTitle.Offset = Marquee.Offset(_waveClock.Elapsed - _titleStart, CollapsedTitle.TextWidth,
-                CollapsedTitle.Bounds.Width, IslandMetrics.MarqueeSpeed, IslandMetrics.MarqueeStartPause,
-                IslandMetrics.MarqueeGap);
     }
 
     /// <summary>Texto de la isla colapsada. Con un texto nuevo, el desplazamiento vuelve al principio.</summary>

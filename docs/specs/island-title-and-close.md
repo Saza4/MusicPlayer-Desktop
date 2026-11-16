@@ -33,8 +33,11 @@ barra de reproducción de la ventana principal. Especificación original: `docs/
    pruebas: texto que cabe (siempre 0), pausa inicial, mitad del recorrido, hueco y vuelta, y anchos de 0.
 6. El dibujo es un control propio (`Controls/MarqueeText`) que no crea objetos de texto en cada fotograma: el
    texto se compone una vez por cambio de texto, de fuente o de ancho.
-7. El movimiento usa el temporizador de la onda (15 fps, `IslandMetrics.WaveFrameInterval`): solo corre con la
-   isla visible y la pista sonando. Con la isla oculta o en pausa no se pide ningún fotograma.
+7. El movimiento usa el temporizador de la onda: solo corre con la isla visible y la pista sonando. Con la isla
+   oculta o en pausa no se pide ningún fotograma. Mientras el título se desplaza, ese temporizador va a 30 fps
+   (`IslandMetrics.MarqueeFrameInterval`) y la onda sigue a 15 (un fotograma de cada dos); sin título que
+   desplazar, va a los 15 fps de siempre. *(Cambiado el 15 de noviembre de 2026: el autor lo probó a 15 fps y se
+   veía a saltos.)*
 8. Coste: medido en Release con `tools/medir-cpu.ps1`, la isla colapsada con el título desplazándose no gasta más
    de 1 punto de un núcleo por encima de la isla con solo la onda. Las cifras se anotan aquí.
 9. El ancho de la pastilla colapsada no cambia (`IslandMetrics.CollapsedWidth`), así que la región de clics y la
@@ -92,8 +95,8 @@ barra de reproducción de la ventana principal. Especificación original: `docs/
 
 **Decisiones tomadas al implementar (revisables):**
 
-1. **Medidas** (`IslandMetrics`): letra de 12, margen de 8 a cada lado, 30 DIPs por segundo (2 por fotograma a
-   15 fps), pausa inicial de 2 s y hueco de 36. Con la pastilla de 180, al texto le quedan unos 93 DIPs.
+1. **Medidas** (`IslandMetrics`): letra de 12, margen de 8 a cada lado, 30 DIPs por segundo (1 por fotograma a
+   30 fps), pausa inicial de 2 s y hueco de 36. Con la pastilla de 180, al texto le quedan unos 93 DIPs.
 2. **Bucle sin salto:** tras el hueco se dibuja una segunda copia del texto; cuando llega al principio, la vuelta
    empieza de nuevo con su pausa. `Marquee.Offset` devuelve como mucho `ancho del texto + hueco`.
 3. **El texto lo pone la ventana** (`IslandWindow.UpdateTitle`, con `Marquee.Label`): «título — artista», solo el
@@ -119,10 +122,16 @@ barra de reproducción de la ventana principal. Especificación original: `docs/
 
   | | Pasadas (% de un núcleo) | Media |
   | --- | --- | --- |
-  | Solo la onda | 8,7 / 5,5 / 6,1 | 6,8 |
-  | Onda y título desplazándose | 7,8 / 5,5 / 5,5 | 6,2 |
+  | Solo la onda (primera medida) | 8,7 / 5,5 / 6,1 | 6,8 |
+  | Onda y título a 15 fps (primera medida) | 7,8 / 5,5 / 5,5 | 6,2 |
+  | Solo la onda (segunda medida) | 6,4 / 6,2 / 4,8 | 5,8 |
+  | Onda a 15 fps y título a 30 fps (segunda medida) | 11,1 / 6,7 / 7,0 | 8,3 |
 
-  La diferencia queda dentro de la variación entre pasadas: el título no añade coste medible.
+  A 15 fps el título no añadía coste medible. **A 30 fps (lo que pidió el autor tras probarlo) cuesta entre 1 y
+  2,5 puntos de un núcleo más** que la onda sola (2,5 con la primera pasada, que salió alta; alrededor de 1,4 sin
+  ella). **El criterio 8 (no más de 1 punto) queda rebasado por poco**, con medidas ruidosas y pocas pasadas: es
+  el precio de la fluidez, aceptado al pedir 30 fps. Solo se paga con el ajuste activado, la isla a la vista, la
+  pista sonando y un título que no cabe.
 
 **Sin verificar (falta la prueba a mano del autor):**
 

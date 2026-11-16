@@ -24,8 +24,10 @@ public static class IslandMetrics
     // borde de la pastilla sale a escalones; con 2 el corte cae en zona transparente (medido en M5).
     public const double CollapsedHitMargin = 2;
 
-    // Título de la isla colapsada (opcional): entre la miniatura y la onda; si no cabe, se desplaza al ritmo de
-    // la onda (WaveFrameInterval). A 15 fps y 30 DIPs por segundo avanza 2 DIPs por fotograma.
+    // Título de la isla colapsada (opcional): entre la miniatura y la onda. Si no cabe, se desplaza con el
+    // temporizador de la onda, que mientras tanto va a MarqueeFrameInterval (30 fps: 1 DIP por fotograma a 30 DIPs
+    // por segundo; a 15 fps se veía a saltos). La onda sigue a 15 fps: se actualiza un fotograma de cada dos.
+    public static readonly TimeSpan MarqueeFrameInterval = TimeSpan.FromMilliseconds(1000.0 / 30);
     public const double CollapsedTitleFontSize = 12;
     public const double CollapsedTitleMargin = 8;        // a cada lado, contra la miniatura y la onda
     public const double MarqueeSpeed = 30;               // DIPs por segundo
