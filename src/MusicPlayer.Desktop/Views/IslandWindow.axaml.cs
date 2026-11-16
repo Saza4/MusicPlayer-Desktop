@@ -40,6 +40,7 @@ public partial class IslandWindow : Window
     private readonly DispatcherTimer _waveTimer;
     private readonly System.Diagnostics.Stopwatch _waveClock = new();
     private MainViewModel? _viewModel;
+    private TimeSpan _titleStart; // lectura de _waveClock cuando el título actual empezó a mostrarse
 
     /// <summary>Clic en la carátula o el título: el controlador trae la ventana principal al frente.</summary>
     public event EventHandler? OpenMainRequested;
@@ -96,6 +97,9 @@ public partial class IslandWindow : Window
         var coverRadius = new CornerRadius(IslandMetrics.CollapsedCoverCornerRadius);
         CollapsedPlaceholder.CornerRadius = coverRadius;
         CollapsedArt.CornerRadius = coverRadius;
+        CollapsedTitle.FontSize = IslandMetrics.CollapsedTitleFontSize;
+        CollapsedTitle.Margin = new Thickness(IslandMetrics.CollapsedTitleMargin, 0);
+        CollapsedTitle.Gap = IslandMetrics.MarqueeGap;
 
         ApplyExpandedMetrics();
 
@@ -142,6 +146,8 @@ public partial class IslandWindow : Window
         Texts.Margin = new Thickness(IslandMetrics.HeaderSpacing, 0);
         TitleText.FontSize = IslandMetrics.TitleFontSize;
         ArtistText.FontSize = IslandMetrics.ArtistFontSize;
+        HideButton.Width = HideButton.Height = IslandMetrics.HideButtonSize;
+        HideButton.Margin = new Thickness(IslandMetrics.HeaderSpacing / 2, 0, 0, 0);
 
         // Progreso
         Progress.Margin = new Thickness(0, IslandMetrics.HeaderToProgress, 0, 0);
@@ -353,6 +359,25 @@ public partial class IslandWindow : Window
                 ((ScaleTransform)wave.Children[i].RenderTransform!).ScaleY =
                     IslandMetrics.WaveMinScale + (1 - IslandMetrics.WaveMinScale) * level;
             }
+
+        // El título se mueve con el mismo temporizador (ninguno más). Si está oculto o cabe, el desplazamiento
+        // no cambia de 0 y no se repinta nada.
+        if (CollapsedTitle.IsVisible)
+            CollapsedTitle.Offset = Marquee.Offset(_waveClock.Elapsed - _titleStart, CollapsedTitle.TextWidth,
+                CollapsedTitle.Bounds.Width, IslandMetrics.MarqueeSpeed, IslandMetrics.MarqueeStartPause,
+                IslandMetrics.MarqueeGap);
+    }
+
+    /// <summary>Texto de la isla colapsada. Con un texto nuevo, el desplazamiento vuelve al principio.</summary>
+    private void UpdateTitle()
+    {
+        var track = _viewModel?.CurrentTrack;
+        var text = Marquee.Label(track?.Title, track?.Artist);
+        if (text == CollapsedTitle.Text) return;
+
+        CollapsedTitle.Text = text;
+        CollapsedTitle.Offset = 0;
+        _titleStart = _waveClock.Elapsed;
     }
 
     private void WatchViewModel()
@@ -360,12 +385,14 @@ public partial class IslandWindow : Window
         if (_viewModel is not null) _viewModel.PropertyChanged -= OnViewModelChanged;
         _viewModel = DataContext as MainViewModel;
         if (_viewModel is not null) _viewModel.PropertyChanged += OnViewModelChanged;
+        UpdateTitle();
         UpdateWave();
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainViewModel.IsPlaying)) UpdateWave();
+        else if (e.PropertyName == nameof(MainViewModel.CurrentTrack)) UpdateTitle();
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -391,8 +418,11 @@ public partial class IslandWindow : Window
     private void UpdateWave()
     {
         var animate = IsVisible && _viewModel?.IsPlaying == true;
+        CollapsedTitle.IsScrolling = animate; // en pausa: quieto al principio y con «…»
         if (animate == _waveTimer.IsEnabled) return;
 
+        _titleStart = TimeSpan.Zero; // el reloj vuelve a 0 en los dos casos: el título empieza por el principio
+        CollapsedTitle.Offset = 0;
         if (animate)
         {
             _waveClock.Restart();

@@ -1,6 +1,8 @@
 # Spec: título desplazable y botones de ocultar y salir en la isla
 
-Estado: **aprobada por el autor el 15 de noviembre de 2026**. Sin código todavía. Depende de `settings-panel.md` (la casilla vive en
+Estado: **M1 a M3 implementados el 15 de noviembre de 2026** (rama `feat/island-title-and-close`): título
+desplazable y «Ocultar isla». Falta M4 («Salir», después de `background-playback.md`) y la prueba a mano del autor
+(ver «Resultado»). Compila con la CS8602 de siempre y pasan 1021 pruebas (811 en Core, 210 en Infrastructure). Depende de `settings-panel.md` (la casilla vive en
 Configuración) y, para el botón «Salir», de `background-playback.md`.
 
 ## Context
@@ -85,6 +87,51 @@ barra de reproducción de la ventana principal. Especificación original: `docs/
 - `IslandWindow.axaml.cs`: `OnWaveFrame` actualiza también `Offset`; `UpdateWave` ya decide cuándo corre.
 - `MainViewModel`: `HideIslandCommand` (pone `ShowIsland = false` y escribe la línea de estado) y la propiedad que
   dice si la ventana principal está oculta (la publica `background-playback.md`).
+
+## Resultado (M1 a M3)
+
+**Decisiones tomadas al implementar (revisables):**
+
+1. **Medidas** (`IslandMetrics`): letra de 12, margen de 8 a cada lado, 30 DIPs por segundo (2 por fotograma a
+   15 fps), pausa inicial de 2 s y hueco de 36. Con la pastilla de 180, al texto le quedan unos 93 DIPs.
+2. **Bucle sin salto:** tras el hueco se dibuja una segunda copia del texto; cuando llega al principio, la vuelta
+   empieza de nuevo con su pausa. `Marquee.Offset` devuelve como mucho `ancho del texto + hueco`.
+3. **El texto lo pone la ventana** (`IslandWindow.UpdateTitle`, con `Marquee.Label`): «título — artista», solo el
+   título sin artista. Un texto nuevo vuelve al principio. Al reanudar tras una pausa también empieza por el
+   principio (el reloj de la onda se reinicia).
+4. **El ajuste vive en `SettingsViewModel`** (`IslandShowTitle`), como el del clic. La casilla se desactiva si la
+   isla está apagada.
+5. **«Ocultar isla»** va arriba a la derecha de la cabecera expandida, **junto a** la onda (no en su lugar): un
+   botón `.icon` de 24 con una ×. El título y el artista expandidos pierden 30 DIPs de ancho.
+6. **`MainViewModel.HideIslandCommand`** apaga `ShowIsland` y escribe la línea de estado del criterio 12.
+
+**Verificado:**
+
+- 24 pruebas nuevas en Core (`MarqueeTests`) y 1 en Infrastructure (guardar y leer el ajuste; un `settings.json`
+  de la v1.3.0 lo carga desactivado).
+- Capturas en Windows (escala 100 %, `settings.json` cambiado con copia previa y restaurado, intacto por hash;
+  volumen a 0 durante la prueba): el texto se desplaza con la pista sonando (dos capturas con 1,5 s de diferencia
+  muestran tramos distintos), en pausa queda «It Wasn't Me …», con el ajuste apagado la isla se ve como antes, el
+  botón «Ocultar isla» aparece al expandir con su globo, un clic en él oculta la isla y la línea de estado dice
+  «Isla oculta. Se activa en Configuración o en la barra de reproducción».
+- **Coste (criterio 8)**, Release, `tools/medir-cpu.ps1`, 3 pasadas de 10 s, ventana principal minimizada, isla
+  colapsada y pista sonando:
+
+  | | Pasadas (% de un núcleo) | Media |
+  | --- | --- | --- |
+  | Solo la onda | 8,7 / 5,5 / 6,1 | 6,8 |
+  | Onda y título desplazándose | 7,8 / 5,5 / 5,5 | 6,2 |
+
+  La diferencia queda dentro de la variación entre pasadas: el título no añade coste medible.
+
+**Sin verificar (falta la prueba a mano del autor):**
+
+- El aspecto del desplazamiento en movimiento (velocidad, pausa y hueco son cuestión de gusto: se cambian en
+  `IslandMetrics`).
+- Cambio de pista con la isla a la vista, y un título corto que cabe.
+- La casilla de Configuración encendiendo y apagando el título con la isla visible.
+- Hover durante el desplazamiento, y «Ocultar isla» durante el fundido de aparición.
+- Escalas de pantalla distintas de 100 % y cambio de pantalla principal.
 
 ## Hitos
 

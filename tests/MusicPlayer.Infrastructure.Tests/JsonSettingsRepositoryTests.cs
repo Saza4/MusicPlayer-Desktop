@@ -80,6 +80,17 @@ public class JsonSettingsRepositoryTests : IDisposable
         Assert.Equal("negro-puro", loaded.ThemeId);
         Assert.True(loaded.Shuffle);
         Assert.False(loaded.PlayOnSingleClick); // docs/specs/settings-panel.md, criterio 12: lo nuevo, con su valor de siempre
+        Assert.False(loaded.IslandShowTitle);   // docs/specs/island-title-and-close.md, criterio 1
+    }
+
+    [Fact]
+    public async Task SaveThenLoad_KeepsIslandShowTitle()
+    {
+        var repository = new JsonSettingsRepository(FilePath);
+
+        await repository.SaveAsync(AppSettings.Default with { IslandShowTitle = true });
+
+        Assert.True((await repository.LoadAsync()).IslandShowTitle);
     }
 
     [Fact]

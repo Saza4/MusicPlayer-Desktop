@@ -24,6 +24,14 @@ public static class IslandMetrics
     // borde de la pastilla sale a escalones; con 2 el corte cae en zona transparente (medido en M5).
     public const double CollapsedHitMargin = 2;
 
+    // Título de la isla colapsada (opcional): entre la miniatura y la onda; si no cabe, se desplaza al ritmo de
+    // la onda (WaveFrameInterval). A 15 fps y 30 DIPs por segundo avanza 2 DIPs por fotograma.
+    public const double CollapsedTitleFontSize = 12;
+    public const double CollapsedTitleMargin = 8;        // a cada lado, contra la miniatura y la onda
+    public const double MarqueeSpeed = 30;               // DIPs por segundo
+    public const double MarqueeGap = 36;                 // hueco entre el final del texto y su siguiente copia
+    public static readonly TimeSpan MarqueeStartPause = TimeSpan.FromSeconds(2);
+
     // Pastilla expandida
     public const double ExpandedWidth = 340;
     public const double ExpandedHeight = 144;
@@ -46,6 +54,7 @@ public static class IslandMetrics
     public const double TitleFontSize = 14;
     public const double ArtistFontSize = 12;
     public const double TimeFontSize = 11;
+    public const double HideButtonSize = 24;         // «Ocultar isla», arriba a la derecha de la cabecera
 
     // Sombra: solo con la pastilla expandida. La ventana deja este margen a los lados y debajo.
     public const double ExpandedShadowMargin = 16;

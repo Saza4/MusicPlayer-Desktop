@@ -2,6 +2,7 @@
     x:Class="MusicPlayer.Desktop.Views.IslandWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:MusicPlayer.Desktop.Controls"
     xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
     Title="Isla"
     x:DataType="vm:MainViewModel"
@@ -70,6 +71,17 @@
                                 </Border>
                             </Panel>
 
+                            <!--
+                                Título (opcional, ajuste IslandShowTitle): «título — artista». Si no cabe, se desplaza
+                                con el temporizador de la onda; en pausa queda quieto y recortado con «…».
+                            -->
+                            <controls:MarqueeText
+                                x:Name="CollapsedTitle"
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource ThemeIslandTextBrush}"
+                                IsVisible="{Binding Settings.IslandShowTitle}" />
+
                             <!--  Onda: se anima en el código (UpdateWave) solo con la isla visible y la pista sonando  -->
                             <StackPanel
                                 x:Name="CollapsedWave"
@@ -99,7 +111,7 @@
                             RowDefinitions="Auto,Auto,Auto">
 
                             <!--  Cabecera: carátula, título y artista (ancho fijo, «…» si no caben) y onda  -->
-                            <Grid x:Name="Header" ColumnDefinitions="Auto,*,Auto">
+                            <Grid x:Name="Header" ColumnDefinitions="Auto,*,Auto,Auto">
                                 <!--  Carátula y textos: un clic trae la ventana principal al frente  -->
                                 <Panel
                                     x:Name="ExpandedCover"
@@ -156,6 +168,21 @@
                                     <Border Classes="bar" Height="16" />
                                     <Border Classes="bar" Height="6" />
                                 </StackPanel>
+
+                                <!--  Ocultar isla: apaga el ajuste «Mostrar isla flotante»; la música sigue  -->
+                                <Button
+                                    x:Name="HideButton"
+                                    Grid.Column="3"
+                                    VerticalAlignment="Top"
+                                    AutomationProperties.Name="Ocultar isla"
+                                    Classes="icon"
+                                    Command="{Binding HideIslandCommand}"
+                                    ToolTip.Tip="Ocultar isla">
+                                    <PathIcon
+                                        Width="10"
+                                        Height="10"
+                                        Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                                </Button>
                             </Grid>
 
                             <!--  Progreso: transcurrido, barra (clic = seek) y restante con signo menos  -->
