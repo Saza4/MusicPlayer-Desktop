@@ -162,49 +162,6 @@
                             <TextBlock Classes="label" Text="Configuración" />
                         </StackPanel>
                     </Button>
-                    <!--  Tema: la lista previsualiza al pasar el cursor o con las flechas; clic o Enter confirma  -->
-                    <Button
-                        x:Name="ThemeButton"
-                        Margin="8,0,0,0"
-                        AutomationProperties.Name="Tema"
-                        Classes="action"
-                        DockPanel.Dock="Right"
-                        ToolTip.Tip="Cambiar el tema">
-                        <Button.Content>
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <PathIcon Data="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
-                                <TextBlock Classes="label" Text="Tema" />
-                            </StackPanel>
-                        </Button.Content>
-                        <Button.Flyout>
-                            <Flyout
-                                Closed="OnThemeFlyoutClosed"
-                                Opened="OnThemeFlyoutOpened"
-                                Placement="BottomEdgeAlignedRight">
-                                <StackPanel Width="220" Spacing="8">
-                                    <ListBox
-                                        x:Name="ThemeList"
-                                        ItemsSource="{Binding Themes.Items}"
-                                        PointerExited="OnThemeListPointerExited"
-                                        PointerMoved="OnThemeListPointerMoved"
-                                        SelectedItem="{Binding Themes.SelectedChoice}"
-                                        Tapped="OnThemeListTapped">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:ThemeChoice">
-                                                <TextBlock Text="{Binding Name}" />
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                    <Button
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Center"
-                                        Click="OnOpenThemesFolder"
-                                        Content="Carpeta de temas"
-                                        Focusable="False" />
-                                </StackPanel>
-                            </Flyout>
-                        </Button.Flyout>
-                    </Button>
                     <TextBox
                         Width="240"
                         DockPanel.Dock="Right"
@@ -1069,7 +1026,8 @@
 
                 <!--
                     Configuración (docs/specs/settings-panel.md): una capa sobre la zona central, no una ventana. Cada
-                    opción se guarda al cambiarla. Solo CheckBox, ComboBox y Button, para no ampliar OwnsKeyboard.
+                    opción se guarda al cambiarla. Solo CheckBox y Button (y el desplegable de «Tema», cuyas teclas atiende la
+                    ventana), para no ampliar OwnsKeyboard.
                 -->
                 <Border
                     Grid.ColumnSpan="3"
@@ -1096,20 +1054,48 @@
 
                             <StackPanel Classes="settings-section" Spacing="8">
                                 <TextBlock Classes="settings-title" Text="APARIENCIA" />
-                                <StackPanel Orientation="Horizontal" Spacing="12">
-                                    <TextBlock VerticalAlignment="Center" Text="Tema" />
-                                    <ComboBox
-                                        MinWidth="200"
-                                        AutomationProperties.Name="Tema"
-                                        ItemsSource="{Binding Themes.Items}"
-                                        SelectedItem="{Binding Themes.CommittedChoice}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:ThemeChoice">
-                                                <TextBlock Text="{Binding Name}" />
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </StackPanel>
+                                <!--  Tema: la lista previsualiza al pasar el cursor o con las flechas; clic o Enter confirma  -->
+                                <Button
+                                    x:Name="ThemeButton"
+                                    HorizontalAlignment="Left"
+                                    AutomationProperties.Name="Tema"
+                                    Classes="action"
+                                    ToolTip.Tip="Cambiar el tema">
+                                    <Button.Content>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <PathIcon Data="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+                                            <TextBlock Classes="label" Text="Tema" />
+                                        </StackPanel>
+                                    </Button.Content>
+                                    <Button.Flyout>
+                                        <Flyout
+                                            Closed="OnThemeFlyoutClosed"
+                                            Opened="OnThemeFlyoutOpened"
+                                            Placement="BottomEdgeAlignedLeft">
+                                            <StackPanel Width="220" Spacing="8">
+                                                <ListBox
+                                                    x:Name="ThemeList"
+                                                    ItemsSource="{Binding Themes.Items}"
+                                                    PointerExited="OnThemeListPointerExited"
+                                                    PointerMoved="OnThemeListPointerMoved"
+                                                    SelectedItem="{Binding Themes.SelectedChoice}"
+                                                    Tapped="OnThemeListTapped">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ThemeChoice">
+                                                            <TextBlock Text="{Binding Name}" />
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                                <Button
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Click="OnOpenThemesFolder"
+                                                    Content="Carpeta de temas"
+                                                    Focusable="False" />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
                             </StackPanel>
 
                             <StackPanel Classes="settings-section" Spacing="8">

@@ -25,7 +25,7 @@ sección.
 
 ### ACCEPTANCE CRITERIA
 
-1. La barra superior tiene un botón «Configuración» con icono de engranaje, a la derecha junto a «Tema», con
+1. La barra superior tiene un botón «Configuración» con icono de engranaje, a la derecha, con
    `Classes="action"`, `ToolTip.Tip`, `AutomationProperties.Name` y el texto en un `TextBlock.label` (se oculta
    en modo `compact`).
 2. El botón abre y cierra una vista «Configuración» que es una capa dentro de `MainWindow` (no una ventana): cubre
@@ -35,8 +35,9 @@ sección.
 4. Secciones, en este orden: **Apariencia**, **Reproducción**, **Isla flotante**, **Segundo plano**, **Letras**
    y **Datos**. Una sección sin opciones todavía no se muestra. «Isla flotante» y «Segundo plano» solo aparecen
    en Windows.
-5. **Apariencia:** una lista desplegable con los mismos temas que el botón «Tema»; elegir uno lo aplica y lo
-   guarda (`ThemeViewModel.Commit`). El botón «Tema» de la barra superior sigue como está.
+5. **Apariencia:** el botón «Tema» de siempre (icono, lista con vista previa y «Carpeta de temas»), que **se muda**
+   de la barra superior a esta sección: hay un solo control de tema. *(Cambiado el 15 de noviembre de 2026 a
+   petición del autor tras probarlo: antes era una lista desplegable aparte y el botón seguía en la barra.)*
 6. **Isla flotante:** una casilla «Mostrar la isla flotante» enlazada al mismo `ShowIsland` que el botón de la
    barra de reproducción (los dos se mantienen sincronizados).
 7. **Datos:** la ruta de la carpeta de datos y un botón «Abrir carpeta» (el mismo mecanismo que «Carpeta de
@@ -60,7 +61,8 @@ sección.
 
 ### OUT OF SCOPE
 
-- Mover o quitar los controles actuales (botón «Tema», botón de la isla, flyout de capas de letra).
+- Mover o quitar los demás controles actuales (botón de la isla, flyout de capas de letra). El botón «Tema» sí se
+  muda (criterio 5).
 - Ajustes nuevos que nadie ha pedido (carpetas vigiladas, atajos configurables, idioma de la interfaz).
 - Un rediseño visual de la app: «la interfaz sigue estando fea» necesita referencias del autor y spec propia.
 - Reproducir con un clic en Álbumes y Artistas: ahí un clic ya abre el álbum o el artista.
@@ -103,9 +105,10 @@ sección.
    el primer clic la pone a sonar; llegue el segundo clic como «doble clic» o como otro clic (depende de la
    plataforma), no la reinicia. De paso, un clic suelto en la pista que suena tampoco la reinicia. Con el ajuste
    desactivado, el doble clic en la pista que suena la reinicia, como siempre.
-2. **Criterio 5, el tema:** `ThemeViewModel.CommittedChoice` (el tema confirmado, sin vista previa) y
-   `ReloadAsync` (relee los temas de usuario sin marcar el selector como abierto, para que los atajos de teclado
-   sigan funcionando). Configuración los relee al abrirse.
+2. **Criterio 5, el tema:** la primera versión añadía una lista desplegable y dejaba el botón «Tema» en la barra
+   superior. El autor la probó y pidió un solo control: el botón «Tema» se mudó tal cual a Apariencia y la lista
+   desplegable se quitó (con `CommittedChoice`, que ya no hace falta). Con la lista de temas abierta, `Esc` cierra
+   solo la lista, no la vista; al cerrarse, el foco vuelve al botón.
 3. **Cierre de la vista:** con `Esc`, con «Cerrar», con el propio engranaje, al entrar en el modo inmersivo y al
    abrir un panel de edición (Convertir, Limpiar etiquetas, Editar etiquetas). El `Esc` del inmersivo va antes; un
    cuadro de texto o una lista desplegable que usan `Esc` lo marcan como atendido y no cierran la vista.
@@ -118,17 +121,20 @@ sección.
 `settings.json` de la v1.3.0 lo carga desactivado). Capturas en Windows (Oscuro, escala 100 %, `settings.json`
 intacto por hash), abriendo la vista por UI Automation: a 640×400 y 960×600 se ven el título, «Cerrar», la lista
 de temas con el tema guardado, la casilla del clic y, a 960, la de la isla; la vista se desplaza cuando no cabe.
-A 640 px el engranaje cabe en la barra superior compacta junto a «Tema», sin recortar ningún botón.
+A 640 px el engranaje cabe en la barra superior compacta sin recortar ningún botón.
 
-**Sin verificar (falta la prueba a mano del autor):**
+**Prueba a mano del autor (15 de noviembre de 2026, Windows), sobre la primera versión:** correctos los dos modos
+de clic, Ctrl + clic, `Esc` (en la vista, en el inmersivo y en el cuadro del nombre de una playlist), el cambio de
+tema, «Abrir carpeta» y los temas Claro y de usuario. Dos observaciones:
 
-- Los dos modos de clic con el ratón: ajuste apagado (un clic selecciona, doble clic reproduce), ajuste encendido
-  (un clic reproduce; Ctrl o Mayús solo seleccionan; el doble clic no reinicia), y que el doble clic en la barra
-  de desplazamiento o en el hueco vacío ya no reproduce nada (H5).
-- `Esc` cerrando la vista, y que no interfiere con el inmersivo ni con el cuadro del nombre de una playlist.
-- Cambiar de tema desde la lista de Configuración y que el botón «Tema» y la lista quedan de acuerdo.
-- «Abrir carpeta» y la casilla de la isla sincronizada con el botón de la barra de reproducción.
-- Los temas Claro y de usuario (no se cambió el tema para no tocar el `settings.json` real).
+- **Mayús + clic «no funciona».** Comprobado después con clics sintéticos y un registro temporal: el clic llega
+  con `Shift`, la fila queda seleccionada y no se reproduce, igual que con Ctrl. La lista es de selección única,
+  así que Mayús no selecciona un rango: si eso es lo que se esperaba, es una función nueva (selección múltiple),
+  no un fallo de esta spec. **Pendiente de que el autor diga qué esperaba.**
+- **Un solo control de tema:** hecho (decisión 2).
+
+**Sin verificar (tras mudar el botón «Tema»):** la lista de temas abierta desde Configuración con ratón y teclado
+(vista previa, `Enter`, y `Esc` cerrando solo la lista).
 
 ## Hitos
 

@@ -272,13 +272,7 @@ public partial class MainViewModel : ViewModelBase
         EmbedLyrics.Finished += ResumeInterrupted;
         Themes.Notified += Notify;
 
-        // Configuración (docs/specs/settings-panel.md): al abrirse relee los temas de usuario; se cierra si se abre
-        // un panel de edición, que ocupa la misma zona.
-        Settings.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(SettingsViewModel.IsOpen) && Settings.IsOpen)
-                _ = Themes.ReloadAsync();
-        };
+        // Configuración (docs/specs/settings-panel.md) se cierra si se abre un panel de edición, que ocupa la misma zona.
         TagEditor.PropertyChanged += ClosePanelSettingsWhenOpened;
         AutoFix.PropertyChanged += ClosePanelSettingsWhenOpened;
         Conversion.PropertyChanged += ClosePanelSettingsWhenOpened;

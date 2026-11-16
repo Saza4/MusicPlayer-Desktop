@@ -342,11 +342,12 @@ public partial class MainWindow : Window
     private static ListBox? ThemeListOf(object? flyout) =>
         ((flyout as Flyout)?.Content as Panel)?.Children.OfType<ListBox>().FirstOrDefault();
 
-    // Se cerró sin confirmar (Esc o clic fuera): se vuelve al tema elegido. El foco regresa a la lista de canciones.
+    // Se cerró sin confirmar (Esc o clic fuera): se vuelve al tema elegido. El foco regresa al botón «Tema», que
+    // está en Configuración (la lista de canciones queda tapada por esa vista).
     private void OnThemeFlyoutClosed(object? sender, EventArgs e)
     {
         if (DataContext is MainViewModel vm) vm.Themes.Close();
-        Dispatcher.UIThread.Post(() => this.FindControl<ListBox>("SongList")?.Focus());
+        Dispatcher.UIThread.Post(() => this.FindControl<Button>("ThemeButton")?.Focus());
     }
 
     private void OnThemeListPointerMoved(object? sender, PointerEventArgs e)
@@ -383,8 +384,12 @@ public partial class MainWindow : Window
             case Key.Enter when vm.Themes.SelectedChoice is { } choice:
                 ConfirmTheme(vm, choice);
                 break;
+            case Key.Escape:
+                // Solo cierra la lista: sin esto, el mismo Esc llegaría a OnKeyDown y cerraría también Configuración.
+                this.FindControl<Button>("ThemeButton")?.Flyout?.Hide();
+                break;
             default:
-                return; // Esc cierra el Flyout por sí solo
+                return;
         }
 
         e.Handled = true;

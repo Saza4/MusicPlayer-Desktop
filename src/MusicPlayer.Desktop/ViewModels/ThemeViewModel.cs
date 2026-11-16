@@ -47,20 +47,6 @@ public partial class ThemeViewModel : ViewModelBase
 
     public event Action<string>? Notified;
 
-    /// <summary>
-    /// El tema confirmado, para la lista de Configuración (sin vista previa): elegir otro lo aplica y lo guarda.
-    /// </summary>
-    public ThemeChoice? CommittedChoice
-    {
-        get => Items.FirstOrDefault(i => i.Id.Equals(_committedId, StringComparison.OrdinalIgnoreCase));
-        set
-        {
-            // Null llega cuando la lista se rehace (los elementos se quitan un instante): no es una elección.
-            if (value is null || value.Id.Equals(_committedId, StringComparison.OrdinalIgnoreCase)) return;
-            Commit(value.Id);
-        }
-    }
-
     /// <summary>La lista está abierta: mientras tanto, los atajos globales de la ventana no deben actuar.</summary>
     public bool IsOpen => _isOpen;
 
@@ -109,13 +95,6 @@ public partial class ThemeViewModel : ViewModelBase
     public async Task OpenAsync()
     {
         _isOpen = true;
-        await ReloadAsync();
-        SelectCommitted();
-    }
-
-    /// <summary>Vuelve a leer los temas de usuario sin abrir el selector (lo usa Configuración al abrirse).</summary>
-    public async Task ReloadAsync()
-    {
         try
         {
             var report = await _repository.LoadAllAsync();
@@ -127,6 +106,8 @@ public partial class ThemeViewModel : ViewModelBase
         {
             Notified?.Invoke($"No se pudieron leer los temas: {ex.Message}");
         }
+
+        SelectCommitted();
     }
 
     /// <summary>La lista se cerró: si había una vista previa sin confirmar, se restaura el tema confirmado.</summary>
@@ -150,7 +131,6 @@ public partial class ThemeViewModel : ViewModelBase
         _previewId = null;
         ApplyById(id);
         _settings.Update(s => s with { ThemeId = id });
-        OnPropertyChanged(nameof(CommittedChoice));
     }
 
     /// <summary>Descarta la vista previa y vuelve al tema confirmado (sin tocar el disco).</summary>
@@ -196,7 +176,6 @@ public partial class ThemeViewModel : ViewModelBase
         }
         finally { _suppressPreview = false; }
 
-        OnPropertyChanged(nameof(CommittedChoice)); // los elementos son nuevos: la lista de Configuración se resincroniza
         return merged;
     }
 
