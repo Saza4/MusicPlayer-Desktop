@@ -1117,6 +1117,14 @@
                                     Classes="settings-help"
                                     Text="Una pastilla arriba al centro de la pantalla muestra lo que suena cuando el reproductor está minimizado o detrás de otra ventana."
                                     TextWrapping="Wrap" />
+                                <CheckBox
+                                    Content="Mostrar el título en la isla"
+                                    IsChecked="{Binding Settings.IslandShowTitle}"
+                                    IsEnabled="{Binding ShowIsland}" />
+                                <TextBlock
+                                    Classes="settings-help"
+                                    Text="La isla sin desplegar muestra el título y el artista. Si no caben, el texto se desplaza mientras suena la música."
+                                    TextWrapping="Wrap" />
                             </StackPanel>
 
                             <StackPanel Classes="settings-section" Spacing="8">

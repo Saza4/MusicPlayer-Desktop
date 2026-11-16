@@ -21,6 +21,9 @@ public partial class SettingsViewModel(SettingsService settings) : ObservableObj
     /// <summary>Un clic sobre una canción la reproduce (por defecto hace falta doble clic).</summary>
     [ObservableProperty] private bool _playOnSingleClick;
 
+    /// <summary>La isla colapsada muestra «título — artista», desplazándose si no cabe.</summary>
+    [ObservableProperty] private bool _islandShowTitle;
+
     /// <summary>Las secciones de la isla y del segundo plano solo existen en Windows.</summary>
     public bool IsWindows { get; } = OperatingSystem.IsWindows();
 
@@ -38,6 +41,12 @@ public partial class SettingsViewModel(SettingsService settings) : ObservableObj
             settings.Update(s => s with { PlayOnSingleClick = value });
     }
 
+    partial void OnIslandShowTitleChanged(bool value)
+    {
+        if (!_restoring)
+            settings.Update(s => s with { IslandShowTitle = value });
+    }
+
     /// <summary>Al arrancar: pone las opciones como estaban guardadas, sin volver a guardarlas.</summary>
     public void Restore(AppSettings saved)
     {
@@ -45,6 +54,7 @@ public partial class SettingsViewModel(SettingsService settings) : ObservableObj
         try
         {
             PlayOnSingleClick = saved.PlayOnSingleClick;
+            IslandShowTitle = saved.IslandShowTitle;
         }
         finally
         {

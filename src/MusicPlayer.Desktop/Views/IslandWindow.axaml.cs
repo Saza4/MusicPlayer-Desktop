@@ -40,6 +40,9 @@ public partial class IslandWindow : Window
     private readonly DispatcherTimer _waveTimer;
     private readonly System.Diagnostics.Stopwatch _waveClock = new();
     private MainViewModel? _viewModel;
+    private TimeSpan _titleStart; // lectura de _waveClock cuando el título actual empezó a mostrarse
+    private bool _seeking;        // arrastrando la barra de progreso: la isla no se colapsa hasta soltar
+    private bool _skipWave;       // a 30 fps (título desplazándose), la onda se actualiza un fotograma de cada dos
 
     /// <summary>Clic en la carátula o el título: el controlador trae la ventana principal al frente.</summary>
     public event EventHandler? OpenMainRequested;
@@ -51,7 +54,7 @@ public partial class IslandWindow : Window
         _collapseDelay = new DispatcherTimer(IslandMetrics.CollapseDelay, DispatcherPriority.Normal, (_, _) =>
         {
             _collapseDelay!.Stop();
-            Run(_hover.CollapseDelayElapsed(IsPointerOverPill()));
+            Run(_hover.CollapseDelayElapsed(_seeking || IsPointerOverPill()));
         });
         _collapseEnd = new DispatcherTimer(IslandMetrics.CollapseDuration, DispatcherPriority.Normal, (_, _) =>
         {
@@ -96,6 +99,9 @@ public partial class IslandWindow : Window
         var coverRadius = new CornerRadius(IslandMetrics.CollapsedCoverCornerRadius);
         CollapsedPlaceholder.CornerRadius = coverRadius;
         CollapsedArt.CornerRadius = coverRadius;
+        CollapsedTitle.FontSize = IslandMetrics.CollapsedTitleFontSize;
+        CollapsedTitle.Margin = new Thickness(IslandMetrics.CollapsedTitleMargin, 0);
+        CollapsedTitle.Gap = IslandMetrics.MarqueeGap;
 
         ApplyExpandedMetrics();
 
@@ -142,6 +148,8 @@ public partial class IslandWindow : Window
         Texts.Margin = new Thickness(IslandMetrics.HeaderSpacing, 0);
         TitleText.FontSize = IslandMetrics.TitleFontSize;
         ArtistText.FontSize = IslandMetrics.ArtistFontSize;
+        HideButton.Width = HideButton.Height = IslandMetrics.HideButtonSize;
+        HideButton.Margin = new Thickness(IslandMetrics.HeaderSpacing / 2, 0, 0, 0);
 
         // Progreso
         Progress.Margin = new Thickness(0, IslandMetrics.HeaderToProgress, 0, 0);
@@ -164,16 +172,50 @@ public partial class IslandWindow : Window
     }
 
     /// <summary>
-    /// Clic en la barra de progreso: un solo seek a esa fracción. La barra se enlaza solo para leer
-    /// (OneWay), así que el refresco del temporizador nunca provoca otro seek.
+    /// Barra de progreso: clic o arrastre, como la de la ventana principal. Mientras se arrastra, la barra y los
+    /// tiempos siguen al cursor y el audio no salta; al soltar hay un único seek (BeginScrub y EndScrub del
+    /// ViewModel, los mismos que usa la barra principal). La barra se enlaza solo para leer (OneWay), así que el
+    /// refresco del temporizador nunca provoca otro seek.
     /// </summary>
     private void OnSeekPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(SeekArea).Properties.IsLeftButtonPressed) return;
-        var width = ProgressBar.Bounds.Width;
-        if (width <= 0) return;
-        (DataContext as MainViewModel)?.SeekToFraction(e.GetPosition(ProgressBar).X / width);
+        if (DataContext is not MainViewModel vm || ProgressBar.Bounds.Width <= 0) return;
+
+        _seeking = true;
+        vm.BeginScrub();
+        e.Pointer.Capture(SeekArea);
+        SeekTo(vm, e);
         e.Handled = true;
+    }
+
+    private void OnSeekMoved(object? sender, PointerEventArgs e)
+    {
+        if (_seeking && DataContext is MainViewModel vm) SeekTo(vm, e);
+    }
+
+    private void OnSeekReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_seeking) return;
+        e.Pointer.Capture(null); // PointerCaptureLost termina el arrastre
+        e.Handled = true;
+    }
+
+    // Aquí acaba todo arrastre: al soltar, o si Windows quita la captura (otra ventana, Alt+Tab).
+    private void OnSeekCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (!_seeking) return;
+        _seeking = false;
+        (DataContext as MainViewModel)?.EndScrub();
+        // Si el cursor salió de la pastilla durante el arrastre, no habrá otro aviso de salida: se pide ahora.
+        if (!IsPointerOverPill()) Run(_hover.PointerExited());
+    }
+
+    // Fuera de la barra, el arrastre se queda en el extremo (SeekToFraction acota la fracción).
+    private void SeekTo(MainViewModel vm, PointerEventArgs e)
+    {
+        var width = ProgressBar.Bounds.Width;
+        if (width > 0) vm.SeekToFraction(e.GetPosition(ProgressBar).X / width);
     }
 
     private void OnOpenMainPressed(object? sender, PointerPressedEventArgs e)
@@ -343,6 +385,19 @@ public partial class IslandWindow : Window
     /// </summary>
     private void OnWaveFrame(object? sender, EventArgs e)
     {
+        // Solo un título que se desplaza necesita 30 fps; sin él (oculto, o cabe), todo sigue a los 15 de la onda.
+        var scrolling = CollapsedTitle.IsVisible && !Marquee.Fits(CollapsedTitle.TextWidth, CollapsedTitle.Bounds.Width);
+        var interval = scrolling ? IslandMetrics.MarqueeFrameInterval : IslandMetrics.WaveFrameInterval;
+        if (_waveTimer.Interval != interval) _waveTimer.Interval = interval;
+
+        if (scrolling)
+            CollapsedTitle.Offset = Marquee.Offset(_waveClock.Elapsed - _titleStart, CollapsedTitle.TextWidth,
+                CollapsedTitle.Bounds.Width, IslandMetrics.MarqueeSpeed, IslandMetrics.MarqueeStartPause,
+                IslandMetrics.MarqueeGap);
+
+        _skipWave = scrolling && !_skipWave;
+        if (_skipWave) return;
+
         var t = _waveClock.Elapsed.TotalMilliseconds;
         var periods = IslandMetrics.WaveBarPeriods;
         foreach (var wave in new[] { CollapsedWave, ExpandedWave })
@@ -355,17 +410,31 @@ public partial class IslandWindow : Window
             }
     }
 
+    /// <summary>Texto de la isla colapsada. Con un texto nuevo, el desplazamiento vuelve al principio.</summary>
+    private void UpdateTitle()
+    {
+        var track = _viewModel?.CurrentTrack;
+        var text = Marquee.Label(track?.Title, track?.Artist);
+        if (text == CollapsedTitle.Text) return;
+
+        CollapsedTitle.Text = text;
+        CollapsedTitle.Offset = 0;
+        _titleStart = _waveClock.Elapsed;
+    }
+
     private void WatchViewModel()
     {
         if (_viewModel is not null) _viewModel.PropertyChanged -= OnViewModelChanged;
         _viewModel = DataContext as MainViewModel;
         if (_viewModel is not null) _viewModel.PropertyChanged += OnViewModelChanged;
+        UpdateTitle();
         UpdateWave();
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainViewModel.IsPlaying)) UpdateWave();
+        else if (e.PropertyName == nameof(MainViewModel.CurrentTrack)) UpdateTitle();
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -391,8 +460,11 @@ public partial class IslandWindow : Window
     private void UpdateWave()
     {
         var animate = IsVisible && _viewModel?.IsPlaying == true;
+        CollapsedTitle.IsScrolling = animate; // en pausa: quieto al principio y con «…»
         if (animate == _waveTimer.IsEnabled) return;
 
+        _titleStart = TimeSpan.Zero; // el reloj vuelve a 0 en los dos casos: el título empieza por el principio
+        CollapsedTitle.Offset = 0;
         if (animate)
         {
             _waveClock.Restart();

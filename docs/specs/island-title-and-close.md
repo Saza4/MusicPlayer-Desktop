@@ -1,6 +1,8 @@
 # Spec: título desplazable y botones de ocultar y salir en la isla
 
-Estado: **aprobada por el autor el 15 de noviembre de 2026**. Sin código todavía. Depende de `settings-panel.md` (la casilla vive en
+Estado: **M1 a M3 implementados el 15 de noviembre de 2026** (rama `feat/island-title-and-close`): título
+desplazable y «Ocultar isla». Probado a mano por el autor. Falta M4 («Salir», después de `background-playback.md`)
+(ver «Resultado»). Compila con la CS8602 de siempre y pasan 1021 pruebas (811 en Core, 210 en Infrastructure). Depende de `settings-panel.md` (la casilla vive en
 Configuración) y, para el botón «Salir», de `background-playback.md`.
 
 ## Context
@@ -31,8 +33,11 @@ barra de reproducción de la ventana principal. Especificación original: `docs/
    pruebas: texto que cabe (siempre 0), pausa inicial, mitad del recorrido, hueco y vuelta, y anchos de 0.
 6. El dibujo es un control propio (`Controls/MarqueeText`) que no crea objetos de texto en cada fotograma: el
    texto se compone una vez por cambio de texto, de fuente o de ancho.
-7. El movimiento usa el temporizador de la onda (15 fps, `IslandMetrics.WaveFrameInterval`): solo corre con la
-   isla visible y la pista sonando. Con la isla oculta o en pausa no se pide ningún fotograma.
+7. El movimiento usa el temporizador de la onda: solo corre con la isla visible y la pista sonando. Con la isla
+   oculta o en pausa no se pide ningún fotograma. Mientras el título se desplaza, ese temporizador va a 30 fps
+   (`IslandMetrics.MarqueeFrameInterval`) y la onda sigue a 15 (un fotograma de cada dos); sin título que
+   desplazar, va a los 15 fps de siempre. *(Cambiado el 15 de noviembre de 2026: el autor lo probó a 15 fps y se
+   veía a saltos.)*
 8. Coste: medido en Release con `tools/medir-cpu.ps1`, la isla colapsada con el título desplazándose no gasta más
    de 1 punto de un núcleo por encima de la isla con solo la onda. Las cifras se anotan aquí.
 9. El ancho de la pastilla colapsada no cambia (`IslandMetrics.CollapsedWidth`), así que la región de clics y la
@@ -85,6 +90,68 @@ barra de reproducción de la ventana principal. Especificación original: `docs/
 - `IslandWindow.axaml.cs`: `OnWaveFrame` actualiza también `Offset`; `UpdateWave` ya decide cuándo corre.
 - `MainViewModel`: `HideIslandCommand` (pone `ShowIsland = false` y escribe la línea de estado) y la propiedad que
   dice si la ventana principal está oculta (la publica `background-playback.md`).
+
+## Resultado (M1 a M3)
+
+**Decisiones tomadas al implementar (revisables):**
+
+1. **Medidas** (`IslandMetrics`): letra de 12, margen de 8 a cada lado, 30 DIPs por segundo (1 por fotograma a
+   30 fps), pausa inicial de 2 s y hueco de 36. Con la pastilla de 180, al texto le quedan unos 93 DIPs.
+2. **Bucle sin salto:** tras el hueco se dibuja una segunda copia del texto; cuando llega al principio, la vuelta
+   empieza de nuevo con su pausa. `Marquee.Offset` devuelve como mucho `ancho del texto + hueco`.
+3. **El texto lo pone la ventana** (`IslandWindow.UpdateTitle`, con `Marquee.Label`): «título — artista», solo el
+   título sin artista. Un texto nuevo vuelve al principio. Al reanudar tras una pausa también empieza por el
+   principio (el reloj de la onda se reinicia).
+4. **El ajuste vive en `SettingsViewModel`** (`IslandShowTitle`), como el del clic. La casilla se desactiva si la
+   isla está apagada.
+5. **«Ocultar isla»** va arriba a la derecha de la cabecera expandida, **junto a** la onda (no en su lugar): un
+   botón `.icon` de 24 con una ×. El título y el artista expandidos pierden 30 DIPs de ancho.
+6. **`MainViewModel.HideIslandCommand`** apaga `ShowIsland` y escribe la línea de estado del criterio 12.
+
+**Verificado:**
+
+- 24 pruebas nuevas en Core (`MarqueeTests`) y 1 en Infrastructure (guardar y leer el ajuste; un `settings.json`
+  de la v1.3.0 lo carga desactivado).
+- Capturas en Windows (escala 100 %, `settings.json` cambiado con copia previa y restaurado, intacto por hash;
+  volumen a 0 durante la prueba): el texto se desplaza con la pista sonando (dos capturas con 1,5 s de diferencia
+  muestran tramos distintos), en pausa queda «It Wasn't Me …», con el ajuste apagado la isla se ve como antes, el
+  botón «Ocultar isla» aparece al expandir con su globo, un clic en él oculta la isla y la línea de estado dice
+  «Isla oculta. Se activa en Configuración o en la barra de reproducción».
+- **Coste (criterio 8)**, Release, `tools/medir-cpu.ps1`, 3 pasadas de 10 s, ventana principal minimizada, isla
+  colapsada y pista sonando:
+
+  | | Pasadas (% de un núcleo) | Media |
+  | --- | --- | --- |
+  | Solo la onda (primera medida) | 8,7 / 5,5 / 6,1 | 6,8 |
+  | Onda y título a 15 fps (primera medida) | 7,8 / 5,5 / 5,5 | 6,2 |
+  | Solo la onda (segunda medida) | 6,4 / 6,2 / 4,8 | 5,8 |
+  | Onda a 15 fps y título a 30 fps (segunda medida) | 11,1 / 6,7 / 7,0 | 8,3 |
+
+  A 15 fps el título no añadía coste medible. **A 30 fps (lo que pidió el autor tras probarlo) cuesta entre 1 y
+  2,5 puntos de un núcleo más** que la onda sola (2,5 con la primera pasada, que salió alta; alrededor de 1,4 sin
+  ella). **El criterio 8 (no más de 1 punto) queda rebasado por poco**, con medidas ruidosas y pocas pasadas: es
+  el precio de la fluidez, aceptado al pedir 30 fps. Solo se paga con el ajuste activado, la isla a la vista, la
+  pista sonando y un título que no cabe.
+
+**Añadido a petición del autor (15 de noviembre de 2026), fuera de los criterios de arriba: la barra de progreso
+de la isla se arrastra.** Mismo aspecto que antes (era solo clic). Usa `BeginScrub` y `EndScrub` de
+`MainViewModel`, como la barra principal: durante el arrastre la barra y los tiempos siguen al cursor y el audio
+no salta; al soltar hay un único salto. La isla no se colapsa mientras se arrastra, aunque el cursor salga de la
+pastilla; al soltar fuera, se colapsa. Comprobado con un arrastre de ratón simulado y capturas (barra siguiendo
+al cursor, isla expandida con el cursor fuera y el botón pulsado, colapso al soltar). Arrastrar hasta el final y
+soltar termina la pista, igual que en la barra principal.
+
+**Prueba a mano del autor (15 de noviembre de 2026):** título, casilla y «Ocultar isla» correctos; pidió 30 fps
+(hecho) y el arrastre de la barra (hecho, sin su prueba a mano todavía).
+
+**Sin verificar:**
+
+- El aspecto del desplazamiento en movimiento (velocidad, pausa y hueco son cuestión de gusto: se cambian en
+  `IslandMetrics`).
+- Cambio de pista con la isla a la vista, y un título corto que cabe.
+- La casilla de Configuración encendiendo y apagando el título con la isla visible.
+- Hover durante el desplazamiento, y «Ocultar isla» durante el fundido de aparición.
+- Escalas de pantalla distintas de 100 % y cambio de pantalla principal.
 
 ## Hitos
 

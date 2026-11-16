@@ -1000,6 +1000,14 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleIsland() => ShowIsland = !ShowIsland;
 
+    /// <summary>Botón «Ocultar isla» de la propia isla: la música sigue y la línea de estado dice dónde reactivarla.</summary>
+    [RelayCommand]
+    private void HideIsland()
+    {
+        ShowIsland = false;
+        Status = "Isla oculta. Se activa en Configuración o en la barra de reproducción";
+    }
+
     partial void OnShowIslandChanged(bool value)
     {
         if (!_restoring)

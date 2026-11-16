@@ -20,7 +20,9 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
   paneles de edición decían «se detendrá»).
 - `docs/specs/responsive-layout.md`: nada se recorta entre 640×400 y pantalla completa. **Hecho y verificado
   a mano por el autor** el 15 de noviembre de 2026 (PR #16).
-- `docs/specs/island-title-and-close.md`: título desplazable y botones de ocultar y salir en la isla.
+- `docs/specs/island-title-and-close.md`: título desplazable y botones de ocultar y salir en la isla. **Código
+  hecho** salvo el botón «Salir» (M4), que espera a `background-playback.md`. Probado a mano por el autor (PR #19), que
+  pidió además 30 fps y poder arrastrar la barra de progreso de la isla (hechos).
 - `docs/specs/background-playback.md`: cerrar oculta a la bandeja, e instancia única.
 - `docs/specs/lyrics-online-translation.md`: traducir la letra en línea, opt-in.
 
