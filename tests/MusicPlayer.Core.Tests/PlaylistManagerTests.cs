@@ -201,4 +201,116 @@ public class PlaylistManagerTests
 
         Assert.Equal(savesBefore, repo.SaveCount);
     }
+
+    // ---- Una operación a la vez (docs/specs/playlist-serialization.md) ----
+
+    /// <summary>Retiene los guardados hasta <see cref="Release"/>: así dos operaciones coinciden a medias.</summary>
+    private sealed class HeldRepository(params Playlist[] stored) : IPlaylistRepository
+    {
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public IReadOnlyList<Playlist> Stored { get; private set; } = stored;
+        public bool FailNextSave { get; set; }
+
+        public void Release() => _release.TrySetResult();
+
+        public Task<IReadOnlyList<Playlist>> LoadAsync(CancellationToken ct = default) =>
+            Task.FromResult(Stored);
+
+        public async Task SaveAsync(IReadOnlyList<Playlist> playlists, CancellationToken ct = default)
+        {
+            await _release.Task;
+            if (FailNextSave)
+            {
+                FailNextSave = false;
+                throw new IOException("disco lleno");
+            }
+            Stored = playlists;
+        }
+    }
+
+    /// <summary>Un gestor con la playlist «Gym» ya cargada y los guardados retenidos.</summary>
+    private static async Task<(HeldRepository Repo, PlaylistManager Manager, Playlist Gym)> SeededAsync()
+    {
+        var gym = new Playlist { Name = "Gym" };
+        var repo = new HeldRepository(gym);
+        var manager = new PlaylistManager(repo);
+        await manager.LoadAsync();
+        return (repo, manager, gym);
+    }
+
+    [Fact]
+    public async Task TwoAddsAtOnce_KeepBothTracks()
+    {
+        var (held, manager, gym) = await SeededAsync();
+
+        var addA = manager.AddTracksAsync(gym.Id, new[] { A });
+        var addB = manager.AddTracksAsync(gym.Id, new[] { B });
+        held.Release();
+        await Task.WhenAll(addA, addB);
+
+        Assert.Equal(new[] { A, B }, manager.Find(gym.Id)!.TrackIds);
+        Assert.Equal(new[] { A, B }, held.Stored.Single().TrackIds);
+    }
+
+    [Fact]
+    public async Task CreateAndAddToAnotherAtOnce_KeepBothChanges()
+    {
+        var (held, manager, gym) = await SeededAsync();
+
+        var create = manager.CreateAsync("Nueva");
+        var add = manager.AddTracksAsync(gym.Id, new[] { A });
+        held.Release();
+        await Task.WhenAll(create, add);
+
+        Assert.Equal(new[] { "Gym", "Nueva" }, held.Stored.Select(p => p.Name));
+        Assert.Equal(new[] { A }, held.Stored[0].TrackIds);
+        Assert.Equal(held.Stored, manager.Playlists);
+    }
+
+    [Fact]
+    public async Task TwoCreatesWithTheSameNameAtOnce_OnlyTheFirstSucceeds()
+    {
+        var (held, manager, _) = await SeededAsync();
+
+        var first = manager.CreateAsync("Nueva");
+        var second = manager.CreateAsync("nueva");
+        held.Release();
+
+        await first;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => second);
+        Assert.Equal(2, manager.Playlists.Count);
+    }
+
+    [Fact]
+    public async Task AfterAFailedSave_TheNextOperationStillRuns()
+    {
+        var (held, manager, gym) = await SeededAsync();
+        held.FailNextSave = true;
+
+        var failing = manager.AddTracksAsync(gym.Id, new[] { A });
+        var next = manager.AddTracksAsync(gym.Id, new[] { B });
+        held.Release();
+
+        await Assert.ThrowsAsync<IOException>(() => failing);
+        await next;
+        Assert.Equal(new[] { B }, manager.Find(gym.Id)!.TrackIds);
+    }
+
+    [Fact]
+    public async Task CancelledWhileWaitingItsTurn_DoesNothing_AndDoesNotBlockTheRest()
+    {
+        var (held, manager, gym) = await SeededAsync();
+        using var cts = new CancellationTokenSource();
+
+        var first = manager.AddTracksAsync(gym.Id, new[] { A });
+        var waiting = manager.AddTracksAsync(gym.Id, new[] { B }, cts.Token);
+        cts.Cancel();
+        // Antes de soltar el primer guardado: si no, el turno podría llegarle justo mientras se cancela.
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiting);
+        held.Release();
+
+        await first;
+        Assert.Equal(1, await manager.AddTracksAsync(gym.Id, new[] { C }));
+        Assert.Equal(new[] { A, C }, manager.Find(gym.Id)!.TrackIds);
+    }
 }

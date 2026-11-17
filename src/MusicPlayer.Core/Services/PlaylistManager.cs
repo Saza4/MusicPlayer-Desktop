@@ -6,6 +6,7 @@ namespace MusicPlayer.Core.Services;
 public sealed class PlaylistManager(IPlaylistRepository repository)
 {
     private IReadOnlyList<Playlist> _playlists = Array.Empty<Playlist>();
+    private readonly SemaphoreSlim _gate = new(1, 1); // serializa lo que lee _playlists y lo reasigna
     private bool _loadFailed;
 
     public IReadOnlyList<Playlist> Playlists => _playlists;
@@ -27,42 +28,59 @@ public sealed class PlaylistManager(IPlaylistRepository repository)
         return _playlists;
     }
 
-    public async Task<Playlist> CreateAsync(string name, CancellationToken ct = default)
+    // Una operación a la vez, como LibraryService.ExclusiveAsync: cada una parte de _playlists y lo reasigna al
+    // guardar, y dos a la vez descartarían el cambio de la primera (docs/specs/playlist-serialization.md).
+    private async Task<T> ExclusiveAsync<T>(Func<Task<T>> work, CancellationToken ct)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            return await work();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public Task<Playlist> CreateAsync(string name, CancellationToken ct = default) => ExclusiveAsync(async () =>
     {
         var playlist = new Playlist { Name = ValidateName(name, ignoreId: null) };
         await CommitAsync(_playlists.Append(playlist).ToList(), ct);
         return playlist;
-    }
+    }, ct);
 
-    public async Task<Playlist> RenameAsync(Guid id, string newName, CancellationToken ct = default)
+    public Task<Playlist> RenameAsync(Guid id, string newName, CancellationToken ct = default) => ExclusiveAsync(async () =>
     {
         var renamed = Get(id) with { Name = ValidateName(newName, ignoreId: id) };
         await CommitAsync(Replace(renamed), ct);
         return renamed;
-    }
+    }, ct);
 
     /// <summary>Un solo guardado, y ninguno si no hay nada que limpiar.</summary>
-    public async Task RemoveTracksEverywhereAsync(IEnumerable<Guid> trackIds, CancellationToken ct = default)
+    public Task RemoveTracksEverywhereAsync(IEnumerable<Guid> trackIds, CancellationToken ct = default) => ExclusiveAsync(async () =>
     {
         var gone = trackIds.ToHashSet();
         if (!_playlists.Any(p => p.TrackIds.Any(gone.Contains)))
-            return;
+            return false;
 
         var updated = _playlists
             .Select(p => p with { TrackIds = p.TrackIds.Where(t => !gone.Contains(t)).ToList() })
             .ToList();
 
         await CommitAsync(updated, ct);
-    }
+        return true;
+    }, ct);
 
-    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    public Task DeleteAsync(Guid id, CancellationToken ct = default) => ExclusiveAsync(async () =>
     {
         Get(id);
         await CommitAsync(_playlists.Where(p => p.Id != id).ToList(), ct);
-    }
+        return true;
+    }, ct);
 
     /// <summary>Añade al final las pistas que aún no estén. Devuelve cuántas se añadieron.</summary>
-    public async Task<int> AddTracksAsync(Guid id, IEnumerable<Guid> trackIds, CancellationToken ct = default)
+    public Task<int> AddTracksAsync(Guid id, IEnumerable<Guid> trackIds, CancellationToken ct = default) => ExclusiveAsync(async () =>
     {
         var playlist = Get(id);
         var present = playlist.TrackIds.ToHashSet();
@@ -75,16 +93,17 @@ public sealed class PlaylistManager(IPlaylistRepository repository)
 
         await CommitAsync(Replace(playlist with { TrackIds = playlist.TrackIds.Concat(toAdd).ToList() }), ct);
         return toAdd.Count;
-    }
+    }, ct);
 
-    public async Task RemoveTrackAsync(Guid id, Guid trackId, CancellationToken ct = default)
+    public Task RemoveTrackAsync(Guid id, Guid trackId, CancellationToken ct = default) => ExclusiveAsync(async () =>
     {
         var playlist = Get(id);
-        if (!playlist.TrackIds.Contains(trackId)) return;
+        if (!playlist.TrackIds.Contains(trackId)) return false;
 
         await CommitAsync(
             Replace(playlist with { TrackIds = playlist.TrackIds.Where(t => t != trackId).ToList() }), ct);
-    }
+        return true;
+    }, ct);
 
     /// <summary>Elementos de la playlist en su orden, omitiendo los que ya no están en la biblioteca.</summary>
     public static IReadOnlyList<T> Resolve<T>(Playlist playlist, IEnumerable<T> items, Func<T, Guid> idOf)
