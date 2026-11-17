@@ -58,6 +58,7 @@ public sealed class BassAudioPlayer : IAudioPlayer
 
     public CorePlaybackState State => _state;
     public TimeSpan Duration => _current?.Duration ?? TimeSpan.Zero;
+    public string? CurrentFilePath => _current?.FilePath;
 
     public TimeSpan CurrentTime
     {

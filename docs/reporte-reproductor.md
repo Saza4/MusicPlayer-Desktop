@@ -728,6 +728,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | Dígitos `0`-`9` en los parsers (`ascii-digits.md`), ejecución del 16 de noviembre de 2026 (Debug) | +6 | +0 | **825 + 211 = 1036**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Las specs entre la fila anterior y esta (de 959 a 819 + 211 = 1030) no se anotaron en esta tabla. |
 | Un solo camino de salto (`single-seek-path.md`), ejecución del 16 de noviembre de 2026 (Debug) | +0 | +0 | **825 + 211 = 1036**. El cambio vive en `MainViewModel` y `LyricsViewModel`, sin pruebas automáticas; probado a mano por el autor ese día. |
 | `PlaylistManager`, una operación a la vez (`playlist-serialization.md`), ejecución del 16 de noviembre de 2026 (Debug) | +5 | +0 | **830 + 211 = 1041**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). |
+| Escribir tras un avance automático (`write-after-advance.md`), ejecución del 16 de noviembre de 2026 (Debug) | +0 | +0 | **830 + 211 = 1041**. El cambio vive en `MainViewModel` y `BassAudioPlayer`, sin pruebas automáticas; pasada manual de regresión hecha por el autor ese día. |
 
 La advertencia es CS8602 en `MainViewModel.cs:249` (antes en las líneas 222 y 237; el código añadido encima la va desplazando): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 

@@ -8,6 +8,13 @@ public interface IAudioPlayer : IDisposable
     TimeSpan CurrentTime { get; }
     TimeSpan Duration { get; }
 
+    /// <summary>
+    /// Ruta del archivo que el reproductor tiene abierto como pista en curso, o null si no hay ninguna. Tras un
+    /// avance automático cambia antes de que se atienda <see cref="AdvancedToNext"/>: quien va a escribir en un
+    /// archivo pregunta aquí, no a lo que muestra la interfaz (docs/specs/write-after-advance.md).
+    /// </summary>
+    string? CurrentFilePath { get; }
+
     /// <summary>0.0 a 1.0</summary>
     double Volume { get; set; }
 
