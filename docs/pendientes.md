@@ -15,6 +15,9 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
 - `docs/specs/audit-3.md`: arreglos de la auditoría. **Hecho y verificado a mano por el autor** el 15 de
   noviembre de 2026 (PR #13, #14 y #15). Resolvió los antiguos puntos 4 (`HideFaded`) y 8
   (aviso de `playlists.json`) de la lista de abajo, que ya no están.
+- `docs/specs/write-sessions.md`: las herramientas que escriben en audio abren una sesión (`WriteSessions`, Core)
+  en lugar de los eventos `Saving` y `Finished`; con escrituras solapadas, la pista no vuelve hasta que termina la
+  última. **Hecho** el 16 de noviembre de 2026, con la pasada manual del autor ese día.
 - `docs/specs/write-after-advance.md`: antes de soltar un archivo para escribirlo o borrarlo, la interfaz se pone
   al día con el reproductor (`IAudioPlayer.CurrentFilePath`, `CatchUpWithPlayer`). **Hecho** el 16 de noviembre
   de 2026, con la pasada manual de regresión del autor ese día. El caso en sí no se puede provocar a mano.

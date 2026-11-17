@@ -9,15 +9,10 @@ using MusicPlayer.Desktop.Services;
 
 namespace MusicPlayer.Desktop.ViewModels;
 
-public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService picker, ILyricsSiblingFinder siblings)
+public class EmbedLyricsViewModel(
+    LyricsEditor editor, ILyricsPickerService picker, ILyricsSiblingFinder siblings, WriteSessions writes)
 {
     private bool _busy;
-
-    /// <summary>Antes de escribir: quien reproduce debe soltar ese archivo.</summary>
-    public event Action<Track>? Saving;
-
-    /// <summary>La escritura terminó, bien o mal: quien soltó el archivo en <see cref="Saving"/> puede volver a cargarlo.</summary>
-    public event Action? Finished;
 
     public event Action<string>? Notified;
 
@@ -26,12 +21,12 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
     /// audio, abre el selector.
     /// </summary>
     /// <returns>
-    /// True si pidió soltar el archivo con <see cref="Saving"/> (quien reproduce lo descargó), haya salido bien o no
+    /// True si abrió una sesión de escritura (quien reproduce descargó el archivo), haya salido bien o no
     /// la escritura: entonces hay que volver a cargar la pista para seguir oyéndola.
     /// </returns>
     public async Task<bool> EmbedAsync(Track track)
     {
-        var saving = false;
+        IDisposable? session = null;
         if (_busy) return false;
         _busy = true;
         try
@@ -52,8 +47,7 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
             // Las capas se toman junto al principal: junto al audio o junto al archivo elegido (spec, criterio 6).
             var layers = siblings.Find(source);
 
-            saving = true;
-            Saving?.Invoke(track);
+            session = writes.Begin(new[] { track.Id }); // quien reproduce suelta el archivo
             var report = await editor.EmbedAsync(track, source, layers);
             Notified?.Invoke(report.Describe(track.Title, Path.GetFileName(source)));
         }
@@ -64,9 +58,9 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
         finally
         {
             _busy = false;
-            if (saving) Finished?.Invoke();
+            session?.Dispose();
         }
-        return saving;
+        return session is not null;
     }
 
     /// <summary>
@@ -78,7 +72,7 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
     /// <returns>Como <see cref="EmbedAsync"/>: True si soltó el archivo y hay que volver a cargar la pista.</returns>
     public async Task<bool> EmbedLayerAsync(Track track, LyricsLayerKind kind, LyricBlock main)
     {
-        var saving = false;
+        IDisposable? session = null;
         if (_busy) return false;
         _busy = true;
         try
@@ -113,8 +107,7 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
                 }
             }
 
-            saving = true;
-            Saving?.Invoke(track);
+            session = writes.Begin(new[] { track.Id }); // quien reproduce suelta el archivo
             var report = await editor.EmbedLayerAsync(track, new LyricsLayerSource(kind, language, path), main);
             Notified?.Invoke(report.DescribeLayer(track.Title, Path.GetFileName(path), fromSystem));
         }
@@ -125,8 +118,8 @@ public class EmbedLyricsViewModel(LyricsEditor editor, ILyricsPickerService pick
         finally
         {
             _busy = false;
-            if (saving) Finished?.Invoke();
+            session?.Dispose();
         }
-        return saving;
+        return session is not null;
     }
 }

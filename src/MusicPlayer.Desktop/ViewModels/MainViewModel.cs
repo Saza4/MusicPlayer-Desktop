@@ -208,8 +208,9 @@ public partial class MainViewModel : ViewModelBase
                          SettingsService settings, TagEditorViewModel tagEditor,
                          TagAutoFixViewModel autoFix, ConvertViewModel conversion,
                          AlbumCoverViewModel albumCover, EmbedLyricsViewModel embedLyrics,
-                         ThemeViewModel themes, SettingsViewModel settingsPanel)
+                         ThemeViewModel themes, SettingsViewModel settingsPanel, WriteSessions writes)
     {
+        _writes = writes;
         Settings = settingsPanel;
         _covers = covers;
         _settings = settings;
@@ -253,23 +254,19 @@ public partial class MainViewModel : ViewModelBase
 
         Playlists.Changed += (_, _) => ApplyFilter();
         Playlists.Notified += Notify;
-        TagEditor.Saving += OnTagsSaving;
         TagEditor.Saved += OnTagsSaved;
-        TagEditor.Finished += ResumeInterrupted;
         TagEditor.Notified += message => Status = message;
-        AutoFix.Saving += OnAutoFixSaving;
         AutoFix.Applied += OnTagsSaved; // el mismo manejador del editor manual
-        AutoFix.Finished += ResumeInterrupted;
         AutoFix.Notified += message => Status = message;
         Conversion.Added += ApplySnapshot;
         Conversion.Notified += message => Status = message;
         AlbumCover.Applied += ApplySnapshot;
         AlbumCover.Notified += message => Status = message;
-        AlbumCover.Saving += OnTagsSaving;
-        AlbumCover.Finished += ResumeInterrupted;
         EmbedLyrics.Notified += message => Status = message;
-        EmbedLyrics.Saving += OnTagsSaving;
-        EmbedLyrics.Finished += ResumeInterrupted;
+        // Las herramientas que escriben en audio abren una sesión: al abrirla se suelta el archivo y, al cerrarse
+        // la última, se vuelve a cargar (docs/specs/write-sessions.md).
+        _writes.Releasing += OnWriting;
+        _writes.AllFinished += ResumeInterrupted;
         Lyrics.SeekRequested += SeekTo;
         Themes.Notified += Notify;
 
@@ -727,9 +724,16 @@ public partial class MainViewModel : ViewModelBase
         OnAdvancedToNext(path);
     }
 
-    /// <summary>Le dice al reproductor cuál es la pista que sigue para que empiece sin silencio.</summary>
-    private void UpdateGapless() =>
+    /// <summary>
+    /// Le dice al reproductor cuál es la pista que sigue para que empiece sin silencio. Mientras hay una escritura
+    /// en curso no se prepara nada: abriría un archivo que alguien puede estar escribiendo. Al cerrarse la última
+    /// sesión, <see cref="ResumeInterrupted"/> vuelve a llamar aquí.
+    /// </summary>
+    private void UpdateGapless()
+    {
+        if (_writes.IsOpen) return;
         _player.PrepareNext(CurrentTrack is null ? null : _queue.PeekNextAfterEnd()?.Track.FilePath);
+    }
 
     private async Task LoadNowPlayingCoverAsync(Track track)
     {
@@ -755,7 +759,7 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>
     /// «Incrustar traducción…» e «Incrustar pronunciación…» del menú de capas del inmersivo (docs/specs/lyrics-layers.md,
-    /// criterio 12b): abre el selector y, al elegir, escribe solo esa capa. Escribir pasa por <see cref="OnTagsSaving"/>,
+    /// criterio 12b): abre el selector y, al elegir, escribe solo esa capa. Escribir pasa por <see cref="OnWriting"/>,
     /// que descarga la pista y cierra el inmersivo: después se vuelve a cargar en el mismo punto, se reabre el
     /// inmersivo y sigue sonando si sonaba. Cancelar el selector no toca la reproducción.
     /// </summary>
@@ -763,14 +767,15 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentTrack is not { } item) return;
 
-        // Mientras se elige el archivo la música sigue. Al escribir, OnTagsSaving anota la posición y
-        // ResumeInterrupted (evento Finished) vuelve a cargar la pista.
+        // Mientras se elige el archivo la música sigue. Al escribir, OnWriting anota la posición y
+        // ResumeInterrupted (al cerrarse la sesión) vuelve a cargar la pista.
         await EmbedLyrics.EmbedLayerAsync(item.Track, kind, Lyrics.CurrentBlock);
     }
 
     // Lo que sonaba cuando una escritura obligó a soltar el archivo (docs/specs/playback-resilience.md, criterio 5).
     private sealed record Interrupted(TrackItemViewModel Item, TimeSpan Position, bool WasPlaying, bool WasImmersive);
     private Interrupted? _interrupted;
+    private readonly WriteSessions _writes;
 
     /// <summary>Descarga la pista en curso para poder escribir en su archivo, anotando cómo volver a ella.</summary>
     private void InterruptForWriting(TrackItemViewModel item)
@@ -950,11 +955,11 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // El archivo debe quedar libre: en Windows no se puede escribir en uno que el reproductor tiene abierto.
-    private void OnTagsSaving(Track track)
+    private void OnWriting(IReadOnlySet<Guid> ids)
     {
         CatchUpWithPlayer(); // antes de soltar la preparada: ponerse al día vuelve a preparar la siguiente
         _player.PrepareNext(null);
-        if (CurrentTrack is { } current && current.Track.Id == track.Id)
+        if (CurrentTrack is { } current && ids.Contains(current.Track.Id))
             InterruptForWriting(current);
     }
 
@@ -975,14 +980,6 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void OpenConvert() =>
         Conversion.Begin(Tracks.Where(t => t.IsAvailable).Select(t => t.Track).ToList(), "");
-
-    private void OnAutoFixSaving(IReadOnlySet<Guid> ids)
-    {
-        CatchUpWithPlayer();
-        _player.PrepareNext(null); // suelta el archivo preparado
-        if (CurrentTrack is { } current && ids.Contains(current.Track.Id))
-            InterruptForWriting(current);
-    }
 
     [RelayCommand]
     private void CycleRepeat() => Repeat = Repeat switch
