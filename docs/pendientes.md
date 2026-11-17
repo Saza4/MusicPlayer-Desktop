@@ -15,6 +15,8 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
 - `docs/specs/audit-3.md`: arreglos de la auditoría. **Hecho y verificado a mano por el autor** el 15 de
   noviembre de 2026 (PR #13, #14 y #15). Resolvió los antiguos puntos 4 (`HideFaded`) y 8
   (aviso de `playlists.json`) de la lista de abajo, que ya no están.
+- `docs/specs/ascii-digits.md`: los parsers solo toman por número los dígitos `0`-`9`. **Hecho** el 16 de
+  noviembre de 2026 (pruebas en Core; no necesita prueba a mano). Era el antiguo punto 7 de la lista de abajo.
 - `docs/specs/settings-panel.md`: área de Configuración y reproducir con un clic. **Código hecho**; falta la
   prueba a mano del autor (lista en la spec, «Resultado»). Resolvió también el antiguo punto 5 de abajo (los
   paneles de edición decían «se detendrá»).
@@ -47,12 +49,6 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
    pausa: la barra, el tiempo y el punto de partida de ← → se quedan donde estaban hasta reanudar. Es la misma
    familia que A1 de `audit-followup.md`, que solo se arregló en `ResumePlayback`. Pasos: pausar pasado el
    segundo 3 y pulsar «Anterior»; o pausar y pulsar una línea de la letra.
-7. **Dígitos que no son `0`-`9`.** En .NET, `\d` acepta cualquier dígito Unicode (`０１`, `١٢`) y `int.Parse` no.
-   `FileNameParser` (`TagText.cs`, `^(?<n>\d{1,3})…` y `uint.Parse`) lanza `FormatException` con un archivo
-   llamado `０１ - título.mp3`, y «Limpiar etiquetas» falla para toda la lista visible. `LrcLyricParser` (las dos
-   expresiones de marcas `[mm:ss.xx]` y `ToTimeSpan`) lanza con `[０１:２３.００]`: la pista se queda sin letra e
-   «Incrustar letra (.lrc)…» falla con un mensaje en inglés. Arreglo: `[0-9]`, como ya hace la marca por palabra
-   (`WordTag`), con una prueba en Core por cada parser.
 9. **Quitar una pista con el guardado fallido deja un hueco en el empalme.** `MainViewModel.RemoveTrackAsync`
    llama a `PrepareNext(null)` al empezar y solo vuelve a `UpdateGapless()` si todo sale bien; en el `catch` no.
 

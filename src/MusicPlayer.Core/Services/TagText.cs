@@ -7,7 +7,9 @@ public sealed record ParsedFileName(uint? Number, string? Artist, string Title, 
 public static partial class FileNameParser
 {
     // Número de pista solo con separador explícito, y lo que sigue no empieza por dígito ("10.000 Reasons").
-    [GeneratedRegex(@"^(?<n>\d{1,3})\s*[-.)]\s*(?<rest>\D.*)$")]
+    // El número, solo con dígitos ASCII: \d acepta también «０１» o «١٢», que uint.Parse no sabe convertir
+    // (docs/specs/ascii-digits.md). El \D de después sí es amplio a propósito: cualquier dígito descarta el número.
+    [GeneratedRegex(@"^(?<n>[0-9]{1,3})\s*[-.)]\s*(?<rest>\D.*)$")]
     private static partial Regex Leading();
 
     public static ParsedFileName Parse(string fileName)
