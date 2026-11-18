@@ -2,7 +2,12 @@ using MusicPlayer.Core.Models;
 
 namespace MusicPlayer.Core.Services;
 
-/// <summary>Temas integrados. Oscuro conserva exactamente los colores que tenía la interfaz antes de los temas.</summary>
+/// <summary>
+/// Temas integrados, con la paleta del rediseño (docs/specs/redesign-mockups.md): fondo, superficie y un solo azul
+/// para lo interactivo y lo que suena. El acento es ese mismo azul, no el del sistema, para que los iconos activos, el
+/// relleno de las barras y el botón Reproducir/Pausa hablen el mismo color. En Claro el azul es más oscuro para llegar a
+/// 4,5:1 sobre blanco.
+/// </summary>
 public static class BuiltInThemes
 {
     public const string SystemId = "system";
@@ -12,12 +17,12 @@ public static class BuiltInThemes
     public static AppTheme Dark { get; } = new(
         DarkId, "Oscuro", ThemeBase.Dark,
         new ThemePalette(
-            Background: ThemeColor.Parse("#0F0F0F"),
-            Surface: ThemeColor.Parse("#000000"),
+            Background: ThemeColor.Parse("#141416"),
+            Surface: ThemeColor.Parse("#0C0C0E"),
             Overlay: ThemeColor.Parse("#FFFFFF"),
-            Primary: ThemeColor.Parse("#FFFFFF"),
-            OnPrimary: ThemeColor.Parse("#101010"),
-            Accent: null,
+            Primary: ThemeColor.Parse("#6B9CF4"),
+            OnPrimary: ThemeColor.Parse("#0B0F1A"),
+            Accent: ThemeColor.Parse("#6B9CF4"),
             Danger: ThemeColor.Parse("#E57373"),
             Success: ThemeColor.Parse("#4CAF50"),
             Warning: ThemeColor.Parse("#FFB74D")),
@@ -26,12 +31,12 @@ public static class BuiltInThemes
     public static AppTheme Light { get; } = new(
         LightId, "Claro", ThemeBase.Light,
         new ThemePalette(
-            Background: ThemeColor.Parse("#F3F3F3"),
+            Background: ThemeColor.Parse("#F4F4F2"),
             Surface: ThemeColor.Parse("#FFFFFF"),
             Overlay: ThemeColor.Parse("#000000"),
-            Primary: ThemeColor.Parse("#1A73E8"),
+            Primary: ThemeColor.Parse("#2F62C8"),
             OnPrimary: ThemeColor.Parse("#FFFFFF"),
-            Accent: null,
+            Accent: ThemeColor.Parse("#2F62C8"),
             Danger: ThemeColor.Parse("#C62828"),
             Success: ThemeColor.Parse("#2E7D32"),
             Warning: ThemeColor.Parse("#B26A00")),

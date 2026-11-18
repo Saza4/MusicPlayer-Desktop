@@ -86,14 +86,24 @@ public partial class MainWindow : Window
 
         TopBar.Classes.Set("compact", layout.TopBarCompact);
 
-        PlayerGrid.ColumnDefinitions[2].Width =
-            layout.PlayerBarCompact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        // Controles centrados en la ventana: columna central fija entre dos lados iguales (los dos son «*»).
+        PlayerGrid.ColumnDefinitions[1].Width =
+            new GridLength(LayoutBreakpoints.PlayerCenterWidth(width, layout.VolumeInFlyout));
         PlayerBar.Classes.Set("narrow", layout.VolumeInFlyout);
         if (!layout.VolumeInFlyout) VolumeButton.Flyout?.Hide();
 
         var sidebarVisible = !layout.SidebarCollapsible || _sidebarOpenWhenNarrow;
         SidebarButton.IsVisible = layout.SidebarCollapsible;
-        Sidebar.IsVisible = sidebarVisible;
+        // En Artistas, la lista de artistas ocupa el sitio de la barra lateral (mockup 1c); el ≡ pliega la que toque.
+        var artists = DataContext is MainViewModel { ShowArtistSidebar: true };
+        if (artists != _artistSidebarShown)
+        {
+            _artistSidebarShown = artists;
+            SlideIn(artists ? ArtistSidebar : Sidebar);
+        }
+        Sidebar.IsVisible = sidebarVisible && !artists;
+        ArtistSidebar.IsVisible = sidebarVisible && artists;
+        SidebarBackground.IsVisible = sidebarVisible;
         CentralGrid.ColumnDefinitions[0].Width = new GridLength(sidebarVisible ? LayoutBreakpoints.SidebarWidth : 0);
 
         var lyricsOnly = DataContext is MainViewModel { Lyrics.ShowPanel: true }
@@ -102,10 +112,37 @@ public partial class MainWindow : Window
         CentralGrid.ColumnDefinitions[1].Width = lyricsOnly ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         CentralGrid.ColumnDefinitions[2].Width = lyricsOnly ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
         LyricsPanel.Width = lyricsOnly ? double.NaN : LayoutBreakpoints.LyricsPanelWidth;
-        LyricsPanel.Margin = lyricsOnly ? new Thickness(8) : new Thickness(0, 8, 8, 8);
 
         var panelHeight = LayoutBreakpoints.EditPanelMaxHeight(ClientSize.Height);
         ConvertScroll.MaxHeight = AutoFixScroll.MaxHeight = TagEditorScroll.MaxHeight = panelHeight;
+    }
+
+    private bool _artistSidebarShown;
+
+    // La animación de la clase «slide-in» corre al ponerla: se quita del otro panel y se vuelve a poner en este.
+    private void SlideIn(Control panel)
+    {
+        Sidebar.Classes.Remove("slide-in");
+        ArtistSidebar.Classes.Remove("slide-in");
+        panel.Classes.Add("slide-in");
+    }
+
+    // Si el foco estaba en el panel que se va, pasa a la lista del que llega: con teclado no se pierde.
+    private void MoveFocusToSidebar()
+    {
+        var focused = FocusManager?.GetFocusedElement() as Visual;
+        var hidden = _artistSidebarShown ? Sidebar : ArtistSidebar;
+        if (focused is null || !hidden.IsVisualAncestorOf(focused)) return;
+
+        Control target = _artistSidebarShown ? ArtistList : LibraryNav;
+        Dispatcher.UIThread.Post(() => target.Focus(NavigationMethod.Tab));
+    }
+
+    // «Artistas» ya elegido no cambia la selección: el clic trae de vuelta la lista si se había ocultado con ←.
+    private void OnArtistsNavTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is MainViewModel { ShowArtistPage: true, ShowArtistSidebar: false } vm)
+            vm.ShowArtistListCommand.Execute(null);
     }
 
     private void OnSidebarButtonClick(object? sender, RoutedEventArgs e)
@@ -431,6 +468,14 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainViewModel.ShowArtistSidebar))
+        {
+            var before = _artistSidebarShown;
+            ApplyLayout();
+            if (before != _artistSidebarShown) MoveFocusToSidebar();
+            return;
+        }
+
         if (e.PropertyName != nameof(MainViewModel.IsImmersive) || sender is not MainViewModel vm)
             return;
 
@@ -482,6 +527,15 @@ public partial class MainWindow : Window
         if (e.Key == Key.Escape && DataContext is MainViewModel { Settings.IsOpen: true } open)
         {
             open.Settings.CloseCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        // Esc con el foco en la lista de artistas vuelve a «Tu biblioteca», como su botón ←. Fuera de ella, Esc no cambia.
+        if (e.Key == Key.Escape && DataContext is MainViewModel { ShowArtistSidebar: true } page
+            && FocusManager?.GetFocusedElement() is Visual focused && ArtistSidebar.IsVisualAncestorOf(focused))
+        {
+            page.ShowLibraryNavCommand.Execute(null);
             e.Handled = true;
             return;
         }

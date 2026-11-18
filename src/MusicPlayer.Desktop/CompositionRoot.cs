@@ -34,6 +34,13 @@ public static class CompositionRoot
         services.AddSingleton<IPlaylistRepository>(_ => new JsonPlaylistRepository(AppPaths.Playlists));
         services.AddSingleton<PlaylistManager>();
         services.AddSingleton<ISettingsRepository>(_ => new JsonSettingsRepository(AppPaths.Settings));
+#if DEBUG
+        // Pruebas a mano sin tocar el settings.json del usuario (ver CLAUDE.md, variables de Debug).
+        if (ReadOnlySettingsRepository.IsRequested())
+            services.AddSingleton<ISettingsRepository>(_ => new ReadOnlySettingsRepository(
+                new JsonSettingsRepository(AppPaths.Settings),
+                Environment.GetEnvironmentVariable("MUSICPLAYER_THEME_OVERRIDE")));
+#endif
         services.AddSingleton<SettingsService>();
 
         // Letras: .lrc primero, USLT de respaldo, y encima traducción/pronunciación (hermanas o incrustadas).

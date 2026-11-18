@@ -48,6 +48,22 @@ public class LruCacheTests
     }
 
     [Fact]
+    public void Clear_ForgetsEverythingAndKeepsWorking()
+    {
+        var cache = new LruCache<string, int>(2);
+        cache.Set("a", 1);
+        cache.Set("b", 2);
+
+        cache.Clear();
+
+        Assert.Equal(0, cache.Count);
+        Assert.False(cache.TryGet("a", out _));
+        cache.Set("c", 3);
+        Assert.True(cache.TryGet("c", out var c));
+        Assert.Equal(3, c);
+    }
+
+    [Fact]
     public void Remove_ForgetsTheKeyAndFreesItsSlot()
     {
         var cache = new LruCache<string, int>(2);

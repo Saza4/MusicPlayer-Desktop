@@ -31,10 +31,11 @@ Todo está fusionado en `main`.
     coherente hacia una pista ausente (el caso vecino de R6).
   - `docs/specs/keep-browse-scope.md` (PR #27): la vista sigue en el álbum o artista tras guardar (era el punto 1).
 
-## Fuera de `main`
+## Falta la prueba a mano del autor
 
-- El rediseño según los mockups (`docs/specs/redesign-mockups.md`): está hecho en un commit local del autor, sin
-  subir ni PR. Su spec registra capturas, pero no una prueba a mano.
+- El rediseño según los mockups (`docs/specs/redesign-mockups.md`), en su PR desde el 19 de noviembre de 2026.
+  Su spec registra capturas, no una prueba a mano. Sin probar: Linux, el foco con teclado real en los botones
+  nuevos y los paneles de edición (convertir, limpiar etiquetas, editor de etiquetas) con la paleta nueva.
 
 ## Sin spec todavía
 

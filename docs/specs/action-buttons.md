@@ -2,6 +2,10 @@
 
 Estado: **terminada** (8 de noviembre de 2026), PR #6. Ver «Resultados por hito».
 
+> **Forma reemplazada** por `docs/specs/redesign-mockups.md` (17 de noviembre de 2026): el botón pasó de píldora tonal
+> a rectángulo de 36 px con borde fino e icono en el primario. Siguen valiendo la clase opt-in, `ToolTip`,
+> `AutomationProperties.Name`, `TextBlock.label`, el modo `compact` y el anillo de `ThemeFocusRingBrush`.
+
 ## Contexto
 
 «Agregar carpeta», «Limpiar etiquetas», «Convertir lo que veo…», «Tema» y el «+» de COLECCIONES son hoy `Button` Fluent genéricos (caja con borde, relleno por defecto, `Content="+"`). La barra multimedia ya tiene un lenguaje propio (`.icon`: sin caja, esquinas redondeadas, velo al pasar el cursor, `PathIcon`). Se quiere que estos cinco botones tengan un estilo reconocible y coherente con él. Es un cambio **solo visual**: no cambian comandos, bindings ni comportamiento.

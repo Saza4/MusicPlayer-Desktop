@@ -99,14 +99,14 @@
             <!--
                 Los nueve colores del tema. Estos valores son los del tema Oscuro y solo cubren el instante antes de
                 que ThemeService aplique el tema elegido; después se reemplazan en tiempo de ejecución.
-                ThemeAccent es el acento del sistema (lo fija ThemeService; este valor es solo de respaldo).
+                ThemeAccent lo fija ThemeService (el del tema, o el del sistema si el tema no trae uno).
             -->
-            <Color x:Key="ThemeBackground">#0F0F0F</Color>
-            <Color x:Key="ThemeSurface">#000000</Color>
+            <Color x:Key="ThemeBackground">#141416</Color>
+            <Color x:Key="ThemeSurface">#0C0C0E</Color>
             <Color x:Key="ThemeOverlay">#FFFFFF</Color>
-            <Color x:Key="ThemePrimary">#FFFFFF</Color>
-            <Color x:Key="ThemeOnPrimary">#101010</Color>
-            <Color x:Key="ThemeAccent">#0078D4</Color>
+            <Color x:Key="ThemePrimary">#6B9CF4</Color>
+            <Color x:Key="ThemeOnPrimary">#0B0F1A</Color>
+            <Color x:Key="ThemeAccent">#6B9CF4</Color>
             <Color x:Key="ThemeDanger">#E57373</Color>
             <Color x:Key="ThemeSuccess">#4CAF50</Color>
             <Color x:Key="ThemeWarning">#FFB74D</Color>

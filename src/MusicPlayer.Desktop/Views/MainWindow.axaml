@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:MusicPlayer.Desktop.ViewModels"
     xmlns:controls="using:MusicPlayer.Desktop.Controls"
+    xmlns:core="using:MusicPlayer.Core.Services"
     Title="Music Player"
     Width="960"
     Height="600"
@@ -36,6 +37,39 @@
                 <TextBlock
                     FontSize="{Binding TranslationFontSize}"
                     FontStyle="Italic"
+                    IsVisible="{Binding ShowTranslation}"
+                    Text="{Binding Translation}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </DataTemplate>
+        <!--
+            Panel lateral de letra (mockup 1a): tamaños fijos y compactos (15 el original, 12,5 la pronunciación y la
+            traducción). «Pronunciación en texto grande» solo cambia el inmersivo.
+        -->
+        <DataTemplate x:Key="SideLyricLineTemplate" x:DataType="vm:LyricLineViewModel">
+            <StackPanel
+                Margin="0,7"
+                Background="Transparent"
+                Classes.active="{Binding IsActive}"
+                Classes.synced="{Binding IsSynced}"
+                Spacing="2">
+                <TextBlock
+                    Classes="secondary"
+                    FontSize="12.5"
+                    IsVisible="{Binding ShowPronunciation}"
+                    Text="{Binding Pronunciation}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Classes="lead"
+                    FontSize="15"
+                    FontWeight="SemiBold"
+                    IsVisible="{Binding ShowOriginal}"
+                    LineHeight="20"
+                    Text="{Binding Text}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Classes="secondary"
+                    FontSize="12.5"
                     IsVisible="{Binding ShowTranslation}"
                     Text="{Binding Translation}"
                     TextWrapping="Wrap" />
@@ -86,6 +120,189 @@
         <Style Selector="ListBox.lyrics StackPanel.active TextBlock.lead">
             <Setter Property="FontWeight" Value="Bold" />
         </Style>
+
+        <!--  Rediseño (docs/specs/redesign-mockups.md): textos secundarios, cabeceras y filas  -->
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="LetterSpacing" Value="0.8" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="TextBlock.heading">
+            <Setter Property="FontSize" Value="24" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <!--  Lista de canciones: filas de 52 px (carátula de 40 + 6 arriba y abajo), alineadas con la cabecera  -->
+        <Style Selector="ListBox.songs">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <!--  El relleno va en el Border.row de la plantilla, para que la fila que suena se pinte entera  -->
+        <Style Selector="ListBox.songs ListBoxItem, ListBox.album-tracks ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.songs ListBoxItem /template/ ContentPresenter#PART_ContentPresenter, ListBox.album-tracks ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="Border.row">
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="Border.row.playing">
+            <Setter Property="Background" Value="{DynamicResource ThemeOverlaySelectedBrush}" />
+        </Style>
+        <!--  Si además está seleccionada, ya lleva el velo de la selección: no se suman dos  -->
+        <Style Selector="ListBoxItem:selected Border.row.playing">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TextBlock.track-title.playing">
+            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryBrush}" />
+        </Style>
+        <Style Selector="ListBox.album-tracks">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <!--  Lista de álbumes (vista «Álbumes»)  -->
+        <Style Selector="ListBox.browse-list">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.browse-list ListBoxItem">
+            <Setter Property="Padding" Value="12,6" />
+        </Style>
+        <Style Selector="ListBox.browse-list ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <!--  Barra lateral y lista de artistas: filas de 34 px con esquinas de 6  -->
+        <Style Selector="ListBox.nav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.nav ListBoxItem">
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ListBox.nav ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="TextBlock.nav-label">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="ListBox.nav ListBoxItem:selected TextBlock.nav-label">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+        <Style Selector="ListBox.artists ListBoxItem:selected TextBlock.nav-label">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <!--  «Biblioteca» está en Playlists.Items, pero se elige en «Tu biblioteca»  -->
+        <Style Selector="ListBox.playlists ListBoxItem">
+            <Setter Property="IsVisible" Value="{ReflectionBinding IsUserPlaylist}" />
+        </Style>
+        <!--
+            Columna de la barra lateral: al cambiar entre «Tu biblioteca» y la lista de artistas, el panel que aparece
+            entra con un deslizamiento corto. ApplyLayout pone la clase solo al cambiar, no al redimensionar.
+        -->
+        <Style Selector="DockPanel.sidebar-panel.slide-in">
+            <Style.Animations>
+                <Animation Easing="CubicEaseOut" FillMode="Forward" Duration="0:0:0.18">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0" />
+                        <Setter Property="TranslateTransform.X" Value="-16" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1" />
+                        <Setter Property="TranslateTransform.X" Value="0" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <!--  Carátulas de la página de artista: la elegida lleva un velo suave y el título en el primario  -->
+        <Style Selector="ListBox.cards">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.cards ListBoxItem">
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+        </Style>
+        <Style Selector="ListBox.cards ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+        <Style Selector="ListBox.cards ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ThemeOverlayHoverBrush}" />
+        </Style>
+        <Style Selector="ListBox.cards ListBoxItem:selected TextBlock.card-title">
+            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryBrush}" />
+        </Style>
+        <!--  Panel de letra: la línea que suena va en el color primario (en el inmersivo sigue blanca)  -->
+        <Style Selector="ListBox.lyrics.side StackPanel.active TextBlock.lead">
+            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="ListBox.lyrics.side StackPanel.synced">
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="ListBox.lyrics.side StackPanel.synced.active">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <!--  Configuración: cada grupo es una tarjeta con filas separadas por una línea  -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource ThemeSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+        <Style Selector="Border.card-row">
+            <Setter Property="Padding" Value="16,14" />
+        </Style>
+        <Style Selector="Border.card-row.divided">
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeOverlayBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <!--
+            Barra superior (mockup 1a): el texto de las acciones también en el primario. Solo aquí: en Configuración
+            los botones conservan su aspecto. Con un tema de usuario cuyo primario no se lea sobre el fondo, el texto
+            perdería contraste (ThemeFactory no lo exige); el icono y el borde siguen identificando el botón.
+        -->
+        <Style Selector="Border#TopBar Button.action TextBlock.label">
+            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryBrush}" />
+        </Style>
+        <!--
+            Controles de la barra de reproducción (mockup 1a): más compactos que en el inmersivo y la isla, que
+            conservan los suyos. Iconos de 17-18 px y Reproducir/Pausa de 42.
+        -->
+        <Style Selector="StackPanel.transport :is(Button).icon PathIcon">
+            <Setter Property="Width" Value="17" />
+            <Setter Property="Height" Value="17" />
+        </Style>
+        <Style Selector="StackPanel.transport :is(Button).icon.skip PathIcon">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+        </Style>
+        <Style Selector="StackPanel.transport Button.play">
+            <Setter Property="Width" Value="42" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Margin" Value="4,0" />
+        </Style>
+        <Style Selector="StackPanel.transport Panel.pp PathIcon">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+        </Style>
+        <!--  «Letra» abierta: además del color, un fondo suave (mockup 1a)  -->
+        <Style Selector="Button.icon.toggled.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ThemeOverlayHoverBrush}" />
+        </Style>
+        <Style Selector="TextBlock.option-title">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
     </Window.Styles>
 
     <Grid>
@@ -93,10 +310,14 @@
 
             <!--  Barra superior  -->
             <!--  Con la ventana estrecha, la clase «compact» (MainWindow.axaml.cs) deja los botones de acción solo con icono  -->
+            <!--
+                Rediseño (docs/specs/redesign-mockups.md): la búsqueda a la izquierda y las acciones a la derecha, sobre el
+                fondo de la ventana. La línea de estado pasó al pie de la zona central (StatusBar).
+            -->
             <Border
                 x:Name="TopBar"
-                Padding="16,12"
-                Background="{DynamicResource ThemeSurfaceBrush}"
+                Padding="20,10,16,10"
+                Background="{DynamicResource ThemeBackgroundBrush}"
                 BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
                 BorderThickness="0,0,0,1"
                 DockPanel.Dock="Top">
@@ -105,6 +326,7 @@
                     <Button
                         x:Name="SidebarButton"
                         Margin="0,0,8,0"
+                        VerticalAlignment="Center"
                         AutomationProperties.Name="Colecciones"
                         Classes="action only"
                         Click="OnSidebarButtonClick"
@@ -113,67 +335,80 @@
                         ToolTip.Tip="Mostrar u ocultar las colecciones">
                         <PathIcon Data="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
                     </Button>
+                    <!--  Configuración: abre y cierra la vista que cubre la zona central (docs/specs/settings-panel.md)  -->
                     <Button
-                        AutomationProperties.Name="Agregar carpeta"
+                        Margin="6,0,0,0"
+                        AutomationProperties.Name="Configuración"
+                        Classes="action square"
+                        Command="{Binding Settings.ToggleOpenCommand}"
+                        DockPanel.Dock="Right"
+                        ToolTip.Tip="Configuración">
+                        <StackPanel Orientation="Horizontal">
+                            <PathIcon Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        Margin="6,0,0,0"
+                        AutomationProperties.Name="Convertir lo que veo"
                         Classes="action"
-                        Command="{Binding AddFolderCommand}"
-                        DockPanel.Dock="Left"
-                        ToolTip.Tip="Agregar carpeta">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <PathIcon Data="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z" />
-                            <TextBlock Classes="label" Text="Agregar carpeta" />
+                        Command="{Binding OpenConvertCommand}"
+                        DockPanel.Dock="Right"
+                        ToolTip.Tip="Convertir lo que veo">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="M18 12l4-4-4-4v3H3v2h15v3zM6 12l-4 4 4 4v-3h15v-2H6v-3z" />
+                            <TextBlock Classes="label" Text="Convertir lo que veo…" />
                         </StackPanel>
                     </Button>
                     <!--  Autocompletar/Limpiar etiquetas… o editor de etiquetas  -->
                     <Button
-                        Margin="8,0,0,0"
+                        Margin="6,0,0,0"
                         AutomationProperties.Name="Limpiar etiquetas"
                         Classes="action"
                         Command="{Binding OpenAutoFixCommand}"
-                        DockPanel.Dock="Left"
+                        DockPanel.Dock="Right"
                         ToolTip.Tip="Limpiar etiquetas">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" />
                             <TextBlock Classes="label" Text="Limpiar etiquetas" />
                         </StackPanel>
                     </Button>
                     <Button
-                        Margin="8,0,0,0"
-                        AutomationProperties.Name="Convertir lo que veo"
+                        Margin="16,0,0,0"
+                        AutomationProperties.Name="Agregar carpeta"
                         Classes="action"
-                        Command="{Binding OpenConvertCommand}"
-                        DockPanel.Dock="Left"
-                        ToolTip.Tip="Convertir lo que veo">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <PathIcon Data="M18 12l4-4-4-4v3H3v2h15v3zM6 12l-4 4 4 4v-3h15v-2H6v-3z" />
-                            <TextBlock Classes="label" Text="Convertir lo que veo…" />
-                        </StackPanel>
-                    </Button>
-                    <!--  Configuración: abre y cierra la vista que cubre la zona central (docs/specs/settings-panel.md)  -->
-                    <Button
-                        Margin="8,0,0,0"
-                        AutomationProperties.Name="Configuración"
-                        Classes="action"
-                        Command="{Binding Settings.ToggleOpenCommand}"
+                        Command="{Binding AddFolderCommand}"
                         DockPanel.Dock="Right"
-                        ToolTip.Tip="Configuración">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <PathIcon Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-                            <TextBlock Classes="label" Text="Configuración" />
+                        ToolTip.Tip="Agregar carpeta">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z" />
+                            <TextBlock Classes="label" Text="Agregar carpeta" />
                         </StackPanel>
                     </Button>
+                    <!--
+                        Ocupa lo que sobra hasta 360 px, pegada a la izquierda: con la ventana estrecha se encoge antes
+                        que los botones. Lo que pase de 360 queda vacío a la derecha de la columna.
+                    -->
+                    <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MaxWidth="360" />
+                    </Grid.ColumnDefinitions>
                     <TextBox
-                        Width="240"
-                        DockPanel.Dock="Right"
+                        MinHeight="36"
+                        VerticalContentAlignment="Center"
+                        AutomationProperties.Name="Buscar"
+                        CornerRadius="8"
                         Text="{Binding SearchText}"
-                        Watermark="Buscar por título, artista o álbum" />
-                    <TextBlock
-                        Margin="16,0"
-                        VerticalAlignment="Center"
-                        Opacity="0.7"
-                        Text="{Binding Status}"
-                        TextTrimming="CharacterEllipsis"
-                        ToolTip.Tip="{Binding Status}" />
+                        Watermark="Buscar por título, artista o álbum">
+                        <TextBox.InnerLeftContent>
+                            <PathIcon
+                                Width="14"
+                                Height="14"
+                                Margin="10,0,0,0"
+                                Data="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                                Opacity="0.6" />
+                        </TextBox.InnerLeftContent>
+                    </TextBox>
+                    </Grid>
                 </DockPanel>
             </Border>
 
@@ -500,25 +735,37 @@
             <!--  Controles de reproducción: [carátula + título] [controles + progreso] [letra, pantalla completa, volumen]  -->
             <Border
                 x:Name="PlayerBar"
-                Padding="16,12"
+                Height="88"
+                Padding="20,0"
                 Background="{DynamicResource ThemeSurfaceBrush}"
                 BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
                 BorderThickness="0,1,0,0"
                 DockPanel.Dock="Bottom">
-                <!--  La tercera columna pasa a Auto con la ventana estrecha (MainWindow.axaml.cs, ApplyLayout)  -->
-                <Grid x:Name="PlayerGrid" ColumnDefinitions="*,2*,*">
+                <!--  Barras finas con pulgar de 12 px (mockup 1a); solo aquí, el inmersivo y la isla no cambian  -->
+                <Border.Resources>
+                    <x:Double x:Key="SliderHorizontalThumbWidth">12</x:Double>
+                    <x:Double x:Key="SliderHorizontalThumbHeight">12</x:Double>
+                    <CornerRadius x:Key="SliderThumbCornerRadius">6</CornerRadius>
+                </Border.Resources>
+                <!--
+                    Columna central de ancho fijo entre dos laterales iguales: los controles quedan centrados en la
+                    ventana a cualquier ancho. El ancho lo fija ApplyLayout (LayoutBreakpoints.PlayerCenterWidth).
+                -->
+                <Grid x:Name="PlayerGrid" ColumnDefinitions="*,560,*">
 
-                    <!--  Izquierda: carátula y título  -->
+                    <!--  Izquierda: carátula, título y artista  -->
                     <Grid
                         Grid.Column="0"
                         VerticalAlignment="Center"
                         ColumnDefinitions="Auto,*">
                         <Button
-                            Width="48"
-                            Height="48"
+                            Width="52"
+                            Height="52"
                             Padding="0"
+                            AutomationProperties.Name="Pantalla completa"
                             ClipToBounds="True"
                             Command="{Binding OpenImmersiveCommand}"
+                            CornerRadius="6"
                             ToolTip.Tip="Pantalla completa">
                             <Panel>
                                 <TextBlock
@@ -530,25 +777,43 @@
                                 <Image Source="{Binding NowPlayingCover}" Stretch="UniformToFill" />
                             </Panel>
                         </Button>
-                        <TextBlock
+                        <StackPanel
                             Grid.Column="1"
                             Margin="12,0,12,0"
                             VerticalAlignment="Center"
-                            FontWeight="SemiBold"
-                            Text="{Binding NowPlaying}"
-                            TextTrimming="CharacterEllipsis" />
+                            Spacing="3">
+                            <TextBlock
+                                FontSize="14"
+                                FontWeight="SemiBold"
+                                Text="{Binding CurrentTrack.Title}"
+                                TextTrimming="CharacterEllipsis"
+                                IsVisible="{Binding CurrentTrack, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock
+                                Classes="secondary"
+                                FontSize="12.5"
+                                Text="{Binding CurrentTrack.Artist}"
+                                TextTrimming="CharacterEllipsis"
+                                IsVisible="{Binding CurrentTrack, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <!--  Sin canción: el texto de siempre («Nada en reproducción»)  -->
+                            <TextBlock
+                                Classes="secondary"
+                                Text="{Binding NowPlaying}"
+                                TextTrimming="CharacterEllipsis"
+                                IsVisible="{Binding CurrentTrack, Converter={x:Static ObjectConverters.IsNull}}" />
+                        </StackPanel>
                     </Grid>
 
-                    <!--  Centro: Aleatorio · Anterior · Reproducir/Pausa · Siguiente · Repetir, y progreso  -->
+                    <!--  Centro: Aleatorio · Anterior · Reproducir/Pausa · Siguiente · Repetir, y debajo el progreso  -->
                     <StackPanel
                         Grid.Column="1"
                         VerticalAlignment="Center"
-                        Spacing="6">
+                        Classes="transport"
+                        Spacing="4">
                         <StackPanel
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Orientation="Horizontal"
-                            Spacing="8">
+                            Spacing="6">
                             <ToggleButton
                                 AutomationProperties.Name="Aleatorio"
                                 Classes="icon"
@@ -621,10 +886,12 @@
                                 </Panel>
                             </Button>
                         </StackPanel>
-                        <Grid ColumnDefinitions="56,*,56">
+                        <Grid MaxWidth="520" ColumnDefinitions="44,*,44">
                             <TextBlock
                                 Grid.Column="0"
                                 VerticalAlignment="Center"
+                                Classes="secondary"
+                                FontSize="11.5"
                                 Text="{Binding PositionText}" />
                             <Slider
                                 Grid.Column="1"
@@ -636,6 +903,8 @@
                                 Grid.Column="2"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
+                                Classes="secondary"
+                                FontSize="11.5"
                                 Text="{Binding DurationText}" />
                         </Grid>
                     </StackPanel>
@@ -649,19 +918,12 @@
                         Spacing="4">
                         <Button
                             AutomationProperties.Name="Letra"
-                            Classes="icon"
+                            Classes="icon toggled"
                             Classes.active="{Binding Lyrics.ShowPanel}"
                             Command="{Binding Lyrics.ToggleOpenCommand}"
                             IsEnabled="{Binding Lyrics.IsAvailable}"
                             ToolTip.Tip="Letra">
                             <PathIcon Data="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z" />
-                        </Button>
-                        <Button
-                            AutomationProperties.Name="Pantalla completa"
-                            Classes="icon"
-                            Command="{Binding OpenImmersiveCommand}"
-                            ToolTip.Tip="Pantalla completa">
-                            <PathIcon Data="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
                         </Button>
                         <!--
                             Isla flotante (solo Windows). Button con comando y no ToggleButton, para no pelear con el
@@ -677,6 +939,13 @@
                             <PathIcon Data="M2 4h20v16H2V4zm2 2v12h16V6H4zm4 1h8a1.5 1.5 0 0 1 0 3H8a1.5 1.5 0 0 1 0-3z" />
                         </Button>
                         <Button
+                            AutomationProperties.Name="Pantalla completa"
+                            Classes="icon"
+                            Command="{Binding OpenImmersiveCommand}"
+                            ToolTip.Tip="Pantalla completa">
+                            <PathIcon Data="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                        </Button>
+                        <Button
                             Margin="8,0,0,0"
                             AutomationProperties.Name="{Binding MuteText}"
                             Classes="icon volume-wide"
@@ -689,8 +958,9 @@
                             </Panel>
                         </Button>
                         <Slider
-                            Width="100"
+                            Width="92"
                             VerticalAlignment="Center"
+                            AutomationProperties.Name="Volumen"
                             Classes="volume-wide"
                             Maximum="1"
                             Minimum="0"
@@ -740,11 +1010,82 @@
             </Border>
 
             <!--  Barra lateral, Lista de canciones y Panel de letras  -->
-            <Grid x:Name="CentralGrid" ColumnDefinitions="220,*,Auto">
+            <!--
+                Fila 0: barra lateral, lista y letra. Fila 1: la línea de estado, bajo la lista y la letra.
+            -->
+            <Grid
+                x:Name="CentralGrid"
+                ColumnDefinitions="232,*,Auto"
+                RowDefinitions="*,Auto">
+                <!--
+                    Columna 0: la barra lateral (Sidebar) o, en Artistas, la lista de artistas (ArtistSidebar), en el
+                    mismo sitio, con el mismo ancho y fondo. Cuál se ve, y si la columna se ve, lo decide ApplyLayout.
+                -->
+                <Border
+                    x:Name="SidebarBackground"
+                    Grid.RowSpan="2"
+                    Grid.Column="0"
+                    Background="{DynamicResource ThemeSurfaceBrush}"
+                    BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
+                    BorderThickness="0,0,1,0" />
+                <DockPanel
+                    x:Name="ArtistSidebar"
+                    Grid.RowSpan="2"
+                    Grid.Column="0"
+                    Margin="12,18,12,12"
+                    Classes="sidebar-panel"
+                    IsVisible="False">
+                    <DockPanel.RenderTransform>
+                        <TranslateTransform />
+                    </DockPanel.RenderTransform>
+                    <DockPanel Margin="0,0,0,8" DockPanel.Dock="Top">
+                        <!--  Vuelve a «Tu biblioteca» + «Playlists» sin salir de la página de artista (también Esc)  -->
+                        <Button
+                            Margin="0,0,6,0"
+                            AutomationProperties.Name="Volver a la biblioteca"
+                            Classes="action only"
+                            Command="{Binding ShowLibraryNavCommand}"
+                            DockPanel.Dock="Left"
+                            ToolTip.Tip="Volver a la biblioteca (Esc)">
+                            <PathIcon Data="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                        </Button>
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Classes="section"
+                            Text="ARTISTAS DEL ÁLBUM" />
+                    </DockPanel>
+                    <ListBox
+                        x:Name="ArtistList"
+                        Classes="nav artists"
+                        ItemsSource="{Binding Artists}"
+                        SelectedItem="{Binding SelectedArtist}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ArtistItemViewModel">
+                                <DockPanel VerticalAlignment="Center">
+                                    <TextBlock
+                                        Margin="8,0,0,0"
+                                        DockPanel.Dock="Right"
+                                        FontSize="12"
+                                        Opacity="0.5"
+                                        Text="{Binding CountText}" />
+                                    <TextBlock
+                                        Classes="nav-label artist-name"
+                                        Text="{Binding Name}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
                 <DockPanel
                     x:Name="Sidebar"
+                    Grid.RowSpan="2"
                     Grid.Column="0"
-                    Margin="8,8,0,8">
+                    Margin="12,18,12,12"
+                    Classes="sidebar-panel">
+                    <DockPanel.RenderTransform>
+                        <TranslateTransform />
+                    </DockPanel.RenderTransform>
                     <!--  Panel de edición (crear / renombrar / confirmar eliminación)  -->
                     <Border
                         Margin="0,8,0,0"
@@ -786,7 +1127,48 @@
                         <Button Command="{Binding Playlists.BeginRenameCommand}" Content="Renombrar" />
                         <Button Command="{Binding Playlists.BeginDeleteCommand}" Content="Eliminar" />
                     </StackPanel>
-                    <DockPanel Margin="0,0,0,6" DockPanel.Dock="Top">
+                    <!--
+                        «Tu biblioteca» (mockup 1a): las vistas de la biblioteca. Elegir una vuelve a la biblioteca si
+                        había una playlist abierta (LibraryNavIndex).
+                    -->
+                    <TextBlock
+                        Margin="10,0,0,8"
+                        Classes="section"
+                        DockPanel.Dock="Top"
+                        Text="Tu biblioteca" />
+                    <ListBox
+                        x:Name="LibraryNav"
+                        Classes="nav"
+                        DockPanel.Dock="Top"
+                        SelectedIndex="{Binding LibraryNavIndex, Mode=TwoWay}">
+                        <ListBoxItem AutomationProperties.Name="Canciones">
+                            <DockPanel>
+                                <TextBlock
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Classes="secondary"
+                                    DockPanel.Dock="Right"
+                                    FontSize="12"
+                                    Text="{Binding LibraryCountText}" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    Classes="nav-label"
+                                    Text="Canciones" />
+                            </DockPanel>
+                        </ListBoxItem>
+                        <!--
+                            «Álbumes» oculto por ahora (el mockup 1a no lo tiene). La vista sigue en el código; para
+                            recuperarla, descomentar esto y su entrada en MainViewModel.NavModes.
+                        <ListBoxItem AutomationProperties.Name="Álbumes">
+                            <TextBlock Classes="nav-label" Text="Álbumes" />
+                        </ListBoxItem>
+                        -->
+                        <!--  Ya elegido, el clic trae de vuelta la lista de artistas si se había ocultado con ←  -->
+                        <ListBoxItem AutomationProperties.Name="Artistas" Tapped="OnArtistsNavTapped">
+                            <TextBlock Classes="nav-label" Text="Artistas" />
+                        </ListBoxItem>
+                    </ListBox>
+                    <DockPanel Margin="10,22,4,6" DockPanel.Dock="Top">
                         <Button
                             AutomationProperties.Name="Nueva playlist"
                             Classes="action only"
@@ -796,23 +1178,22 @@
                             <PathIcon Data="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                         </Button>
                         <TextBlock
-                            Margin="8,0"
                             VerticalAlignment="Center"
-                            FontSize="12"
-                            Opacity="0.6"
-                            Text="COLECCIONES" />
+                            Classes="section"
+                            Text="Playlists" />
                     </DockPanel>
-                    <ListBox ItemsSource="{Binding Playlists.Items}" SelectedItem="{Binding Playlists.Selected}">
+                    <!--  La entrada «Biblioteca» de Playlists.Items se oculta: la biblioteca se elige arriba  -->
+                    <ListBox
+                        Classes="nav playlists"
+                        ItemsSource="{Binding Playlists.Items}"
+                        SelectedItem="{Binding Playlists.Selected}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:PlaylistItemViewModel">
-                                <DockPanel Margin="4">
-                                    <TextBlock
-                                        Margin="8,0,0,0"
-                                        DockPanel.Dock="Right"
-                                        Opacity="0.6"
-                                        Text="{Binding CountText}" />
-                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                </DockPanel>
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    Classes="nav-label"
+                                    Text="{Binding Name}"
+                                    TextTrimming="CharacterEllipsis" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -821,18 +1202,9 @@
                 <DockPanel
                     x:Name="ListArea"
                     Grid.Column="1"
-                    Margin="8">
-                    <TabStrip
-                        Margin="0,0,0,6"
-                        DockPanel.Dock="Top"
-                        IsVisible="{Binding ShowModeTabs}"
-                        SelectedIndex="{Binding BrowseIndex}">
-                        <TabStripItem Content="Canciones" />
-                        <TabStripItem Content="Álbumes" />
-                        <TabStripItem Content="Artistas" />
-                    </TabStrip>
+                    Margin="16,18,16,0">
                     <DockPanel
-                        Margin="0,0,0,6"
+                        Margin="12,0,0,8"
                         DockPanel.Dock="Top"
                         IsVisible="{Binding ShowBackBar}">
                         <Button
@@ -840,20 +1212,65 @@
                             Content="{Binding BackText}"
                             DockPanel.Dock="Left" />
                         <Button
+                            HorizontalAlignment="Right"
                             Command="{Binding PlayScopeCommand}"
-                            Content="▶ Reproducir"
-                            DockPanel.Dock="Right" />
-                        <TextBlock
-                            Margin="12,0"
-                            VerticalAlignment="Center"
-                            FontWeight="SemiBold"
-                            Text="{Binding BrowseTitle}"
-                            TextTrimming="CharacterEllipsis" />
+                            Content="▶ Reproducir" />
                     </DockPanel>
-                    <Panel>
-                        <!--  Canciones: el mismo ListBox de antes, con IsVisible nuevo  -->
+                    <!--  Cabecera: título de lo que se ve («Canciones», la playlist, el álbum…) y su resumen  -->
+                    <StackPanel
+                        Margin="12,4,0,14"
+                        DockPanel.Dock="Top"
+                        IsVisible="{Binding ShowListHeader}"
+                        Orientation="Horizontal"
+                        Spacing="12">
+                        <TextBlock
+                            VerticalAlignment="Bottom"
+                            Classes="heading"
+                            Text="{Binding ListHeading}"
+                            TextTrimming="CharacterEllipsis" />
+                        <TextBlock
+                            Margin="0,0,0,4"
+                            VerticalAlignment="Bottom"
+                            Classes="secondary"
+                            FontSize="13"
+                            Text="{Binding ListSummary}" />
+                    </StackPanel>
+                    <!--  Columnas de la lista de canciones: mismas medidas que la fila (relleno de 12 del ListBoxItem)  -->
+                    <Border
+                        Height="30"
+                        Padding="12,0"
+                        BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        DockPanel.Dock="Top"
+                        IsVisible="{Binding ShowSongs}">
+                        <Grid VerticalAlignment="Center" ColumnDefinitions="40,2*,1.2*,1.2*,64">
+                            <TextBlock Classes="section" Text="#" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Classes="section"
+                                Text="TÍTULO" />
+                            <TextBlock
+                                Grid.Column="2"
+                                Margin="12,0,0,0"
+                                Classes="section"
+                                Text="ARTISTA" />
+                            <TextBlock
+                                Grid.Column="3"
+                                Margin="12,0,0,0"
+                                Classes="section"
+                                Text="ÁLBUM" />
+                            <TextBlock
+                                Grid.Column="4"
+                                HorizontalAlignment="Right"
+                                Classes="section"
+                                Text="DURACIÓN" />
+                        </Grid>
+                    </Border>
+                    <Panel Margin="0,4,0,0">
+                        <!--  Canciones: el mismo ListBox de antes, con columnas y la carátula junto al título  -->
                         <ListBox
                             x:Name="SongList"
+                            Classes="songs"
                             ContextRequested="OnTrackListContextRequested"
                             DoubleTapped="OnTrackDoubleTapped"
                             Tapped="OnTrackTapped"
@@ -862,49 +1279,116 @@
                             SelectedItem="{Binding SelectedTrack}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TrackItemViewModel">
-                                    <Grid
-                                        Margin="8,4"
-                                        Classes.missing="{Binding !IsAvailable}"
-                                        ColumnDefinitions="Auto,3*,2*,Auto">
-                                        <!--  Thumbnail de Canciones  -->
-                                        <Border
-                                            Grid.Column="0"
-                                            Width="40"
-                                            Height="40"
-                                            Margin="0,0,12,0"
-                                            Background="{DynamicResource ThemeOverlayCoverBrush}"
-                                            ClipToBounds="True"
-                                            CornerRadius="4">
-                                            <Image Source="{Binding Cover}" Stretch="UniformToFill" />
-                                        </Border>
+                                    <!--  La fila que suena lleva el velo de selección, como en el mockup  -->
+                                    <Border Classes="row" Classes.playing="{Binding IsPlaying}">
+                                    <Grid Classes.missing="{Binding !IsAvailable}" ColumnDefinitions="40,2*,1.2*,1.2*,64">
+                                        <!--  «#»: número de la fila, o tres barras si es la que suena  -->
                                         <TextBlock
-                                            Grid.Column="1"
                                             VerticalAlignment="Center"
-                                            Text="{Binding Title}"
-                                            TextTrimming="CharacterEllipsis" />
+                                            Classes="secondary"
+                                            FontSize="13"
+                                            IsVisible="{Binding IsNotPlaying}"
+                                            Text="{Binding Number}" />
+                                        <StackPanel
+                                            Height="12"
+                                            VerticalAlignment="Center"
+                                            IsVisible="{Binding IsPlaying}"
+                                            Orientation="Horizontal"
+                                            Spacing="2"
+                                            ToolTip.Tip="Suena ahora">
+                                            <Rectangle
+                                                Width="3"
+                                                Height="7"
+                                                VerticalAlignment="Bottom"
+                                                Fill="{DynamicResource ThemePrimaryBrush}"
+                                                RadiusX="1"
+                                                RadiusY="1" />
+                                            <Rectangle
+                                                Width="3"
+                                                Height="12"
+                                                VerticalAlignment="Bottom"
+                                                Fill="{DynamicResource ThemePrimaryBrush}"
+                                                RadiusX="1"
+                                                RadiusY="1" />
+                                            <Rectangle
+                                                Width="3"
+                                                Height="5"
+                                                VerticalAlignment="Bottom"
+                                                Fill="{DynamicResource ThemePrimaryBrush}"
+                                                RadiusX="1"
+                                                RadiusY="1" />
+                                        </StackPanel>
+                                        <!--  Título con la carátula del álbum a su izquierda  -->
+                                        <DockPanel Grid.Column="1">
+                                            <Border
+                                                Width="40"
+                                                Height="40"
+                                                Margin="0,0,12,0"
+                                                Background="{DynamicResource ThemeOverlayCoverBrush}"
+                                                ClipToBounds="True"
+                                                CornerRadius="4"
+                                                DockPanel.Dock="Left">
+                                                <Image Source="{Binding Cover}" Stretch="UniformToFill" />
+                                            </Border>
+                                            <Border
+                                                Margin="8,0,0,0"
+                                                Padding="6,2"
+                                                VerticalAlignment="Center"
+                                                BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                DockPanel.Dock="Right"
+                                                IsVisible="{Binding !IsAvailable}">
+                                                <TextBlock
+                                                    FontSize="10.5"
+                                                    FontWeight="SemiBold"
+                                                    Text="No disponible" />
+                                            </Border>
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Classes="track-title"
+                                                Classes.playing="{Binding IsPlaying}"
+                                                FontSize="13"
+                                                FontWeight="Medium"
+                                                Text="{Binding Title}"
+                                                TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
                                         <TextBlock
                                             Grid.Column="2"
+                                            Margin="12,0,0,0"
                                             VerticalAlignment="Center"
-                                            Opacity="0.7"
+                                            Classes="secondary"
+                                            FontSize="13"
                                             Text="{Binding Artist}"
                                             TextTrimming="CharacterEllipsis" />
                                         <TextBlock
                                             Grid.Column="3"
                                             Margin="12,0,0,0"
                                             VerticalAlignment="Center"
-                                            Opacity="0.7"
-                                            Text="{Binding TrailingText}" />
+                                            Classes="secondary"
+                                            FontSize="13"
+                                            Text="{Binding Album}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <TextBlock
+                                            Grid.Column="4"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Classes="secondary"
+                                            FontSize="13"
+                                            Text="{Binding DurationText}" />
                                     </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
                         <ListBox
+                            Classes="browse-list"
                             IsVisible="{Binding ShowAlbums}"
                             ItemsSource="{Binding Albums}"
                             Tapped="OnBrowseTapped">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:AlbumItemViewModel">
-                                    <Grid Margin="8,4" ColumnDefinitions="Auto,*">
+                                    <Grid ColumnDefinitions="Auto,*">
                                         <!--  Thumbnail de Álbumes  -->
                                         <Border
                                             Width="56"
@@ -932,60 +1416,208 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <ListBox
-                            IsVisible="{Binding ShowArtists}"
-                            ItemsSource="{Binding Artists}"
-                            Tapped="OnBrowseTapped">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ArtistItemViewModel">
-                                    <Grid Margin="8,4" ColumnDefinitions="Auto,*">
-                                        <!--  Thumbnail de Artistas  -->
-                                        <Border
-                                            Width="56"
-                                            Height="56"
-                                            Margin="0,0,12,0"
-                                            Background="{DynamicResource ThemeOverlayCoverBrush}"
-                                            ClipToBounds="True"
-                                            CornerRadius="4">
-                                            <Image Source="{Binding Cover}" Stretch="UniformToFill" />
-                                        </Border>
-                                        <StackPanel
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Spacing="2">
-                                            <TextBlock
-                                                FontWeight="SemiBold"
-                                                Text="{Binding Name}"
-                                                TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Opacity="0.7" Text="{Binding Summary}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
                     </Panel>
                 </DockPanel>
 
+                <!--
+                    Página de artista (mockup 1c): migas, nombre, carátulas de sus álbumes y las pistas del álbum
+                    elegido. La lista de artistas va en la columna de la barra lateral (ArtistSidebar). La página va en
+                    la misma columna que la lista: con la ventana estrecha y la letra abierta, ApplyLayout deja esa
+                    columna en 0 y la página se va con ella.
+                -->
+                <Panel
+                    x:Name="ArtistPage"
+                    Grid.Column="1"
+                    IsVisible="{Binding ShowArtistPage}">
+                    <DockPanel Margin="32,22,32,0">
+                        <!--  Migas y nombre  -->
+                        <StackPanel
+                            Margin="0,0,0,24"
+                            DockPanel.Dock="Top"
+                            Spacing="6">
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                TextElement.FontSize="12.5">
+                                <TextBlock Foreground="{DynamicResource ThemePrimaryBrush}" Text="Artistas" />
+                                <TextBlock Classes="secondary" Text="›" />
+                                <TextBlock
+                                    Classes="secondary"
+                                    Text="{Binding SelectedArtist.Name}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock
+                                    VerticalAlignment="Bottom"
+                                    FontSize="28"
+                                    FontWeight="Bold"
+                                    Text="{Binding SelectedArtist.Name}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Margin="0,0,0,5"
+                                    VerticalAlignment="Bottom"
+                                    Classes="secondary"
+                                    FontSize="13"
+                                    Text="{Binding ArtistPageSummary}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!--  Carátulas de los álbumes: elegir una muestra sus pistas debajo  -->
+                        <!--  Una sola fila, como en el mockup: con muchos álbumes se desplaza a lo ancho  -->
+                        <ListBox
+                            Margin="-8,0,0,24"
+                            Classes="cards"
+                            DockPanel.Dock="Top"
+                            ItemsSource="{Binding Albums}"
+                            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                            ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                            SelectedItem="{Binding SelectedAlbum}">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AlbumItemViewModel">
+                                    <!--  Medida compartida con la prueba de CoverSizes (se decodifica a 512 px)  -->
+                                    <StackPanel Width="{x:Static core:CoverSizes.CardDisplaySize}" Spacing="8">
+                                        <Border
+                                            Width="{x:Static core:CoverSizes.CardDisplaySize}"
+                                            Height="{x:Static core:CoverSizes.CardDisplaySize}"
+                                            Background="{DynamicResource ThemeOverlayCoverBrush}"
+                                            ClipToBounds="True"
+                                            CornerRadius="8">
+                                            <Panel>
+                                                <TextBlock
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="40"
+                                                    Opacity="0.4"
+                                                    Text="♪" />
+                                                <!--  CardCover: 512 px, no la miniatura de 96; el ♪ se ve mientras carga  -->
+                                                <Image
+                                                    RenderOptions.BitmapInterpolationMode="HighQuality"
+                                                    Source="{Binding CardCover}"
+                                                    Stretch="UniformToFill" />
+                                            </Panel>
+                                        </Border>
+                                        <StackPanel Spacing="2">
+                                            <TextBlock
+                                                Classes="card-title"
+                                                FontSize="13.5"
+                                                FontWeight="SemiBold"
+                                                Text="{Binding Title}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                Classes="secondary"
+                                                FontSize="12"
+                                                Text="{Binding CardSubtitle}"
+                                                TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!--  Álbum elegido: «Shiokaze · 2024» y «DISCO 1»  -->
+                        <Border
+                            Margin="0,0,0,4"
+                            Padding="12,0,12,8"
+                            BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            DockPanel.Dock="Top">
+                            <DockPanel>
+                                <TextBlock
+                                    VerticalAlignment="Bottom"
+                                    Classes="section"
+                                    DockPanel.Dock="Right"
+                                    Text="{Binding AlbumSectionDisc}" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock
+                                        FontSize="15"
+                                        FontWeight="SemiBold"
+                                        Text="{Binding AlbumSectionTitle}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        Classes="secondary"
+                                        FontSize="15"
+                                        Text="{Binding AlbumSectionYear}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!--  Pistas del álbum: mismos clics, menú y atajos que la lista de canciones  -->
+                        <ListBox
+                            Classes="album-tracks"
+                            ContextRequested="OnTrackListContextRequested"
+                            DoubleTapped="OnTrackDoubleTapped"
+                            ItemsSource="{Binding Tracks}"
+                            SelectedItem="{Binding SelectedTrack}"
+                            Tapped="OnTrackTapped">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TrackItemViewModel">
+                                    <StackPanel>
+                                        <TextBlock
+                                            Margin="12,14,0,6"
+                                            Classes="section"
+                                            IsVisible="{Binding HasDiscHeader}"
+                                            Text="{Binding DiscHeader}" />
+                                        <Border Classes="row" Classes.playing="{Binding IsPlaying}">
+                                            <Grid
+                                                Height="24"
+                                                Classes.missing="{Binding !IsAvailable}"
+                                                ColumnDefinitions="36,*,52">
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    Classes="secondary"
+                                                    FontSize="13"
+                                                    Text="{Binding AlbumTrackNumber}" />
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Classes="track-title"
+                                                    Classes.playing="{Binding IsPlaying}"
+                                                    FontSize="13"
+                                                    FontWeight="Medium"
+                                                    Text="{Binding Title}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                                <TextBlock
+                                                    Grid.Column="2"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    Classes="secondary"
+                                                    FontSize="13"
+                                                    Text="{Binding DurationText}" />
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Panel>
+
+                <!--  Panel de letra: pegado al borde derecho, separado de la lista por una línea  -->
                 <Border
                     x:Name="LyricsPanel"
                     Grid.Column="2"
-                    Width="380"
-                    Margin="0,8,8,8"
-                    Padding="8"
-                    Background="{DynamicResource ThemeSurfaceBrush}"
+                    Width="300"
+                    Padding="20,22,12,0"
                     BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
+                    BorderThickness="1,0,0,0"
                     IsVisible="{Binding Lyrics.ShowPanel}">
                     <DockPanel>
+                        <DockPanel Margin="0,0,0,12" DockPanel.Dock="Top">
+                        <!--  Capas: la misma burbuja con «A» que en el modo inmersivo  -->
                         <Button
-                            Margin="0,0,0,8"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Center"
-                            Content="Traducción y pronunciación"
-                            DockPanel.Dock="Top">
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="Traducción y pronunciación"
+                            Classes="icon"
+                            DockPanel.Dock="Right"
+                            ToolTip.Tip="Traducción y pronunciación">
+                            <PathIcon Data="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12zM11.3 6h1.4l2.8 8h-1.5l-.6-1.8h-2.8l-.6 1.8H8.5zm-.3 5h2l-1-3z" />
                             <Button.Flyout>
-                                <Flyout Placement="Bottom">
+                                <Flyout Placement="BottomEdgeAlignedRight">
                                     <StackPanel MinWidth="260" Spacing="4">
                                         <CheckBox
                                             Content="Mostrar traducción"
@@ -1014,146 +1646,276 @@
                                 </Flyout>
                             </Button.Flyout>
                         </Button>
+                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                            <TextBlock
+                                FontSize="15"
+                                FontWeight="SemiBold"
+                                Text="Letra" />
+                            <TextBlock
+                                Classes="secondary"
+                                FontSize="12"
+                                Text="{Binding Lyrics.PanelSubtitle}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        </DockPanel>
+                        <!--
+                            El final se funde con el fondo (mockup 1a). La máscara solo usa el alfa: Black y
+                            Transparent no son colores que se vean, por eso no salen de los recursos del tema.
+                        -->
                         <ListBox
                             Background="Transparent"
-                            Classes="lyrics"
-                            ItemTemplate="{StaticResource LyricLineTemplate}"
+                            Classes="lyrics side"
+                            ItemTemplate="{StaticResource SideLyricLineTemplate}"
                             ItemsSource="{Binding Lyrics.Lines}"
                             SelectedIndex="{Binding Lyrics.ActiveIndex, Mode=OneWay}"
-                            Tapped="OnLyricTapped" />
+                            Tapped="OnLyricTapped">
+                            <ListBox.OpacityMask>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Offset="0.75" Color="Black" />
+                                    <GradientStop Offset="1" Color="Transparent" />
+                                </LinearGradientBrush>
+                            </ListBox.OpacityMask>
+                        </ListBox>
                     </DockPanel>
+                </Border>
+
+                <!--  Línea de estado (mockup 1a): «Biblioteca al día.» o el último aviso, error o progreso  -->
+                <Border
+                    x:Name="StatusBar"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Grid.ColumnSpan="2"
+                    Height="28"
+                    Padding="20,0"
+                    BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
+                    BorderThickness="0,1,0,0">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Classes="secondary"
+                        FontSize="12"
+                        Text="{Binding Status}"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTip.Tip="{Binding Status}" />
                 </Border>
 
                 <!--
                     Configuración (docs/specs/settings-panel.md): una capa sobre la zona central, no una ventana. Cada
                     opción se guarda al cambiarla. Solo CheckBox y Button (y el desplegable de «Tema», cuyas teclas atiende la
-                    ventana), para no ampliar OwnsKeyboard.
+                    ventana), para no ampliar OwnsKeyboard. Rediseño (docs/specs/redesign-mockups.md): «Volver a la
+                    biblioteca» arriba, columna centrada de 640 px y cada grupo en una tarjeta.
                 -->
-                <Border
+                <DockPanel
+                    Grid.RowSpan="2"
                     Grid.ColumnSpan="3"
                     Background="{DynamicResource ThemeBackgroundBrush}"
                     IsVisible="{Binding Settings.IsOpen}">
+                    <Border
+                        Height="56"
+                        Padding="20,0"
+                        BorderBrush="{DynamicResource ThemeOverlayBorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        DockPanel.Dock="Top">
+                        <DockPanel>
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                Classes="secondary"
+                                DockPanel.Dock="Right"
+                                FontSize="12"
+                                Text="Esc cierra" />
+                            <Button
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="Volver a la biblioteca"
+                                Classes="action"
+                                Command="{Binding Settings.CloseCommand}"
+                                ToolTip.Tip="Cerrar la configuración (Esc)">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                                    <TextBlock Classes="label" Text="Volver a la biblioteca" />
+                                </StackPanel>
+                            </Button>
+                        </DockPanel>
+                    </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel
-                            MaxWidth="560"
-                            Margin="24,16"
-                            HorizontalAlignment="Left"
-                            Spacing="20">
-                            <DockPanel>
-                                <Button
-                                    Command="{Binding Settings.CloseCommand}"
-                                    Content="Cerrar"
-                                    DockPanel.Dock="Right"
-                                    ToolTip.Tip="Cerrar la configuración (Esc)" />
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    FontSize="20"
-                                    FontWeight="SemiBold"
-                                    Text="Configuración" />
-                            </DockPanel>
+                            MaxWidth="640"
+                            Margin="24,32"
+                            Spacing="28">
+                            <TextBlock
+                                FontSize="26"
+                                FontWeight="Bold"
+                                Text="Configuración" />
 
-                            <StackPanel Classes="settings-section" Spacing="8">
-                                <TextBlock Classes="settings-title" Text="APARIENCIA" />
-                                <!--  Tema: la lista previsualiza al pasar el cursor o con las flechas; clic o Enter confirma  -->
-                                <Button
-                                    x:Name="ThemeButton"
-                                    HorizontalAlignment="Left"
-                                    AutomationProperties.Name="Tema"
-                                    Classes="action"
-                                    ToolTip.Tip="Cambiar el tema">
-                                    <Button.Content>
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <PathIcon Data="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
-                                            <TextBlock Classes="label" Text="Tema" />
-                                        </StackPanel>
-                                    </Button.Content>
-                                    <Button.Flyout>
-                                        <Flyout
-                                            Closed="OnThemeFlyoutClosed"
-                                            Opened="OnThemeFlyoutOpened"
-                                            Placement="BottomEdgeAlignedLeft">
-                                            <StackPanel Width="220" Spacing="8">
-                                                <ListBox
-                                                    x:Name="ThemeList"
-                                                    ItemsSource="{Binding Themes.Items}"
-                                                    PointerExited="OnThemeListPointerExited"
-                                                    PointerMoved="OnThemeListPointerMoved"
-                                                    SelectedItem="{Binding Themes.SelectedChoice}"
-                                                    Tapped="OnThemeListTapped">
-                                                    <ListBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:ThemeChoice">
-                                                            <TextBlock Text="{Binding Name}" />
-                                                        </DataTemplate>
-                                                    </ListBox.ItemTemplate>
-                                                </ListBox>
-                                                <Button
-                                                    HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Center"
-                                                    Click="OnOpenThemesFolder"
-                                                    Content="Carpeta de temas"
-                                                    Focusable="False" />
+                            <StackPanel Spacing="10">
+                                <TextBlock Classes="section" Text="APARIENCIA" />
+                                <Border Classes="card">
+                                    <Border Classes="card-row">
+                                        <DockPanel>
+                                            <!--  Tema: la lista previsualiza al pasar el cursor o con las flechas; clic o Enter confirma  -->
+                                            <Button
+                                                x:Name="ThemeButton"
+                                                MinWidth="200"
+                                                Margin="16,0,0,0"
+                                                VerticalAlignment="Top"
+                                                HorizontalContentAlignment="Stretch"
+                                                AutomationProperties.Name="Tema"
+                                                Classes="action"
+                                                DockPanel.Dock="Right"
+                                                ToolTip.Tip="Cambiar el tema">
+                                                <Button.Content>
+                                                    <DockPanel>
+                                                        <PathIcon
+                                                            Margin="12,0,0,0"
+                                                            Data="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"
+                                                            DockPanel.Dock="Right" />
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            Text="{Binding Themes.CommittedName}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                    </DockPanel>
+                                                </Button.Content>
+                                                <Button.Flyout>
+                                                    <Flyout
+                                                        Closed="OnThemeFlyoutClosed"
+                                                        Opened="OnThemeFlyoutOpened"
+                                                        Placement="BottomEdgeAlignedLeft">
+                                                        <StackPanel Width="220" Spacing="8">
+                                                            <ListBox
+                                                                x:Name="ThemeList"
+                                                                ItemsSource="{Binding Themes.Items}"
+                                                                PointerExited="OnThemeListPointerExited"
+                                                                PointerMoved="OnThemeListPointerMoved"
+                                                                SelectedItem="{Binding Themes.SelectedChoice}"
+                                                                Tapped="OnThemeListTapped">
+                                                                <ListBox.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:ThemeChoice">
+                                                                        <TextBlock Text="{Binding Name}" />
+                                                                    </DataTemplate>
+                                                                </ListBox.ItemTemplate>
+                                                            </ListBox>
+                                                            <Button
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Center"
+                                                                Click="OnOpenThemesFolder"
+                                                                Content="Carpeta de temas"
+                                                                Focusable="False" />
+                                                        </StackPanel>
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Classes="option-title" Text="Tema" />
+                                                <TextBlock
+                                                    Classes="settings-help"
+                                                    Text="Pasa el cursor o usa las flechas para previsualizar. Enter confirma; Esc vuelve al anterior."
+                                                    TextWrapping="Wrap" />
                                             </StackPanel>
-                                        </Flyout>
-                                    </Button.Flyout>
-                                </Button>
+                                        </DockPanel>
+                                    </Border>
+                                </Border>
                             </StackPanel>
 
-                            <StackPanel Classes="settings-section" Spacing="8">
-                                <TextBlock Classes="settings-title" Text="REPRODUCCIÓN" />
-                                <CheckBox Content="Reproducir con un solo clic" IsChecked="{Binding Settings.PlayOnSingleClick}" />
-                                <TextBlock
-                                    Classes="settings-help"
-                                    Text="Desactivado, un clic selecciona la canción y el doble clic la reproduce. Con Ctrl o Mayús el clic solo selecciona."
-                                    TextWrapping="Wrap" />
+                            <StackPanel Spacing="10">
+                                <TextBlock Classes="section" Text="REPRODUCCIÓN" />
+                                <Border Classes="card">
+                                    <Border Classes="card-row">
+                                        <CheckBox AutomationProperties.Name="Reproducir con un solo clic" IsChecked="{Binding Settings.PlayOnSingleClick}">
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Classes="option-title" Text="Reproducir con un solo clic" />
+                                                <TextBlock
+                                                    Classes="settings-help"
+                                                    Text="Desactivado, un clic selecciona la canción y el doble clic la reproduce. Con Ctrl o Mayús el clic solo selecciona."
+                                                    TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </Border>
+                                </Border>
                             </StackPanel>
 
-                            <StackPanel
-                                Classes="settings-section"
-                                IsVisible="{Binding Settings.IsWindows}"
-                                Spacing="8">
-                                <TextBlock Classes="settings-title" Text="ISLA FLOTANTE" />
-                                <CheckBox Content="Mostrar la isla flotante" IsChecked="{Binding ShowIsland}" />
-                                <TextBlock
-                                    Classes="settings-help"
-                                    Text="Una pastilla arriba al centro de la pantalla muestra lo que suena cuando el reproductor está minimizado o detrás de otra ventana."
-                                    TextWrapping="Wrap" />
-                                <CheckBox
-                                    Content="Mostrar el título en la isla"
-                                    IsChecked="{Binding Settings.IslandShowTitle}"
-                                    IsEnabled="{Binding ShowIsland}" />
-                                <TextBlock
-                                    Classes="settings-help"
-                                    Text="La isla sin desplegar muestra el título y el artista. Si no caben, el texto se desplaza mientras suena la música."
-                                    TextWrapping="Wrap" />
+                            <StackPanel IsVisible="{Binding Settings.IsWindows}" Spacing="10">
+                                <TextBlock Classes="section" Text="ISLA FLOTANTE" />
+                                <Border Classes="card">
+                                    <StackPanel>
+                                        <Border Classes="card-row divided">
+                                            <CheckBox AutomationProperties.Name="Mostrar la isla flotante" IsChecked="{Binding ShowIsland}">
+                                                <StackPanel Spacing="3">
+                                                    <TextBlock Classes="option-title" Text="Mostrar la isla flotante" />
+                                                    <TextBlock
+                                                        Classes="settings-help"
+                                                        Text="Una pastilla arriba al centro de la pantalla muestra lo que suena cuando el reproductor está minimizado o detrás de otra ventana."
+                                                        TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </Border>
+                                        <Border Classes="card-row">
+                                            <CheckBox
+                                                AutomationProperties.Name="Mostrar el título en la isla"
+                                                IsChecked="{Binding Settings.IslandShowTitle}"
+                                                IsEnabled="{Binding ShowIsland}">
+                                                <StackPanel Spacing="3">
+                                                    <TextBlock Classes="option-title" Text="Mostrar el título en la isla" />
+                                                    <TextBlock
+                                                        Classes="settings-help"
+                                                        Text="La isla sin desplegar muestra el título y el artista. Si no caben, el texto se desplaza mientras suena la música."
+                                                        TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
 
-                            <StackPanel
-                                Classes="settings-section"
-                                IsVisible="{Binding Settings.IsWindows}"
-                                Spacing="8">
-                                <TextBlock Classes="settings-title" Text="SEGUNDO PLANO" />
-                                <CheckBox Content="Seguir sonando al cerrar la ventana" IsChecked="{Binding Settings.KeepRunningOnClose}" />
-                                <TextBlock
-                                    Classes="settings-help"
-                                    Text="Al cerrar la ventana, el reproductor se queda en la bandeja del sistema (junto al reloj) y la música sigue. Un clic en su icono vuelve a abrirlo; para cerrarlo del todo, clic derecho en el icono y «Salir», o el botón «Salir» de la isla flotante."
-                                    TextWrapping="Wrap" />
+                            <StackPanel IsVisible="{Binding Settings.IsWindows}" Spacing="10">
+                                <TextBlock Classes="section" Text="SEGUNDO PLANO" />
+                                <Border Classes="card">
+                                    <Border Classes="card-row">
+                                        <CheckBox AutomationProperties.Name="Seguir sonando al cerrar la ventana" IsChecked="{Binding Settings.KeepRunningOnClose}">
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Classes="option-title" Text="Seguir sonando al cerrar la ventana" />
+                                                <TextBlock
+                                                    Classes="settings-help"
+                                                    Text="Al cerrar la ventana, el reproductor se queda en la bandeja del sistema (junto al reloj) y la música sigue. Un clic en su icono vuelve a abrirlo; para cerrarlo del todo, clic derecho en el icono y «Salir», o el botón «Salir» de la isla flotante."
+                                                    TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </Border>
+                                </Border>
                             </StackPanel>
 
-                            <StackPanel Classes="settings-section" Spacing="8">
-                                <TextBlock Classes="settings-title" Text="DATOS" />
-                                <TextBlock
-                                    Classes="settings-help"
-                                    Text="La biblioteca, las playlists, los ajustes y los temas se guardan en esta carpeta:"
-                                    TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding Settings.DataFolder}" TextWrapping="Wrap" />
-                                <Button
-                                    HorizontalAlignment="Left"
-                                    Click="OnOpenDataFolder"
-                                    Content="Abrir carpeta" />
+                            <StackPanel Spacing="10">
+                                <TextBlock Classes="section" Text="DATOS" />
+                                <Border Classes="card">
+                                    <Border Classes="card-row">
+                                        <DockPanel>
+                                            <Button
+                                                Margin="16,0,0,0"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="Abrir carpeta"
+                                                Classes="action"
+                                                Click="OnOpenDataFolder"
+                                                DockPanel.Dock="Right">
+                                                <TextBlock Classes="label" Text="Abrir carpeta" />
+                                            </Button>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Classes="option-title" Text="Carpeta de datos" />
+                                                <TextBlock
+                                                    Classes="settings-help"
+                                                    Text="La biblioteca, las playlists, los ajustes y los temas se guardan aquí:"
+                                                    TextWrapping="Wrap" />
+                                                <TextBlock
+                                                    Classes="secondary"
+                                                    FontFamily="Cascadia Mono,Consolas,monospace"
+                                                    FontSize="12"
+                                                    Text="{Binding Settings.DataFolder}"
+                                                    TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </Border>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
-                </Border>
+                </DockPanel>
             </Grid>
 
         </DockPanel>
@@ -1238,10 +2000,18 @@
                                 FontWeight="Bold"
                                 Text="{Binding CurrentTrack.Title}"
                                 TextTrimming="CharacterEllipsis" />
+                            <!--  «Artista · Álbum», como en el diseño del inmersivo  -->
                             <TextBlock
+                                FontSize="15"
                                 Opacity="0.7"
-                                Text="{Binding CurrentTrack.Artist}"
-                                TextTrimming="CharacterEllipsis" />
+                                TextTrimming="CharacterEllipsis">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0} · {1}">
+                                        <Binding Path="CurrentTrack.Artist" />
+                                        <Binding Path="CurrentTrack.Album" />
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
                         </StackPanel>
                         <Grid ColumnDefinitions="48,*,48">
                             <TextBlock

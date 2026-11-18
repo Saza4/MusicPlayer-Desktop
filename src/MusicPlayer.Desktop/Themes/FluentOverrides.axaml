@@ -119,11 +119,14 @@
         Opacity="0.1490196078"
         Color="{DynamicResource ThemeOverlay}" />
 
-    <!--  Sliders: el relleno y el pulgar toman el acento del tema (por defecto, el acento del sistema)  -->
+    <!--
+        Sliders: el relleno toma el acento del tema; el pulgar, el color de texto (claro sobre Oscuro, oscuro sobre
+        Claro), para que se distinga del relleno (docs/specs/redesign-mockups.md).
+    -->
     <SolidColorBrush x:Key="SliderTrackValueFill" Color="{DynamicResource ThemeAccent}" />
     <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="{DynamicResource ThemeAccent}" />
     <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{DynamicResource ThemeAccent}" />
-    <SolidColorBrush x:Key="SliderThumbBackground" Color="{DynamicResource ThemeAccent}" />
-    <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="{DynamicResource ThemeAccent}" />
-    <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="{DynamicResource ThemeAccent}" />
+    <SolidColorBrush x:Key="SliderThumbBackground" Color="{DynamicResource SystemBaseHighColor}" />
+    <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="{DynamicResource SystemBaseHighColor}" />
+    <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="{DynamicResource SystemBaseHighColor}" />
 </ResourceDictionary>
