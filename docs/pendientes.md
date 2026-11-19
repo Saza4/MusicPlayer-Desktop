@@ -15,6 +15,9 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
 - `docs/specs/audit-3.md`: arreglos de la auditoría. **Hecho y verificado a mano por el autor** el 15 de
   noviembre de 2026 (PR #13, #14 y #15). Resolvió los antiguos puntos 4 (`HideFaded`) y 8
   (aviso de `playlists.json`) de la lista de abajo, que ya no están.
+- `docs/specs/write-after-advance.md`: antes de soltar un archivo para escribirlo o borrarlo, la interfaz se pone
+  al día con el reproductor (`IAudioPlayer.CurrentFilePath`, `CatchUpWithPlayer`). **Hecho** el 16 de noviembre
+  de 2026, con la pasada manual de regresión del autor ese día. El caso en sí no se puede provocar a mano.
 - `docs/specs/playlist-serialization.md`: las operaciones de `PlaylistManager` van una a la vez, como las de
   `LibraryService`. **Hecho** el 16 de noviembre de 2026 (pruebas en Core; no necesita prueba a mano). Era el
   antiguo punto 2 de la lista de abajo.
@@ -56,7 +59,7 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
   falla con el archivo abierto (el original queda intacto). **No entra en `background-playback.md`**: no tiene que
   ver con la ventana oculta, y esa spec ya cambia el ciclo de vida de la app. Va como arreglo pequeño aparte:
   que `OnTagsSaving` pregunte al reproductor qué archivo tiene abierto (una propiedad nueva en `IAudioPlayer`) en
-  lugar de fiarse de `CurrentTrack`.
+  lugar de fiarse de `CurrentTrack`. **Hecho** el 16 de noviembre de 2026 (`docs/specs/write-after-advance.md`).
 
 ## Aplazado a propósito
 

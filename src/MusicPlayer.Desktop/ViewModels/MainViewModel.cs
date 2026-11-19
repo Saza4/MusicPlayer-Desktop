@@ -555,6 +555,7 @@ public partial class MainViewModel : ViewModelBase
         if (item is null) return;
         try
         {
+            CatchUpWithPlayer();
             _player.PrepareNext(null); // suelta el archivo preparado: en Windows no se puede borrar un archivo abierto
 
             // Una sola regla: si suena la canción quitada, se detiene. Además, en Windows
@@ -706,6 +707,24 @@ public partial class MainViewModel : ViewModelBase
         }
 
         UpdateGapless();
+    }
+
+    /// <summary>
+    /// Antes de decidir si un archivo está abierto: el reproductor pudo pasar solo a la pista siguiente y su aviso
+    /// seguir en cola. Entonces <see cref="CurrentTrack"/> es todavía la anterior, y compararla dejaría abierto el
+    /// archivo que se va a escribir o borrar (docs/specs/write-after-advance.md). El avance se atiende aquí y el
+    /// aviso en cola se descarta. Solo si el reproductor está en la pista que la cola da por siguiente: una ruta
+    /// distinta por otro motivo (una pista reubicada) no es un avance.
+    /// </summary>
+    private void CatchUpWithPlayer()
+    {
+        if (CurrentTrack is not { } shown || _player.CurrentFilePath is not { } path
+            || FilePaths.Comparer.Equals(path, shown.Track.FilePath)
+            || !FilePaths.Comparer.Equals(path, _queue.PeekNextAfterEnd()?.Track.FilePath))
+            return;
+
+        _epoch.Advance(); // el aviso que venía de camino ya no vale: se atiende ahora
+        OnAdvancedToNext(path);
     }
 
     /// <summary>Le dice al reproductor cuál es la pista que sigue para que empiece sin silencio.</summary>
@@ -933,6 +952,7 @@ public partial class MainViewModel : ViewModelBase
     // El archivo debe quedar libre: en Windows no se puede escribir en uno que el reproductor tiene abierto.
     private void OnTagsSaving(Track track)
     {
+        CatchUpWithPlayer(); // antes de soltar la preparada: ponerse al día vuelve a preparar la siguiente
         _player.PrepareNext(null);
         if (CurrentTrack is { } current && current.Track.Id == track.Id)
             InterruptForWriting(current);
@@ -958,6 +978,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void OnAutoFixSaving(IReadOnlySet<Guid> ids)
     {
+        CatchUpWithPlayer();
         _player.PrepareNext(null); // suelta el archivo preparado
         if (CurrentTrack is { } current && ids.Contains(current.Track.Id))
             InterruptForWriting(current);
