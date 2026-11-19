@@ -4,7 +4,7 @@ Estado: **terminada** (5 de noviembre de 2026). M0-M10 hechos en la rama `featur
 
 ## Contexto
 
-MusicPlayer-Desktop solo se controla desde `MainWindow`. Con la app minimizada o tapada no hay forma de ver ni controlar lo que suena, salvo la barra espaciadora con la ventana enfocada. Se añade una ventana flotante estilo Live Activity (referencia: Dynamic Island de Apple Music en Mac y `Referencias.png`): una pastilla negra arriba al centro, siempre encima, que se expande al pasar el cursor.
+MusicPlayer-Desktop solo se controla desde `MainWindow`. Con la app minimizada o tapada no hay forma de ver ni controlar lo que suena, salvo la barra espaciadora con la ventana enfocada. Se añade una ventana flotante (referencia visual: `Referencias.png`): una pastilla negra arriba al centro, siempre encima, que se expande al pasar el cursor.
 
 Fuentes: `docs/reporte-reproductor.md`, `README.md`, `docs/diseño.md` (principios: simplicidad, discreción —«no te metas»—, constancia de interacciones, accesibilidad, animaciones fluidas) y la exploración de `Desktop`.
 

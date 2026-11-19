@@ -108,6 +108,7 @@ lectura. Hallazgos y qué se hizo con ellos:
 | Audio en `tests/`, BASS, `bin/`/`obj/`, rutas personales, `.env` | Solo `Fixtures/silencio.m4a`; `native/` en `.gitignore`; nada más versionado |
 | Reporte 3.1, «Navegación» | Hablaba de pestañas Canciones, Álbumes y Artistas: desde el rediseño, «Tu biblioteca» con Canciones y Artistas. Corregido |
 | `island-title-and-close.md`, «Sin verificar» | Seguía listando lo que el autor ya probó. Corregido |
-| `action-buttons.md` | Cita los principios de `diseño.md` con los nombres anteriores («Oficios», «Delicia»); `diseño.md` usa ahora «Artesanía» y «Encanto». Anotado en la spec |
-| `docs/diseño.md` | Es una traducción de los principios de las Human Interface Guidelines de Apple. Queda a decisión del autor si conviene tenerla en un repositorio público (el README declara MIT para el código) |
+| Marcas comerciales en la documentación | Se quitaron las comparaciones con otras apps y servicios (README, reporte y specs). Quedan solo identificadores técnicos de formato necesarios para leer y escribir los archivos (`com.apple.iTunes` en M4A, la clase `AppleTag` de TagLib) |
+| `action-buttons.md` | Cita los principios de `diseño.md` con los nombres anteriores. Anotado en la spec |
+| `docs/diseño.md` | Era la traducción de un texto de diseño de terceros. Por decisión del autor (sin referencias a marcas), se reescribió con principios propios de la app |
 | Publicación efectiva | No verificable por lectura: se comprueba en GitHub al publicar |

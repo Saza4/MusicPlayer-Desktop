@@ -161,7 +161,7 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 | 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | v1.3.0 |
 | 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | v1.3.0 |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
-| 14  | Letra progresiva en el modo inmersivo (estilo Apple Music) | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | v1.4.0 (PR #4) |
+| 14  | Letra progresiva en el modo inmersivo | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | v1.4.0 (PR #4) |
 | 15  | Capas de letra: traducción y pronunciación incrustadas, y menú de capas en el inmersivo | Core, Infrastructure, Desktop | Hecho: pruebas en MP3, FLAC y M4A, comprobado en la app por UI Automation y probado a mano por el autor en copias | v1.4.0 (PR #5) |
 | 16  | Botones de acción: estilo tonal con icono en la barra superior y en el «+» de COLECCIONES | Desktop                       | Hecho: capturas en Windows (Oscuro, Claro y un tema de usuario, a 640, 960 y 1200 px), hover y foco; CI del PR #6 en verde. Sin probar: `Tab` real, pressed y deshabilitado | v1.4.0 (PR #6) |
 | 17  | Limpieza de código sin uso (`IAudioPlayer.Stop`, `LyricLine.Words`, `LibrarySnapshot.Folders`, `ViewLocator`…) | Core, Audio, Infrastructure, Desktop | Hecho: build sin errores, 640 + 173 pruebas, la app arranca igual | v1.4.0 (PR #7) |
@@ -180,7 +180,7 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 
 #### Barra multimedia con íconos
 
-Se reemplazaron los botones de texto por íconos vectoriales (`PathIcon`), tomando como guía `referencias.png` (referencias tipo Spotify, Apple Music y reproductores móviles) y los principios de `diseño.md`.
+Se reemplazaron los botones de texto por íconos vectoriales (`PathIcon`), tomando como guía `referencias.png` (capturas de reproductores de escritorio y móviles) y los principios de `diseño.md`.
 
 - Estilos reutilizables por clase: `.icon` (botón plano, fondo solo al pasar el cursor), `.skip` (íconos de anterior y siguiente, algo más grandes) y `.play` (círculo sólido y más grande para Reproducir/Pausa, con escala al pasar el cursor y al pulsar).
 - Reproducir y Pausa son dos íconos que se funden con una pequeña escala según `IsPlaying`.
@@ -536,7 +536,7 @@ SHA-256: `FE5640786A3E63AC2B70F806FF4CBB6229AC5E7DEF7D10DBEB7EC8D4AD8ABE6C`
 
 _Fuente del texto: `docs/notas-de-version/v1.4.0.md` (spec: `docs/specs/release-v1.4.0.md`). Publicada el 8 de noviembre de 2026._
 
-Tres novedades: una **letra progresiva** en el modo inmersivo (estilo Apple Music), **traducción y pronunciación incrustadas** en el propio archivo de audio, y **botones de acción con icono** en la barra superior.
+Tres novedades: una **letra progresiva** en el modo inmersivo, **traducción y pronunciación incrustadas** en el propio archivo de audio, y **botones de acción con icono** en la barra superior.
 
 #### Letra progresiva (modo inmersivo)
 
@@ -1051,7 +1051,7 @@ Descripción de las experiencias que sirvieron de modelo, adaptadas a un reprodu
 **Visión y objetivos**
 
 - Tipo de aplicación: reproductor de escritorio para archivos de audio locales (`.mp3`, `.flac`, `.wav`, `.m4a`).
-- Enfoque: personal, experimental y formativo, sin consumo de APIs de streaming cerrado ni dependencias del ecosistema propietario de Spotify o Apple Music.
+- Enfoque: personal, experimental y formativo, sin consumo de APIs de streaming cerradas ni dependencias de plataformas propietarias.
 - Propósito profesional: proyecto de referencia para portafolio en GitHub, con patrones de diseño documentados.
 - Portabilidad: solución multiplataforma (Windows y Linux), sin acoplamientos a Win32, WPF, WinUI o NAudio.
 
@@ -1137,7 +1137,7 @@ Objetivo para este paso:
 
 ## Anexo D: análisis de funciones esenciales y su estado
 
-Funciones que un reproductor local de escritorio, comparado con Apple Music o Spotify, debería tener, con el estado actual de cada una.
+Funciones que un reproductor local de escritorio, comparado con los grandes reproductores comerciales, debería tener, con el estado actual de cada una.
 
 | Prioridad original | Función                                              | Por qué importa                                                                    | Diseño técnico previsto                                                               | Estado                                                              |
 | ------------------ | ---------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
