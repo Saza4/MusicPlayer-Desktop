@@ -2,7 +2,7 @@
 
 Lista corta de lo que se sabe que falta. No es un plan: cada punto necesita su spec aprobada antes de tocar código.
 Estado a 19 de noviembre de 2026. La v1.5.0 está publicada desde el 12 de noviembre (`docs/specs/release-v1.5.0.md`);
-todo lo de abajo va camino de la v1.6.0, que aún no tiene spec de release.
+la v1.6.0 está preparada (`docs/specs/release-v1.6.0.md`), a falta del borrador en GitHub y de publicarla.
 
 El plan de la primera auditoría (que numeraba «siete specs») no se guardó en el repositorio y no se va a
 reconstruir. De sus specs 6 (`ux-quick-wins.md`) y 7 solo se conocía lo que aparecía aquí, y ya está hecho.
@@ -56,10 +56,8 @@ Todo está fusionado en `main`.
 
 ## Notas cortas (sin prisa)
 
-- **Rutas locales en los binarios publicados.** Los DLL y los `.pdb` de los zip de v1.4.0 y v1.5.0 llevan la ruta
-  de compilación del equipo del autor (carpeta de usuario incluida). Decidido el 19 de noviembre de 2026: la spec
-  de la próxima release publicará con `dotnet publish … -p:ContinuousIntegrationBuild=true` (solo en ese comando,
-  no en un `Directory.Build.props`, para no cambiar los builds de desarrollo ni del CI). Además añadirá una fila de
-  comprobación: buscar la carpeta de usuario en los DLL y `.pdb` del zip.
+- **Rutas locales en los binarios publicados:** resuelto en la v1.6.0 (`docs/specs/release-v1.6.0.md`, decisión 7).
+  `ContinuousIntegrationBuild` no bastaba (Avalonia deja la ruta del `.pdb` en `MusicPlayer.Desktop.dll`): se
+  publica además desde una unidad virtual (`subst`).
 - `WindowNative.Restore`, `IsForeground` y `ForceForeground` ya llaman a Win32 dentro de métodos con
   `[SupportedOSPlatform("windows")]`, como pide CLAUDE.md (19 de noviembre de 2026).
