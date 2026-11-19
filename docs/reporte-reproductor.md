@@ -725,8 +725,13 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | Auditoría, spec 5: medida de CPU del relleno por palabra (`lyrics-render-perf.md`) | +0 | +0 | Sin código nuevo: solo la sonda `tools/medir-cpu.ps1` y las cifras. |
 | Segunda auditoría (`audit-followup.md`), ejecución del 11 de noviembre de 2026 (`-c Release`) | +6 | +7 | **754 + 204 = 958**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). CI del PR #10 en verde en Windows y Ubuntu. |
 | Pruebas sin esperas reales (`test-waits-and-docs.md`) | +1 | +0 | **755 + 204 = 959**. La prueba del guardado diferido de los ajustes ya no depende del reloj. |
+| Dígitos `0`-`9` en los parsers (`ascii-digits.md`), ejecución del 16 de noviembre de 2026 (Debug) | +6 | +0 | **825 + 211 = 1036**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Las specs entre la fila anterior y esta (de 959 a 819 + 211 = 1030) no se anotaron en esta tabla. |
+| Un solo camino de salto (`single-seek-path.md`), ejecución del 16 de noviembre de 2026 (Debug) | +0 | +0 | **825 + 211 = 1036**. El cambio vive en `MainViewModel` y `LyricsViewModel`, sin pruebas automáticas; probado a mano por el autor ese día. |
+| `PlaylistManager`, una operación a la vez (`playlist-serialization.md`), ejecución del 16 de noviembre de 2026 (Debug) | +5 | +0 | **830 + 211 = 1041**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). |
+| Escribir tras un avance automático (`write-after-advance.md`), ejecución del 16 de noviembre de 2026 (Debug) | +0 | +0 | **830 + 211 = 1041**. El cambio vive en `MainViewModel` y `BassAudioPlayer`, sin pruebas automáticas; pasada manual de regresión hecha por el autor ese día. |
+| Sesión de escritura con contador (`write-sessions.md`), ejecución del 16 de noviembre de 2026 (Debug) | +10 | +0 | **840 + 211 = 1051**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Las pruebas son de `WriteSessions`; el resto vive en Desktop, con la pasada manual hecha por el autor ese día. |
 
-La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las propiedades de la isla la desplazaron): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
+La advertencia es CS8602 en `MainViewModel.cs:249` (antes en las líneas 222 y 237; el código añadido encima la va desplazando): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
 **Cobertura de lo más reciente:**
 
@@ -753,7 +758,7 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 | CS0246: no se encuentra `Exception`                                                                               | Añadir `using System;` o habilitar `ImplicitUsings`                                                                            |
 | CS0535: `AvaloniaImagePickerService` no implementaba `PickImageAsync()`                                           | La interfaz `IImagePickerService` no se había actualizado con la firma nueva `PickImageAsync(string title = …)`. Se sincronizó |
 | Teclado sin foco al abrir y barra espaciadora sin efecto                                                          | Foco inicial en `SongList`, `Activate()` y manejador _tunnel_ de la barra (sección 4.3)                                        |
-| Archivos de audio bloqueados al escribir en Windows                                                               | El reproductor suelta el archivo antes de escribir (`OnTagsSaving`)                                                            |
+| Archivos de audio bloqueados al escribir en Windows                                                               | El reproductor suelta el archivo antes de escribir (`WriteSessions`, `OnWriting`)                                                            |
 | Isla: una ventana transparente captura los clics en todo su rectángulo (M0)                                       | La zona de clics se limita con la región de la ventana (`SetWindowRgn`)                                                        |
 | Isla: al redimensionar la ventana para expandir, la pastilla saltaba un fotograma (M5, medido)                    | La ventana no cambia de tamaño ni de sitio; cambia la región de clics                                                          |
 | Isla: bordes a escalones en la pastilla colapsada (M5, visto con la Lupa)                                         | La región se amplía 2 DIPs: el corte sin suavizar cae en la zona transparente                                                  |
@@ -772,7 +777,6 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 **Reproducción**
 
-- En pausa, «Anterior» (pasados 3 s) y pulsar una línea de la letra saltan en el reproductor, pero la barra de progreso, el tiempo y el punto de partida de `←` `→` no cambian hasta reanudar: el temporizador no escribe en pausa y esos dos saltos no pasan por `PositionSeconds` (`MainViewModel.Previous`, `LyricsViewModel.SeekTo`).
 
 **Carátulas y etiquetas**
 
@@ -781,7 +785,6 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 - La carátula de álbum aplica el criterio de «mismo álbum». Un recopilatorio sin «artista del álbum» se separa por artista.
 - Si suena una pista al escribir en su archivo (etiquetas, carátula, carátula de álbum, autocompletar o letra), se descarga para escribir y se vuelve a cargar en el mismo punto, sonando o en pausa como estaba (spec `docs/specs/playback-resilience.md`): se nota un corte breve. Las miniaturas de la lista se refrescan.
 - La carátula de álbum no tiene botón para cancelar ni para quitar la imagen de todo el álbum.
-- «Limpiar etiquetas» falla para toda la lista visible («No se pudo revisar: …») si un archivo empieza por un número escrito con dígitos que no son `0`-`9` (`０１ - título.mp3`): `FileNameParser` los reconoce como número de pista y no los sabe convertir.
 
 **Conversión**
 
@@ -794,7 +797,6 @@ La advertencia es CS8602 en `MainViewModel.cs:237` (antes en la línea 222; las 
 
 - USLT es texto _sin sincronizar_ por especificación. Los tiempos `[mm:ss.xx]` viajan dentro del texto. La app los interpreta, pero un reproductor estricto los mostrará como texto. No se escribe SYLT, el marco sincronizado del estándar.
 - Solo UTF-8, de hasta 1 MB, al incrustar y al leer (spec `docs/specs/untrusted-input-limits.md`): un `.lrc`, un hermano o una letra incrustada mayor se ignora; un texto con caracteres nulos no se toma por letra; de una línea se usan como mucho 32 marcas de tiempo iniciales.
-- Un `.lrc` (o una letra incrustada) con marcas de tiempo escritas con dígitos que no son `0`-`9` (`[０１:２３.００]`) no se muestra, e «Incrustar letra (.lrc)…» falla con un mensaje en inglés: `LrcLyricParser` reconoce la marca y no sabe convertirla.
 - Sustituye la letra incrustada anterior sin preguntar y no hay botón para quitarla.
 - La traducción y la pronunciación incrustadas (`LYRICS_TRANSLATION_<CÓDIGO>`, `LYRICS_PRONUNCIATION`) solo las muestra esta app; otros reproductores ven solo la principal. En WAV, OGG u Opus solo se incrusta la principal.
 - Con el clic derecho («Incrustar letra (.lrc)…») hace falta la letra principal: con solo `.es.lrc` y `.rom.lrc` no se incrusta nada. Desde el inmersivo, «Incrustar traducción…» e «Incrustar pronunciación…» eligen el archivo con el selector y no necesitan `cancion.lrc` ni hermanos, pero sí que la pista ya tenga letra sincronizada (sin ella, el botón de capas del inmersivo no aparece y la capa no se vería).

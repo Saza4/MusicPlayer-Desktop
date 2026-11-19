@@ -218,12 +218,16 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
         SeekTo(line.Line.Timestamp);
     }
 
+    /// <summary>
+    /// Pide saltar a una posición. Lo atiende <c>MainViewModel.SeekTo</c>, que salta en el reproductor y mueve la
+    /// barra, el tiempo y la línea activa, también en pausa (docs/specs/single-seek-path.md).
+    /// </summary>
+    public event Action<TimeSpan>? SeekRequested;
+
     /// <summary>Salta a <paramref name="position"/> (una línea o una pausa de la letra progresiva).</summary>
     public void SeekTo(TimeSpan position)
     {
-        if (!IsSynced) return;
-        player.Seek(position);
-        UpdatePosition(position); // También funciona con la reproducción en pausa
+        if (IsSynced) SeekRequested?.Invoke(position);
     }
 
     private void SetBlock(LyricBlock block)

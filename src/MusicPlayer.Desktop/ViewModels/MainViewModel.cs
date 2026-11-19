@@ -177,7 +177,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly DispatcherTimer _searchDebounce;
     [ObservableProperty] private string _searchText = "";
 
-    // Evita el bucle timer -> Slider -> Seek -> timer.
+    // Evita el bucle timer -> Slider -> Seek -> timer. Solo lo toca SetPositionSilently.
     private bool _isUpdatingFromTimer;
 
     [ObservableProperty] private ObservableCollection<TrackItemViewModel> _tracks = new();
@@ -208,8 +208,9 @@ public partial class MainViewModel : ViewModelBase
                          SettingsService settings, TagEditorViewModel tagEditor,
                          TagAutoFixViewModel autoFix, ConvertViewModel conversion,
                          AlbumCoverViewModel albumCover, EmbedLyricsViewModel embedLyrics,
-                         ThemeViewModel themes, SettingsViewModel settingsPanel)
+                         ThemeViewModel themes, SettingsViewModel settingsPanel, WriteSessions writes)
     {
+        _writes = writes;
         Settings = settingsPanel;
         _covers = covers;
         _settings = settings;
@@ -253,23 +254,20 @@ public partial class MainViewModel : ViewModelBase
 
         Playlists.Changed += (_, _) => ApplyFilter();
         Playlists.Notified += Notify;
-        TagEditor.Saving += OnTagsSaving;
         TagEditor.Saved += OnTagsSaved;
-        TagEditor.Finished += ResumeInterrupted;
         TagEditor.Notified += message => Status = message;
-        AutoFix.Saving += OnAutoFixSaving;
         AutoFix.Applied += OnTagsSaved; // el mismo manejador del editor manual
-        AutoFix.Finished += ResumeInterrupted;
         AutoFix.Notified += message => Status = message;
         Conversion.Added += ApplySnapshot;
         Conversion.Notified += message => Status = message;
         AlbumCover.Applied += ApplySnapshot;
         AlbumCover.Notified += message => Status = message;
-        AlbumCover.Saving += OnTagsSaving;
-        AlbumCover.Finished += ResumeInterrupted;
         EmbedLyrics.Notified += message => Status = message;
-        EmbedLyrics.Saving += OnTagsSaving;
-        EmbedLyrics.Finished += ResumeInterrupted;
+        // Las herramientas que escriben en audio abren una sesión: al abrirla se suelta el archivo y, al cerrarse
+        // la última, se vuelve a cargar (docs/specs/write-sessions.md).
+        _writes.Releasing += OnWriting;
+        _writes.AllFinished += ResumeInterrupted;
+        Lyrics.SeekRequested += SeekTo;
         Themes.Notified += Notify;
 
         // Configuración (docs/specs/settings-panel.md) se cierra si se abre un panel de edición, que ocupa la misma zona.
@@ -554,6 +552,7 @@ public partial class MainViewModel : ViewModelBase
         if (item is null) return;
         try
         {
+            CatchUpWithPlayer();
             _player.PrepareNext(null); // suelta el archivo preparado: en Windows no se puede borrar un archivo abierto
 
             // Una sola regla: si suena la canción quitada, se detiene. Además, en Windows
@@ -596,13 +595,7 @@ public partial class MainViewModel : ViewModelBase
         Lyrics.Clear();
         _player.Unload();
         _epoch.Advance();
-        _isUpdatingFromTimer = true;
-        try
-        {
-            PositionSeconds = 0;
-            DurationSeconds = 1;
-        }
-        finally { _isUpdatingFromTimer = false; }
+        SetPositionSilently(TimeSpan.Zero, duration: 1);
 
         PositionText = "0:00";
         DurationText = "0:00";
@@ -663,13 +656,7 @@ public partial class MainViewModel : ViewModelBase
         _scrub.Abandon(); // un arrastre a medias no debe saltar en la pista nueva
         // Reiniciar posición ANTES de cambiar el máximo: si no, el Slider ajusta su
         // valor al nuevo rango y dispara un Seek no deseado.
-        _isUpdatingFromTimer = true;
-        try
-        {
-            PositionSeconds = 0;
-            DurationSeconds = Math.Max(_player.Duration.TotalSeconds, 1);
-        }
-        finally { _isUpdatingFromTimer = false; }
+        SetPositionSilently(TimeSpan.Zero, duration: Math.Max(_player.Duration.TotalSeconds, 1));
 
         DurationText = TimeFormatter.Format(_player.Duration);
         UpdateRemainingText(); // si la posición ya era 0, OnPositionSecondsChanged no se dispara
@@ -709,9 +696,7 @@ public partial class MainViewModel : ViewModelBase
         if (next.Track.Id == CurrentTrack?.Track.Id)
         {
             // "Repetir una": misma letra y carátula, solo vuelve el contador al principio. Por Id, como en OnTrackEnded.
-            _isUpdatingFromTimer = true;
-            try { PositionSeconds = 0; }
-            finally { _isUpdatingFromTimer = false; }
+            SetPositionSilently(TimeSpan.Zero);
         }
         else
         {
@@ -721,9 +706,34 @@ public partial class MainViewModel : ViewModelBase
         UpdateGapless();
     }
 
-    /// <summary>Le dice al reproductor cuál es la pista que sigue para que empiece sin silencio.</summary>
-    private void UpdateGapless() =>
+    /// <summary>
+    /// Antes de decidir si un archivo está abierto: el reproductor pudo pasar solo a la pista siguiente y su aviso
+    /// seguir en cola. Entonces <see cref="CurrentTrack"/> es todavía la anterior, y compararla dejaría abierto el
+    /// archivo que se va a escribir o borrar (docs/specs/write-after-advance.md). El avance se atiende aquí y el
+    /// aviso en cola se descarta. Solo si el reproductor está en la pista que la cola da por siguiente: una ruta
+    /// distinta por otro motivo (una pista reubicada) no es un avance.
+    /// </summary>
+    private void CatchUpWithPlayer()
+    {
+        if (CurrentTrack is not { } shown || _player.CurrentFilePath is not { } path
+            || FilePaths.Comparer.Equals(path, shown.Track.FilePath)
+            || !FilePaths.Comparer.Equals(path, _queue.PeekNextAfterEnd()?.Track.FilePath))
+            return;
+
+        _epoch.Advance(); // el aviso que venía de camino ya no vale: se atiende ahora
+        OnAdvancedToNext(path);
+    }
+
+    /// <summary>
+    /// Le dice al reproductor cuál es la pista que sigue para que empiece sin silencio. Mientras hay una escritura
+    /// en curso no se prepara nada: abriría un archivo que alguien puede estar escribiendo. Al cerrarse la última
+    /// sesión, <see cref="ResumeInterrupted"/> vuelve a llamar aquí.
+    /// </summary>
+    private void UpdateGapless()
+    {
+        if (_writes.IsOpen) return;
         _player.PrepareNext(CurrentTrack is null ? null : _queue.PeekNextAfterEnd()?.Track.FilePath);
+    }
 
     private async Task LoadNowPlayingCoverAsync(Track track)
     {
@@ -749,7 +759,7 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>
     /// «Incrustar traducción…» e «Incrustar pronunciación…» del menú de capas del inmersivo (docs/specs/lyrics-layers.md,
-    /// criterio 12b): abre el selector y, al elegir, escribe solo esa capa. Escribir pasa por <see cref="OnTagsSaving"/>,
+    /// criterio 12b): abre el selector y, al elegir, escribe solo esa capa. Escribir pasa por <see cref="OnWriting"/>,
     /// que descarga la pista y cierra el inmersivo: después se vuelve a cargar en el mismo punto, se reabre el
     /// inmersivo y sigue sonando si sonaba. Cancelar el selector no toca la reproducción.
     /// </summary>
@@ -757,14 +767,15 @@ public partial class MainViewModel : ViewModelBase
     {
         if (CurrentTrack is not { } item) return;
 
-        // Mientras se elige el archivo la música sigue. Al escribir, OnTagsSaving anota la posición y
-        // ResumeInterrupted (evento Finished) vuelve a cargar la pista.
+        // Mientras se elige el archivo la música sigue. Al escribir, OnWriting anota la posición y
+        // ResumeInterrupted (al cerrarse la sesión) vuelve a cargar la pista.
         await EmbedLyrics.EmbedLayerAsync(item.Track, kind, Lyrics.CurrentBlock);
     }
 
     // Lo que sonaba cuando una escritura obligó a soltar el archivo (docs/specs/playback-resilience.md, criterio 5).
     private sealed record Interrupted(TrackItemViewModel Item, TimeSpan Position, bool WasPlaying, bool WasImmersive);
     private Interrupted? _interrupted;
+    private readonly WriteSessions _writes;
 
     /// <summary>Descarga la pista en curso para poder escribir en su archivo, anotando cómo volver a ella.</summary>
     private void InterruptForWriting(TrackItemViewModel item)
@@ -811,15 +822,10 @@ public partial class MainViewModel : ViewModelBase
             _player.Load(item.Track.FilePath);
             _epoch.Advance();
             ShowTrack(item);
+            // Con SeekTo y no con Seek a secas: en pausa, la barra, el tiempo y la letra quedarían en 0:00 y ← →
+            // saltarían desde el principio (docs/specs/audit-followup.md, criterio 1).
             if (position > TimeSpan.Zero && position < _player.Duration)
-            {
-                _player.Seek(position);
-                // En pausa el temporizador no escribe: sin esto la barra, el tiempo y la letra quedarían en 0:00 y
-                // ← → saltarían desde el principio (docs/specs/audit-followup.md, criterio 1).
-                _isUpdatingFromTimer = true;
-                try { PositionSeconds = position.TotalSeconds; }
-                finally { _isUpdatingFromTimer = false; }
-            }
+                SeekTo(position);
             if (play) _player.Play();
             UpdateGapless();
             IsImmersive = immersive;
@@ -897,7 +903,7 @@ public partial class MainViewModel : ViewModelBase
         if (_player.CurrentTime > TimeSpan.FromSeconds(3)
             || _queue.MovePrevious(CheckAvailable) is not { } previous)
         {
-            _player.Seek(TimeSpan.Zero);
+            SeekTo(TimeSpan.Zero);
             return;
         }
         StartPlayback(previous);
@@ -949,10 +955,11 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // El archivo debe quedar libre: en Windows no se puede escribir en uno que el reproductor tiene abierto.
-    private void OnTagsSaving(Track track)
+    private void OnWriting(IReadOnlySet<Guid> ids)
     {
+        CatchUpWithPlayer(); // antes de soltar la preparada: ponerse al día vuelve a preparar la siguiente
         _player.PrepareNext(null);
-        if (CurrentTrack is { } current && current.Track.Id == track.Id)
+        if (CurrentTrack is { } current && ids.Contains(current.Track.Id))
             InterruptForWriting(current);
     }
 
@@ -973,13 +980,6 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void OpenConvert() =>
         Conversion.Begin(Tracks.Where(t => t.IsAvailable).Select(t => t.Track).ToList(), "");
-
-    private void OnAutoFixSaving(IReadOnlySet<Guid> ids)
-    {
-        _player.PrepareNext(null); // suelta el archivo preparado
-        if (CurrentTrack is { } current && ids.Contains(current.Track.Id))
-            InterruptForWriting(current);
-    }
 
     [RelayCommand]
     private void CycleRepeat() => Repeat = Repeat switch
@@ -1053,9 +1053,38 @@ public partial class MainViewModel : ViewModelBase
     {
         if (_player.State != PlaybackState.Playing || !_scrub.TimerMayWrite) return;
 
+        SetPositionSilently(_player.CurrentTime);
+    }
+
+    /// <summary>
+    /// Mueve la barra, el tiempo y la letra sin saltar en el reproductor. Con <paramref name="duration"/>, cambia
+    /// también el máximo de la barra dentro de la misma guarda: si no, el Slider ajusta su valor al rango nuevo y
+    /// dispara un salto no deseado.
+    /// </summary>
+    private void SetPositionSilently(TimeSpan position, double? duration = null)
+    {
         _isUpdatingFromTimer = true;
-        try { PositionSeconds = _player.CurrentTime.TotalSeconds; }
+        try
+        {
+            PositionSeconds = position.TotalSeconds;
+            if (duration is { } seconds) DurationSeconds = seconds;
+        }
         finally { _isUpdatingFromTimer = false; }
+    }
+
+    /// <summary>
+    /// Salta a <paramref name="position"/> y pone al día lo que se ve. Es el camino de todo salto que no nace de
+    /// la barra: en pausa el temporizador no escribe, y un <c>Seek</c> a secas dejaría la barra, el tiempo y el
+    /// punto de partida de ← → donde estaban (docs/specs/single-seek-path.md).
+    /// </summary>
+    private void SeekTo(TimeSpan position)
+    {
+        // Acotada como en el reproductor: una línea de la letra más allá del final (un .lrc de otra versión) no
+        // debe dejar la barra fuera de su rango.
+        var duration = _player.Duration;
+        position = position < TimeSpan.Zero ? TimeSpan.Zero : position > duration ? duration : position;
+        _player.Seek(position);
+        SetPositionSilently(position);
     }
 
     // Método parcial generado por CommunityToolkit: se ejecuta al cambiar PositionSeconds.

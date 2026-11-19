@@ -11,7 +11,8 @@ using MusicPlayer.Desktop.Services;
 namespace MusicPlayer.Desktop.ViewModels;
 
 public partial class TagEditorViewModel(
-    TagEditor editor, CoverEditor coverEditor, CoverArtLoader covers, IImagePickerService imagePicker)
+    TagEditor editor, CoverEditor coverEditor, CoverArtLoader covers, IImagePickerService imagePicker,
+    WriteSessions writes)
     : ObservableObject
 {
     private Track? _target;
@@ -20,14 +21,8 @@ public partial class TagEditorViewModel(
     private bool _removeCover;   // quitar la carátula al guardar
     private int _loadVersion;    // descarta vistas previas de una apertura anterior
 
-    /// <summary>Antes de escribir: quien reproduce debe soltar el archivo.</summary>
-    public event Action<Track>? Saving;
-
     /// <summary>Después de guardar: la biblioteca nueva, ya reordenada.</summary>
     public event Action<LibrarySnapshot>? Saved;
-
-    /// <summary>La escritura terminó, bien o mal: quien soltó el archivo en <see cref="Saving"/> puede volver a cargarlo.</summary>
-    public event Action? Finished;
 
     public event Action<string>? Notified;
 
@@ -167,9 +162,10 @@ public partial class TagEditorViewModel(
         if (!TryParse(DiscText, 999, out var disc)) { Error = "El disco debe ser un número."; return; }
 
         _busy = true;
+        IDisposable? session = null;
         try
         {
-            Saving?.Invoke(target);
+            session = writes.Begin(new[] { target.Id }); // quien reproduce suelta el archivo
             var snapshot = await editor.SaveAsync(
                 target.Id, new TrackTags(Title, Artist, AlbumArtist, Album, year, number, disc));
 
@@ -202,7 +198,7 @@ public partial class TagEditorViewModel(
         finally
         {
             _busy = false;
-            Finished?.Invoke();
+            session?.Dispose(); // terminó, bien o mal: quien soltó el archivo puede volver a cargarlo
         }
     }
 

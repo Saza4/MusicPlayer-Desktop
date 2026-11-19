@@ -11,11 +11,12 @@ public sealed partial class LrcLyricParser : ILyricParser
     /// <summary>Marcas [mm:ss.xx] iniciales que se usan por línea; las demás se descartan (docs/specs/untrusted-input-limits.md).</summary>
     public const int MaxLeadingMarks = 32;
 
-    // Uno o más tags de tiempo al inicio de la línea: [mm:ss.xx][mm:ss.xx]
-    [GeneratedRegex(@"^(?:\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\])+")]
+    // Uno o más tags de tiempo al inicio de la línea: [mm:ss.xx][mm:ss.xx]. Solo dígitos ASCII, como WordTag: \d
+    // acepta también «０１» o «١٢», que int.Parse no sabe convertir (docs/specs/ascii-digits.md).
+    [GeneratedRegex(@"^(?:\[[0-9]{1,3}:[0-9]{2}(?:[.:][0-9]{1,3})?\])+")]
     private static partial Regex LeadingTimeTags();
 
-    [GeneratedRegex(@"\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]")]
+    [GeneratedRegex(@"\[([0-9]{1,3}):([0-9]{2})(?:[.:]([0-9]{1,3}))?\]")]
     private static partial Regex SingleTimeTag();
 
     // Marca por palabra de un .lrc enhanced: <mm:ss.xx>. Solo dígitos ASCII; los segundos (< 60) se comprueban aparte.

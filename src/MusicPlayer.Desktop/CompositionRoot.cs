@@ -73,6 +73,8 @@ public static class CompositionRoot
 
         // Los selectores avisan a ModalTracker mientras están abiertos (la isla no aparece encima).
         services.AddSingleton<ModalTracker>();
+        // Escrituras en curso sobre archivos de audio: los editores abren una sesión y MainViewModel suelta y reanuda.
+        services.AddSingleton<WriteSessions>();
         services.AddSingleton<IImagePickerService, AvaloniaImagePickerService>();
         services.AddSingleton<ILyricsPickerService, AvaloniaLyricsPickerService>();
         services.AddSingleton<ConvertViewModel>();
