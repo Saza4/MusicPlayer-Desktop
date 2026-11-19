@@ -24,7 +24,8 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
     [ObservableProperty] private ObservableCollection<LyricLineViewModel> _lines = new();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowProgressiveImmersive), nameof(ShowClassicImmersive), nameof(ShowLayersButton))]
+    [NotifyPropertyChangedFor(nameof(ShowProgressiveImmersive), nameof(ShowClassicImmersive), nameof(ShowLayersButton),
+        nameof(PanelSubtitle))]
     private bool _isSynced;
 
     [ObservableProperty] private int _activeIndex = -1;
@@ -57,12 +58,21 @@ public partial class LyricsViewModel(ILyricsProvider provider, IAudioPlayer play
 
     // Lo que la canción actual tiene disponible.
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasExtras))]
+    [NotifyPropertyChangedFor(nameof(HasExtras), nameof(PanelSubtitle))]
     private bool _hasTranslation;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasExtras))]
+    [NotifyPropertyChangedFor(nameof(HasExtras), nameof(PanelSubtitle))]
     private bool _hasPronunciation;
+
+    /// <summary>Bajo el título «Letra» del panel: «Sincronizada · traducción · pronunciación», según lo que haya.</summary>
+    public string PanelSubtitle =>
+        string.Join(" · ", new[]
+        {
+            IsSynced ? "Sincronizada" : "Sin sincronizar",
+            HasTranslation ? "traducción" : null,
+            HasPronunciation ? "pronunciación" : null,
+        }.Where(s => s is not null));
 
     /// <summary>Código de la traducción mostrada («en»), para la etiqueta del menú de capas.</summary>
     [ObservableProperty] private string? _translationLanguage;

@@ -45,6 +45,13 @@ public partial class ThemeViewModel : ViewModelBase
     [ObservableProperty]
     private ThemeChoice? _selectedChoice;
 
+    /// <summary>
+    /// Nombre del tema guardado, para el botón de «Tema» en Configuración (docs/specs/redesign-mockups.md). No sigue
+    /// la vista previa: dice lo que hay elegido, no lo que se está probando.
+    /// </summary>
+    [ObservableProperty]
+    private string _committedName = "";
+
     public event Action<string>? Notified;
 
     /// <summary>La lista está abierta: mientras tanto, los atajos globales de la ventana no deben actuar.</summary>
@@ -130,8 +137,13 @@ public partial class ThemeViewModel : ViewModelBase
         _committedId = id;
         _previewId = null;
         ApplyById(id);
+        UpdateCommittedName();
         _settings.Update(s => s with { ThemeId = id });
     }
+
+    private void UpdateCommittedName() =>
+        CommittedName = Items.FirstOrDefault(i => i.Id.Equals(_committedId, StringComparison.OrdinalIgnoreCase))?.Name
+                        ?? BuiltInThemes.Dark.Name; // un id que ya no existe cae en Oscuro (ThemeCatalog.Resolve)
 
     /// <summary>Descarta la vista previa y vuelve al tema confirmado (sin tocar el disco).</summary>
     public void Cancel()
@@ -176,6 +188,7 @@ public partial class ThemeViewModel : ViewModelBase
         }
         finally { _suppressPreview = false; }
 
+        UpdateCommittedName();
         return merged;
     }
 

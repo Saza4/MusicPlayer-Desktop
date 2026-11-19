@@ -174,6 +174,7 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 | 24  | Seguir sonando al cerrar (bandeja) e instancia única (`background-playback.md`) | Core, Desktop | Hecho y probado a mano por el autor | v1.6.0 (PR #20) |
 | 25  | Arreglos del 16 de noviembre: dígitos ASCII, un solo camino de salto, playlists en fila, escribir tras un avance y sesión de escritura | Core, Audio, Desktop | Hecho, con la pasada manual del autor ese día | v1.6.0 (PR #22 a #26) |
 | 26  | Quitar una pista sin hueco y avance hacia una pista ausente (`remove-and-advance.md`); la vista se queda en el álbum o artista tras guardar (`keep-browse-scope.md`) | Core, Desktop | Hecho y probado a mano por el autor | v1.6.0 (PR #27) |
+| 27  | Rediseño según los mockups: paleta, barra lateral con artistas, página de artista, barra de reproducción centrada y botones de acción con borde (`redesign-mockups.md`) | Core, Desktop | Hecho: capturas en Windows con tres temas y dos tamaños, y probado a mano por el autor | v1.6.0 (PR #29) |
 
 ### 4.2 Novedades de la serie v1.1.0
 
@@ -262,7 +263,7 @@ El botón de volumen alterna entre silenciar y restaurar. `MainViewModel` recuer
 ### 4.3.2 Temas de la interfaz (v1.3.0)
 
 - **Selector:** botón «Tema» en la vista de Configuración (estuvo en la barra superior hasta la v1.5.0) con una lista (Sistema, Oscuro, Claro y los temas de usuario). Mover el cursor o las flechas por la lista **previsualiza** el tema en toda la app sin guardar nada; clic o `Enter` lo confirma y lo guarda en los ajustes (`ThemeId`); `Esc` o cerrar la lista restaura el tema confirmado. Mientras la lista está abierta no actúan los atajos globales de teclado.
-- **Tema por defecto:** Oscuro, con los colores exactos que tenía la interfaz. *Sistema* sigue el tema de Windows y reacciona si cambia con la app abierta.
+- **Tema por defecto:** Oscuro. Hasta el rediseño (4.3.10) tenía los colores exactos de la interfaz anterior; ahora, la paleta de los mockups. *Sistema* sigue el tema de Windows y reacciona si cambia con la app abierta.
 - **Recursos del tema (nueve colores):** `background`, `surface`, `overlay`, `primary`, `onPrimary`, `accent` (opcional: si falta, el acento del sistema), `danger`, `success` y `warning`. Los velos translúcidos (hover, selección, bordes) son `overlay` con una escalera fija de opacidades: las mismas del diseño anterior. El texto no es configurable: sigue la variante de Fluent (clara u oscura) de la `base`.
 - **Cómo se aplica:** `ThemeService` fija la variante de Fluent y escribe los nueve `Color` en los recursos de la aplicación; los pinceles de `Themes/ThemeBrushes.axaml` y las claves de Fluent de `Themes/FluentOverrides.axaml` los leen con `DynamicResource`, así que el cambio es inmediato. `App.axaml.cs` aplica el tema guardado antes de mostrar la ventana.
 - **Temas de usuario:** archivos `.json` en `%APPDATA%\MusicPlayer\themes` (formato en el README). `JsonThemeRepository` nunca lanza: cada archivo roto es un error con su motivo, que se muestra en la línea de estado al abrir el selector, y los demás siguen funcionando. Máximo 50 archivos de 64 KB. Un color con formato no válido o desconocido solo da un aviso y hereda el de la base.
@@ -354,6 +355,18 @@ Filas 20 a 26 de 4.1. Cada cambio tiene su spec en `docs/specs/`.
 - **Reproducción y escritura:** sesiones de escritura con contador (`write-sessions.md`), ponerse al día con el reproductor antes de escribir (`write-after-advance.md`), un solo camino de salto (`single-seek-path.md`), quitar una pista sin hueco y avance coherente hacia una pista ausente (`remove-and-advance.md`).
 - **Datos y entradas:** operaciones de playlists una a la vez (`playlist-serialization.md`), dígitos ASCII en los parsers (`ascii-digits.md`) y la tercera auditoría (`audit-3.md`).
 - **Descartado:** traducir la letra en línea (`lyrics-online-translation.md`). La app sigue siendo 100 % local.
+### 4.3.10 Rediseño según los mockups (camino a v1.6.0, sin publicar)
+
+Especificación, decisiones y resultado: `docs/specs/redesign-mockups.md`. Es visual; el comportamiento no cambia.
+
+- **Paleta nueva en Oscuro y Claro:** fondo y superficie nuevos y un solo azul (`#6B9CF4` / `#2F62C8`) como primario y acento. Los temas de usuario sin `accent` siguen usando el del sistema.
+- **Ventana principal:** búsqueda a la izquierda y acciones a la derecha; barra lateral de alto completo; cabecera grande con el resumen; lista con columnas (#, título con carátula, artista, álbum, duración) y la fila que suena marcada; línea de estado al pie solo con avisos; panel de letra de 300 px con cabecera «Letra»; barra de reproducción de 88 px con título y artista.
+- **Botones de acción:** rectángulo con borde fino e icono azul (antes, píldora tonal; ver 4.3.6).
+- **Configuración:** «Volver a la biblioteca», columna centrada y un grupo por tarjeta.
+- **Inmersivo:** igual; el subtítulo es «Artista · Álbum».
+- **Navegación:** las pestañas pasan a «Tu biblioteca» (Canciones y Artistas) en la barra lateral, sobre «Playlists». «Álbumes» está oculto, comentado en `MainWindow.axaml` y en `MainViewModel.NavModes`; la vista sigue en el código. «Artistas» es una página: la lista de artistas ocupa el sitio de la barra lateral (un botón ← o Esc devuelven «Tu biblioteca» sin salir de la página), y a la derecha van las carátulas de sus álbumes y las pistas del elegido, con separadores de disco; abre en el artista de la canción que suena.
+- **Barra de reproducción centrada:** los controles van en una columna central de ancho fijo entre dos laterales iguales, así quedan centrados en la ventana a cualquier ancho (`LayoutBreakpoints.PlayerCenterWidth`), y son más compactos que en el inmersivo y la isla.
+- **Carátulas nítidas en Artistas:** las tarjetas se decodifican a 512 px (antes, la miniatura de 96 de la lista), con una caché propia que se suelta al salir de la vista.
 
 ### 4.4 Base anterior: lo que ya contenía v1.0.0
 
@@ -748,6 +761,10 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | Escribir tras un avance automático (`write-after-advance.md`), ejecución del 16 de noviembre de 2026 (Debug) | +0 | +0 | **830 + 211 = 1041**. El cambio vive en `MainViewModel` y `BassAudioPlayer`, sin pruebas automáticas; pasada manual de regresión hecha por el autor ese día. |
 | Sesión de escritura con contador (`write-sessions.md`), ejecución del 16 de noviembre de 2026 (Debug) | +10 | +0 | **840 + 211 = 1051**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Las pruebas son de `WriteSessions`; el resto vive en Desktop, con la pasada manual hecha por el autor ese día. |
 | Quitar sin hueco y vista conservada (`remove-and-advance.md`, `keep-browse-scope.md`), ejecución del 19 de noviembre de 2026 (`-c Release`) | +10 | +0 | **850 + 211 = 1061**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Las pruebas son de `BrowseScope`; lo demás vive en Desktop y lo probó a mano el autor ese día. |
+| Rediseño según los mockups (`redesign-mockups.md`), ejecución del 17 de noviembre de 2026 (Debug) | +3 | +0 | **843 + 211 = 1054**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Pruebas de la paleta y del contraste del primario de los temas integrados; el resto es vista, comprobada con capturas. |
+| Rediseño, tercera pasada: artistas en la barra lateral y carátulas nítidas (`redesign-mockups.md`), 17 de noviembre de 2026 (Debug) | +5 | +0 | **848 + 211 = 1059**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Pruebas de `CoverSizes`, `LruCache.Clear` y `ThumbnailRequests.Clear`. |
+| Rediseño, cuarta pasada: barra de reproducción centrada (`redesign-mockups.md`), 17 de noviembre de 2026 (Debug) | +9 | +0 | **857 + 211 = 1068**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Pruebas de `LayoutBreakpoints.PlayerCenterWidth`. |
+| Rediseño sobre `main` con el PR #27 (`BrowseScope`), 19 de noviembre de 2026 (`-c Release`) | +0 | +0 | **867 + 211 = 1078**, todas superadas: las 17 del rediseño más las 10 de `BrowseScope` sobre las 840 de antes. Compila con 0 errores y 1 advertencia (CS8602). |
 
 La advertencia es CS8602 en `MainViewModel.cs:250` (antes en las líneas 222, 237 y 249; el código añadido encima la va desplazando): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
@@ -853,7 +870,7 @@ La advertencia es CS8602 en `MainViewModel.cs:250` (antes en las líneas 222, 23
 - Las flechas de la lista de temas las atiende la ventana (el foco se queda en el botón «Tema»), no la lista.
 - El botón «Carpeta de temas» no es enfocable con el teclado (así `Enter` confirma siempre el tema resaltado).
 - No hay recarga automática: los cambios en un archivo de tema se ven al volver a abrir el selector.
-- Los botones de acción de la barra superior (4.3.6) no llevan contorno: el relleno tonal no llega a 3:1 contra la superficie y el botón se identifica por su texto e icono. Con un tema de usuario cuyo `overlay` sea casi igual al fondo, el relleno apenas se ve. El umbral de 1100 px para el modo solo-iconos es una constante (`TopBarCompactBelowWidth`), no se mide: con una fuente o un escalado mayores el texto podría seguir sin caber justo por encima de ese ancho.
+- Los botones de acción de la barra superior llevan, desde el rediseño (4.3.10), un borde fino del velo en lugar del relleno tonal de 4.3.6. No se ha medido que ese borde llegue a 3:1 contra la superficie: el botón se identifica por su texto e icono, y con un tema de usuario cuyo `overlay` sea casi igual al fondo el borde apenas se ve. El umbral de 1100 px para el modo solo-iconos es una constante (`LayoutBreakpoints.CompactBelow`), no se mide: con una fuente o un escalado mayores el texto podría seguir sin caber justo por encima de ese ancho.
 
 **Isla flotante**
 

@@ -30,11 +30,7 @@ Todo está fusionado en `main`.
   - `docs/specs/remove-and-advance.md` (PR #27): quitar una pista sin hueco en el empalme (era el punto 9) y avance
     coherente hacia una pista ausente (el caso vecino de R6).
   - `docs/specs/keep-browse-scope.md` (PR #27): la vista sigue en el álbum o artista tras guardar (era el punto 1).
-
-## Fuera de `main`
-
-- El rediseño según los mockups (`docs/specs/redesign-mockups.md`): está hecho en un commit local del autor, sin
-  subir ni PR. Su spec registra capturas, pero no una prueba a mano.
+  - `docs/specs/redesign-mockups.md` (PR #29): el rediseño según los mockups. Linux sigue sin probar.
 
 ## Sin spec todavía
 

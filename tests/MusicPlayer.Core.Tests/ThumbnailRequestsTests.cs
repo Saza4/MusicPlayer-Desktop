@@ -95,4 +95,18 @@ public class ThumbnailRequestsTests
         Assert.NotNull(requests.Begin("a")); // se olvidó: se volverá a leer
         Assert.Null(requests.Begin("c"));
     }
+
+    // Al salir de la página de artista (docs/specs/redesign-mockups.md, tercera pasada).
+    [Fact]
+    public void Clear_DropsLoadsInFlightAndForgetsMissingCovers()
+    {
+        var requests = new ThumbnailRequests();
+        var loading = requests.Begin("a")!.Value;
+        requests.Complete("b", requests.Begin("b")!.Value, found: false);
+
+        requests.Clear();
+
+        Assert.False(requests.Complete("a", loading, found: true)); // ya no vale: no se guarda
+        Assert.NotNull(requests.Begin("b"));                         // se vuelve a intentar
+    }
 }

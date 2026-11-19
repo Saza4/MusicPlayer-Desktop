@@ -57,18 +57,41 @@ public class ColorContrastTests
 public class BuiltInThemesTests
 {
     [Fact]
-    public void Dark_KeepsTheColorsTheInterfaceAlwaysHad()
+    public void Dark_UsesTheRedesignPalette()
     {
         var p = BuiltInThemes.Dark.Palette;
-        Assert.Equal("#0F0F0F", p.Background.ToHex());
-        Assert.Equal("#000000", p.Surface.ToHex());
+        Assert.Equal("#141416", p.Background.ToHex());
+        Assert.Equal("#0C0C0E", p.Surface.ToHex());
         Assert.Equal("#FFFFFF", p.Overlay.ToHex());
-        Assert.Equal("#FFFFFF", p.Primary.ToHex());
-        Assert.Equal("#101010", p.OnPrimary.ToHex());
-        Assert.Null(p.Accent);
+        Assert.Equal("#6B9CF4", p.Primary.ToHex());
+        Assert.Equal("#0B0F1A", p.OnPrimary.ToHex());
+        Assert.Equal("#6B9CF4", p.Accent?.ToHex());
         Assert.Equal("#E57373", p.Danger.ToHex());
         Assert.Equal("#4CAF50", p.Success.ToHex());
         Assert.Equal("#FFB74D", p.Warning.ToHex());
+    }
+
+    [Fact]
+    public void Light_UsesTheDarkerBlue()
+    {
+        var p = BuiltInThemes.Light.Palette;
+        Assert.Equal("#F4F4F2", p.Background.ToHex());
+        Assert.Equal("#FFFFFF", p.Surface.ToHex());
+        Assert.Equal("#2F62C8", p.Primary.ToHex());
+        Assert.Equal("#2F62C8", p.Accent?.ToHex());
+    }
+
+    // El azul también se usa como texto (la canción que suena, enlaces): en los temas integrados debe llegar a 4,5:1
+    // sobre el fondo y la superficie, aunque ThemeFactory solo exija 3:1 contra el velo negro a los temas de usuario.
+    [Theory]
+    [InlineData("dark")]
+    [InlineData("light")]
+    public void BuiltInPrimary_Reaches45To1OnBackgroundAndSurface(string id)
+    {
+        var p = BuiltInThemes.All.Single(t => t.Id == id).Palette;
+        Assert.True(ColorContrast.Ratio(p.Primary, p.Background) >= 4.5);
+        Assert.True(ColorContrast.Ratio(p.Primary, p.Surface) >= 4.5);
+        Assert.True(ColorContrast.Ratio(p.OnPrimary, p.Primary) >= 4.5);
     }
 
     [Theory]
@@ -157,7 +180,9 @@ public class ThemeFactoryTests
     {
         var result = ThemeFactory.Create("solo-base", 1, null, "light", null);
 
-        Assert.Equal(BuiltInThemes.Light.Palette, result.Theme!.Palette);
+        // Todo se hereda de la base salvo el acento: sin «accent», un tema de usuario usa el del sistema (README),
+        // aunque los integrados traigan el suyo.
+        Assert.Equal(BuiltInThemes.Light.Palette with { Accent = null }, result.Theme!.Palette);
         Assert.Equal(ThemeBase.Light, result.Theme.Base);
     }
 

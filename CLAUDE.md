@@ -8,7 +8,7 @@ Reproductor de música local en C# / .NET 8 / Avalonia 11. El detalle de funcion
 
 ```bash
 dotnet build                                   # compila la solución (hoy: 0 errores, 1 advertencia CS8602 conocida)
-dotnet test                                    # 850 pruebas en Core y 211 en Infrastructure
+dotnet test                                    # 867 pruebas en Core y 211 en Infrastructure
 dotnet test tests/MusicPlayer.Core.Tests --filter "FullyQualifiedName~PlayQueueTests"   # una clase
 dotnet test tests/MusicPlayer.Core.Tests --filter "FullyQualifiedName~PlayQueueTests.Sequential_PlaysInOrderAndStopsAtTheEnd"  # un test
 dotnet run --project src/MusicPlayer.Desktop   # ejecuta la app (necesita los binarios de BASS en src/MusicPlayer.Audio/native/)
@@ -29,7 +29,7 @@ Los fps (30 pedidos, ~24 reales), las medidas y los tiempos están en `Progressi
 
 Capas de letra (traducción y pronunciación incrustadas; spec en `docs/specs/lyrics-layers.md`). **Excepción a la regla de no subir audio:** `tests/MusicPlayer.Infrastructure.Tests/Fixtures/silencio.m4a` (0,1 s de silencio generado con ffmpeg, sin derechos), porque un M4A no se arma a mano en la prueba. El MP3 y el FLAC de prueba se generan en código (`TestAudio`). No añadas otros archivos de audio.
 
-Capturas de la app para verificar cambios visuales (Windows): `AppPaths` usa `Environment.GetFolderPath(ApplicationData)`, así que cambiar la variable `APPDATA` del proceso **no** redirige los datos; la app abre los `settings.json`, `library.json` y temas reales del usuario. Para probar otro tema hay que cambiar `ThemeId` en el `settings.json` real, con copia de seguridad previa y restaurándolo al terminar (comprobar el hash). Las teclas sintéticas (`SendKeys`, `keybd_event`) no movían el foco: para ver `:focus-visible` se enfoca el control por código con `Focus(NavigationMethod.Tab)` en un cambio temporal que no se sube.
+Capturas de la app para verificar cambios visuales (Windows): `AppPaths` usa `Environment.GetFolderPath(ApplicationData)`, así que cambiar la variable `APPDATA` del proceso **no** redirige los datos; la app abre los `settings.json`, `library.json` y temas reales del usuario. En Debug, `MUSICPLAYER_SETTINGS_READONLY=1` lee los ajustes y nunca los guarda (`ReadOnlySettingsRepository`), y `MUSICPLAYER_THEME_OVERRIDE=<id>` cambia el tema leído: así se prueba otro tema, se reproduce o se silencia sin tocar el `settings.json` real (comprobar igualmente el hash antes y después). `AVALONIA_GLOBAL_SCALE_FACTOR` no tiene efecto en Windows. Las teclas sintéticas (`SendKeys`, `keybd_event`) no movían el foco: para ver `:focus-visible` se enfoca el control por código con `Focus(NavigationMethod.Tab)` en un cambio temporal que no se sube.
 
 ## Arquitectura
 

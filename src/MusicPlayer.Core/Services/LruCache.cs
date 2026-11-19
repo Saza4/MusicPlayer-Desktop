@@ -54,6 +54,16 @@ public sealed class LruCache<TKey, TValue> where TKey : notnull
         }
     }
 
+    /// <summary>Vacía la caché (por ejemplo, al salir de la vista que la usaba).</summary>
+    public void Clear()
+    {
+        lock (_lock)
+        {
+            _map.Clear();
+            _order.Clear();
+        }
+    }
+
     public bool Remove(TKey key)
     {
         lock (_lock)

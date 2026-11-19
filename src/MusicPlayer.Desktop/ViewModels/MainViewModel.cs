@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -92,6 +93,7 @@ public partial class MainViewModel : ViewModelBase
     partial void OnMissingCountChanged(int value)
     {
         if (value == 0) IsConfirmingPrune = false; // nada que confirmar
+        UpdateListSummary(CurrentSource().Count, !string.IsNullOrWhiteSpace(SearchText)); // «· 3 no disponibles»
     }
 
     // ---- Navegación por álbum y artista ----
@@ -102,33 +104,120 @@ public partial class MainViewModel : ViewModelBase
     private AlbumGroup? _albumScope;  // álbum abierto
     private BrowseMode Mode => (BrowseMode)Math.Max(0, BrowseIndex);
     private bool InLibrary => Playlists.CurrentPlaylist is null;
-    public bool ShowModeTabs => InLibrary;
-    public bool ShowArtists => InLibrary && Mode == BrowseMode.Artists && _artistScope is null;
-    public bool ShowAlbums => InLibrary && _albumScope is null
-        && (Mode == BrowseMode.Albums || (Mode == BrowseMode.Artists && _artistScope is not null));
-    public bool ShowSongs => !ShowArtists && !ShowAlbums;
-    public bool ShowBackBar => InLibrary && (_artistScope is not null || _albumScope is not null);
-    public string BackText => _albumScope is null ? "← Artistas"
-        : _artistScope is { } artist ? $"← {artist}"
-        : "← Álbumes";
-    public string BrowseTitle => _albumScope is { } album ? $"{album.Album} — {album.Artist}" : _artistScope ?? "";
+
+    // Rediseño (docs/specs/redesign-mockups.md, mockup 1c): «Artistas» es una página con la lista de artistas a la
+    // izquierda, las carátulas de sus álbumes arriba y las pistas del álbum elegido debajo. Siempre hay un artista y un
+    // álbum elegidos (el primero si no se eligió ninguno). «Álbumes» sigue siendo una lista que se abre a sus pistas.
+    public bool ShowArtistPage => InLibrary && Mode == BrowseMode.Artists;
+    public bool ShowAlbums => InLibrary && Mode == BrowseMode.Albums && _albumScope is null;
+    public bool ShowSongs => !ShowArtistPage && !ShowAlbums;
+    public bool ShowListHeader => !ShowArtistPage;
+    public bool ShowBackBar => InLibrary && Mode == BrowseMode.Albums && _albumScope is not null;
+    public string BackText => "← Álbumes";
+
+    /// <summary>
+    /// Vistas de «Tu biblioteca», en el orden de sus filas en la barra lateral. «Álbumes» está comentado (oculto, no
+    /// borrado): para recuperarlo, descomentarlo aquí y su ListBoxItem en MainWindow.axaml.
+    /// </summary>
+    private static readonly BrowseMode[] NavModes =
+    [
+        BrowseMode.Songs,
+        // BrowseMode.Albums,
+        BrowseMode.Artists,
+    ];
+
+    /// <summary>
+    /// Fila elegida en «Tu biblioteca» (posición en <see cref="NavModes"/>), o -1 con una playlist abierta.
+    /// Elegir una fila vuelve a la biblioteca y cambia de vista.
+    /// </summary>
+    public int LibraryNavIndex
+    {
+        get => InLibrary ? Array.IndexOf(NavModes, Mode) : -1;
+        set
+        {
+            if (value < 0 || value >= NavModes.Length) return; // -1: se abrió una playlist, no es una orden
+            var mode = NavModes[value];
+            if (mode == BrowseMode.Artists) _libraryNavRequested = false; // entrar en Artistas trae su lista
+            if (!InLibrary) Playlists.Selected = Playlists.Items[0];
+            BrowseIndex = (int)mode;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Número junto a «Canciones» en la barra lateral, con separador de miles («1.284»).</summary>
+    public string LibraryCountText => _allTracks.Count.ToString("N0", CultureInfo.CurrentCulture);
+
+    // Página de artista
+    [ObservableProperty] private ArtistItemViewModel? _selectedArtist;
+    [ObservableProperty] private AlbumItemViewModel? _selectedAlbum;
+    [ObservableProperty] private string _artistPageSummary = "";
+    [ObservableProperty] private string _albumSectionTitle = "";
+    [ObservableProperty] private string _albumSectionYear = "";
+    [ObservableProperty] private string _albumSectionDisc = "";
+    private bool _syncingBrowse; // mientras ApplyFilter fija la selección, no es un clic del usuario
+
+    // Elegir en la lista abre al terminar el clic: la página se rehace y cambiar las colecciones de una lista mientras
+    // esta atiende su propia selección no es buena idea.
+    partial void OnSelectedArtistChanged(ArtistItemViewModel? value)
+    {
+        if (!_syncingBrowse && value is not null)
+            Dispatcher.UIThread.Post(() => { if (SelectedArtist == value) OpenArtist(value); });
+    }
+
+    partial void OnSelectedAlbumChanged(AlbumItemViewModel? value)
+    {
+        if (!_syncingBrowse && value is not null && ShowArtistPage)
+            Dispatcher.UIThread.Post(() => { if (SelectedAlbum == value) OpenAlbum(value); });
+    }
+
+    // Lo que la página de artista ya agrupó: la lista de artistas y la de álbumes solo se rehacen si cambia la
+    // biblioteca, la búsqueda o el artista; así no pierden el desplazamiento al elegir otro álbum.
+    private (IReadOnlyList<TrackItemViewModel> Library, string Search)? _artistsBuiltFor;
+    private string? _albumsBuiltFor;
+
+    // Página de artista: la lista de artistas ocupa el sitio de la barra lateral (mockup 1c). El botón ← vuelve a
+    // mostrar «Tu biblioteca» sin salir de la página; pulsar «Artistas» trae la lista otra vez. Al salir de la página
+    // por cualquier camino, ShowArtistPage es falso y la barra es la de siempre.
+    private bool _libraryNavRequested;
+    private bool _wasArtistPage;
+
+    public bool ShowArtistSidebar => ShowArtistPage && !_libraryNavRequested;
+
+    [RelayCommand]
+    private void ShowLibraryNav()
+    {
+        _libraryNavRequested = true;
+        NotifyBrowse();
+    }
+
+    [RelayCommand]
+    private void ShowArtistList()
+    {
+        _libraryNavRequested = false;
+        NotifyBrowse();
+    }
 
     partial void OnBrowseIndexChanged(int value)
     {
         _artistScope = null;
         _albumScope = null;
+        if ((BrowseMode)Math.Max(0, value) == BrowseMode.Artists) _libraryNavRequested = false;
         ApplyFilter();
     }
 
     private void NotifyBrowse()
     {
-        OnPropertyChanged(nameof(ShowModeTabs));
-        OnPropertyChanged(nameof(ShowArtists));
+        if (_wasArtistPage && !ShowArtistPage) _covers.ReleaseCards(); // las tarjetas de 512 px no hacen falta fuera
+        _wasArtistPage = ShowArtistPage;
+
+        OnPropertyChanged(nameof(ShowArtistPage));
+        OnPropertyChanged(nameof(ShowArtistSidebar));
         OnPropertyChanged(nameof(ShowAlbums));
         OnPropertyChanged(nameof(ShowSongs));
+        OnPropertyChanged(nameof(ShowListHeader));
         OnPropertyChanged(nameof(ShowBackBar));
-        OnPropertyChanged(nameof(BackText));
-        OnPropertyChanged(nameof(BrowseTitle));
+        OnPropertyChanged(nameof(LibraryNavIndex));
+        OnPropertyChanged(nameof(LibraryCountText));
     }
 
     [RelayCommand]
@@ -136,6 +225,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (artist is null) return;
         _artistScope = artist.Name;
+        _albumScope = null; // se elige su primer álbum
         ApplyFilter();
     }
 
@@ -150,8 +240,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void GoBack()
     {
-        if (_albumScope is not null) _albumScope = null;
-        else _artistScope = null;
+        _albumScope = null;
         ApplyFilter();
     }
 
@@ -185,7 +274,23 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private TrackItemViewModel? _currentTrack;
 
     [ObservableProperty] private string _status = "Agrega una carpeta para empezar";
+
     [ObservableProperty] private string _nowPlaying = "Nada en reproducción";
+
+    // Cabecera de la lista (docs/specs/redesign-mockups.md): título grande y resumen («1.284 canciones · 3 no
+    // disponibles»). La línea de estado, al pie, dice «Biblioteca al día.» o el último aviso.
+    [ObservableProperty] private string _listHeading = "Canciones";
+    [ObservableProperty] private string _listSummary = "";
+
+    // La fila de la canción que suena se marca (barras en «#», título en azul). Se compara por Id y se recorre toda la
+    // biblioteca: tras volver a cargarla, la fila marcada es una instancia nueva y no la que guarda CurrentTrack.
+    partial void OnCurrentTrackChanged(TrackItemViewModel? oldValue, TrackItemViewModel? newValue)
+    {
+        var playingId = newValue?.Track.Id;
+        if (oldValue is not null) oldValue.IsPlaying = false;
+        foreach (var item in _allTracks) item.IsPlaying = item.Track.Id == playingId;
+        if (newValue is not null) newValue.IsPlaying = true;
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PlayPauseText))]
@@ -386,7 +491,11 @@ public partial class MainViewModel : ViewModelBase
     {
         _missingIds.IntersectWith(snapshot.Tracks.Select(t => t.Id));
         _allTracks = snapshot.Tracks
-            .Select(t => new TrackItemViewModel(t, _covers) { IsAvailable = !_missingIds.Contains(t.Id) })
+            .Select(t => new TrackItemViewModel(t, _covers)
+            {
+                IsAvailable = !_missingIds.Contains(t.Id),
+                IsPlaying = CurrentTrack?.Track.Id == t.Id, // CurrentTrack sigue siendo la instancia anterior
+            })
             .ToList();
         // La cola guardaba las instancias anteriores, con las etiquetas y la ruta de antes: se cambian por las
         // nuevas, por Id (docs/specs/audit-followup.md, criterio 2). Las que ya no están en la biblioteca se quedan.
@@ -419,37 +528,123 @@ public partial class MainViewModel : ViewModelBase
         if (playlist is null)
         {
             // Solo se agrupa lo que se ve (criterio 3): cada cambio de vista o de álbum abierto pasa por aquí.
-            Artists = ShowArtists
-                ? new(LibraryGrouper.GroupArtists(visible.Select(i => i.Track))
-                    .Select(g => new ArtistItemViewModel(g, _covers)))
-                : new();
-            if (_artistScope is { } artist)
-                visible = visible.Where(i =>
-                    string.Equals(i.Track.AlbumOwner.Trim(), artist, StringComparison.OrdinalIgnoreCase)).ToList();
-            Albums = ShowAlbums
-                ? new(LibraryGrouper.GroupAlbums(visible.Select(i => i.Track))
-                    .Select(g => new AlbumItemViewModel(g, _covers)))
-                : new();
-            if (_albumScope is { } album)
-                visible = visible.Where(i => LibraryGrouper.AlbumKey(i.Track) == album.Key).ToList();
+            if (ShowArtistPage)
+            {
+                visible = BuildArtistPage(visible);
+            }
+            else
+            {
+                _artistsBuiltFor = null; // las colecciones se reutilizan para otra cosa: al volver, se rehacen
+                _albumsBuiltFor = null;
+                Artists = new();
+                Albums = ShowAlbums
+                    ? new(LibraryGrouper.GroupAlbums(visible.Select(i => i.Track))
+                        .Select(g => new AlbumItemViewModel(g, _covers)))
+                    : new();
+                if (_albumScope is { } album)
+                    visible = InAlbumOrder(album, visible);
+            }
         }
 
         // La lista se sustituye entera y la selección se iría con ella: se recupera por Id (criterio 2).
         var selectedId = SelectedTrack?.Track.Id;
+        for (var i = 0; i < visible.Count; i++) visible[i].Number = i + 1; // columna «#»
         Tracks = new ObservableCollection<TrackItemViewModel>(visible);
         SelectedTrack = selectedId is { } id ? visible.FirstOrDefault(i => i.Track.Id == id) : null;
         var searching = !string.IsNullOrWhiteSpace(SearchText);
+        ListHeading = playlist?.Name
+            ?? (ShowBackBar ? _albumScope!.Album
+                : Mode switch { BrowseMode.Albums => "Álbumes", BrowseMode.Artists => "Artistas", _ => "Canciones" });
+        UpdateListSummary(source.Count, searching);
         Status = playlist is not null
             ? source.Count == 0 ? $"\"{playlist.Name}\" está vacía. Clic derecho en una canción para agregarla"
-              : searching ? $"{Tracks.Count} de {source.Count} canciones"
-              : $"{playlist.Name}: {source.Count} canciones"
+              : "Biblioteca al día."
             : _allTracks.Count == 0 ? "Agrega una carpeta para empezar"
-            : ShowArtists ? Plural.Of(Artists.Count, "artista", "artistas")
-            : ShowAlbums ? Plural.Of(Albums.Count, "álbum", "álbumes")
-            : _albumScope is not null || _artistScope is not null ? Plural.Of(Tracks.Count, "canción", "canciones")
-            : searching ? $"{Tracks.Count} de {source.Count} canciones"
-            : $"{_allTracks.Count} canciones en la biblioteca";
+            : MissingCount > 0
+                ? $"Biblioteca al día. {Plural.Of(MissingCount, "canción no disponible", "canciones no disponibles")}."
+                : "Biblioteca al día.";
         NotifyBrowse();
+    }
+
+    // Junto al título grande: «1.284 canciones · 3 no disponibles», «12 de 1.284 canciones», «8 álbumes»…
+    private void UpdateListSummary(int sourceCount, bool searching)
+    {
+        var missing = MissingCount > 0 ? $" · {MissingCount.ToString("N0", CultureInfo.CurrentCulture)} no disponible{(MissingCount == 1 ? "" : "s")}" : "";
+        ListSummary = Playlists.CurrentPlaylist is not null
+            ? searching ? $"{Plural.Of(Tracks.Count, "canción", "canciones")} de {sourceCount.ToString("N0", CultureInfo.CurrentCulture)}"
+              : Plural.Of(sourceCount, "canción", "canciones")
+            : _allTracks.Count == 0 ? ""
+            : ShowAlbums ? Plural.Of(Albums.Count, "álbum", "álbumes")
+            : ShowBackBar ? Plural.Of(Tracks.Count, "canción", "canciones")
+            : searching ? $"{Plural.Of(Tracks.Count, "canción", "canciones")} de {sourceCount.ToString("N0", CultureInfo.CurrentCulture)}"
+            : Plural.Of(_allTracks.Count, "canción", "canciones") + missing;
+    }
+
+    // Las pistas de un álbum en su orden (disco, pista, título), no en el de la biblioteca.
+    private static List<TrackItemViewModel> InAlbumOrder(AlbumGroup album, List<TrackItemViewModel> visible)
+    {
+        var byId = new Dictionary<Guid, TrackItemViewModel>();
+        foreach (var item in visible) byId.TryAdd(item.Track.Id, item);
+        return album.Tracks.Select(t => byId.GetValueOrDefault(t.Id)).OfType<TrackItemViewModel>().ToList();
+    }
+
+    // Página de artista (mockup 1c): artistas, álbumes del elegido y pistas del álbum elegido, con los separadores
+    // de disco. Devuelve las pistas que se muestran.
+    private List<TrackItemViewModel> BuildArtistPage(List<TrackItemViewModel> visible)
+    {
+        var source = (_allTracks, SearchText);
+        if (_artistsBuiltFor is not { } built || !ReferenceEquals(built.Library, _allTracks) || built.Search != SearchText)
+        {
+            Artists = new(LibraryGrouper.GroupArtists(visible.Select(i => i.Track))
+                .Select(g => new ArtistItemViewModel(g, _covers)));
+            _artistsBuiltFor = source;
+            _albumsBuiltFor = null;
+        }
+
+        // Sin artista elegido, la página abre en el de la canción que suena y en su álbum (mockup 1c).
+        string? playingAlbumKey = null;
+        if (_artistScope is null && CurrentTrack is { } playing)
+        {
+            _artistScope = playing.Track.AlbumOwner.Trim();
+            playingAlbumKey = LibraryGrouper.AlbumKey(playing.Track);
+        }
+
+        var artist = Artists.FirstOrDefault(a => string.Equals(a.Name, _artistScope, StringComparison.OrdinalIgnoreCase))
+                     ?? Artists.FirstOrDefault();
+        _artistScope = artist?.Name;
+
+        if (_albumsBuiltFor is null || !string.Equals(_albumsBuiltFor, artist?.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            Albums = artist is null ? new() : new(artist.Group.Albums.Select(g => new AlbumItemViewModel(g, _covers)));
+            _albumsBuiltFor = artist?.Name;
+        }
+        var albumKey = _albumScope?.Key ?? playingAlbumKey;
+        var album = Albums.FirstOrDefault(a => a.Group.Key == albumKey) ?? Albums.FirstOrDefault();
+        _albumScope = album?.Group;
+
+        _syncingBrowse = true;
+        try
+        {
+            SelectedArtist = artist;
+            SelectedAlbum = album;
+        }
+        finally { _syncingBrowse = false; }
+
+        ArtistPageSummary = artist?.Summary ?? "";
+        AlbumSectionTitle = album?.Title ?? "";
+        AlbumSectionYear = album is { Group.Year: > 0 } ? $"· {album.Group.Year}" : "";
+        if (album is null) return new();
+
+        var tracks = InAlbumOrder(album.Group, visible);
+        var discs = tracks.Select(i => i.Track.DiscNumber).Where(d => d > 0).Distinct().ToList();
+        AlbumSectionDisc = discs.Count > 0 ? $"DISCO {discs.Min()}" : "";
+        for (var i = 0; i < tracks.Count; i++)
+        {
+            var disc = tracks[i].Track.DiscNumber;
+            tracks[i].DiscHeader = i > 0 && disc > 0 && disc != tracks[i - 1].Track.DiscNumber ? $"DISCO {disc}" : null;
+        }
+
+        return tracks;
     }
 
     [RelayCommand]

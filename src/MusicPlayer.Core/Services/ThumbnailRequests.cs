@@ -43,4 +43,11 @@ public sealed class ThumbnailRequests(int missingCapacity = 2000, IEqualityCompa
         _loading.Remove(key);
         _missing.Remove(key);
     }
+
+    /// <summary>Se olvida todo: las cargas en curso dejan de valer (no se guardan) y se puede volver a pedir cualquier clave.</summary>
+    public void Clear()
+    {
+        _loading.Clear();
+        _missing.Clear();
+    }
 }
