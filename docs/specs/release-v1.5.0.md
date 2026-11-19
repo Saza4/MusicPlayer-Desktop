@@ -1,8 +1,10 @@
 # Especificación: release v1.5.0
 
-Estado: **preparada** (11 de noviembre de 2026) y **revisada con una auditoría previa** (12 de noviembre, ver al
-final). Notas escritas y zip construido y comprobado. El autor dio el visto bueno al borrador el 12 de noviembre:
-**falta** crearlo en GitHub cuando el PR de esta documentación esté fusionado, y publicarlo, que lo hace el autor.
+Estado: **publicada el 12 de noviembre de 2026** (13 en UTC): release «MusicPlayer v1.5.0», marcada como Latest
+en GitHub, con el tag `v1.5.0` sobre `09081aa` (fusión del PR #11, solo documentación sobre `91c4b34`). El zip
+adjunto tiene el mismo SHA-256 que las notas. Se preparó el 11 de noviembre y se revisó con una auditoría previa el
+12 (ver al final). Lo que sigue es el registro de cómo se preparó: donde dice «borrador» o «falta publicar», eso ya
+se hizo. Los «puntos 5 a 9» de `docs/pendientes.md` que se citan ya están resueltos (ver ese archivo).
 
 ## Contexto
 
@@ -95,8 +97,14 @@ Zip construido con el código de `main` (`91c4b34`) el 11 de noviembre de 2026.
 | Arranque del exe publicado | Arranca (ventana «Music Player»), cierre limpio con código de salida 0 |
 | Datos del usuario | `settings.json` y `library.json` idénticos antes y después (mismo hash) |
 
-El zip se construyó una sola vez y está fuera del repositorio. Es el que debe adjuntarse al borrador, con el
-SHA-256 de las notas.
+El zip se construyó una sola vez y está fuera del repositorio. Es el que se adjuntó a la release, con el SHA-256
+de las notas.
+
+| Publicación | Resultado |
+|---|---|
+| Release en GitHub | Publicada el 12 de noviembre de 2026 (`2026-11-13T01:05Z`), marcada como Latest |
+| Tag | `v1.5.0` sobre `09081aa` |
+| Zip adjunto | Su digest coincide con el SHA-256 de las notas (comprobado el 19 de noviembre de 2026) |
 
 ## Auditoría previa (12 de noviembre de 2026)
 

@@ -1,6 +1,6 @@
 # Especificación: release v1.3.0
 
-Estado: **preparada** (5 de noviembre de 2026). La release está como borrador en GitHub; la publica el autor.
+Estado: **publicada el 5 de noviembre de 2026** (6 en UTC). Se preparó como borrador en GitHub y la publicó el autor.
 
 ## Contexto
 
