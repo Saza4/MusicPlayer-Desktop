@@ -177,7 +177,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly DispatcherTimer _searchDebounce;
     [ObservableProperty] private string _searchText = "";
 
-    // Evita el bucle timer -> Slider -> Seek -> timer.
+    // Evita el bucle timer -> Slider -> Seek -> timer. Solo lo toca SetPositionSilently.
     private bool _isUpdatingFromTimer;
 
     [ObservableProperty] private ObservableCollection<TrackItemViewModel> _tracks = new();
@@ -270,6 +270,7 @@ public partial class MainViewModel : ViewModelBase
         EmbedLyrics.Notified += message => Status = message;
         EmbedLyrics.Saving += OnTagsSaving;
         EmbedLyrics.Finished += ResumeInterrupted;
+        Lyrics.SeekRequested += SeekTo;
         Themes.Notified += Notify;
 
         // Configuración (docs/specs/settings-panel.md) se cierra si se abre un panel de edición, que ocupa la misma zona.
@@ -596,13 +597,7 @@ public partial class MainViewModel : ViewModelBase
         Lyrics.Clear();
         _player.Unload();
         _epoch.Advance();
-        _isUpdatingFromTimer = true;
-        try
-        {
-            PositionSeconds = 0;
-            DurationSeconds = 1;
-        }
-        finally { _isUpdatingFromTimer = false; }
+        SetPositionSilently(TimeSpan.Zero, duration: 1);
 
         PositionText = "0:00";
         DurationText = "0:00";
@@ -663,13 +658,7 @@ public partial class MainViewModel : ViewModelBase
         _scrub.Abandon(); // un arrastre a medias no debe saltar en la pista nueva
         // Reiniciar posición ANTES de cambiar el máximo: si no, el Slider ajusta su
         // valor al nuevo rango y dispara un Seek no deseado.
-        _isUpdatingFromTimer = true;
-        try
-        {
-            PositionSeconds = 0;
-            DurationSeconds = Math.Max(_player.Duration.TotalSeconds, 1);
-        }
-        finally { _isUpdatingFromTimer = false; }
+        SetPositionSilently(TimeSpan.Zero, duration: Math.Max(_player.Duration.TotalSeconds, 1));
 
         DurationText = TimeFormatter.Format(_player.Duration);
         UpdateRemainingText(); // si la posición ya era 0, OnPositionSecondsChanged no se dispara
@@ -709,9 +698,7 @@ public partial class MainViewModel : ViewModelBase
         if (next.Track.Id == CurrentTrack?.Track.Id)
         {
             // "Repetir una": misma letra y carátula, solo vuelve el contador al principio. Por Id, como en OnTrackEnded.
-            _isUpdatingFromTimer = true;
-            try { PositionSeconds = 0; }
-            finally { _isUpdatingFromTimer = false; }
+            SetPositionSilently(TimeSpan.Zero);
         }
         else
         {
@@ -811,15 +798,10 @@ public partial class MainViewModel : ViewModelBase
             _player.Load(item.Track.FilePath);
             _epoch.Advance();
             ShowTrack(item);
+            // Con SeekTo y no con Seek a secas: en pausa, la barra, el tiempo y la letra quedarían en 0:00 y ← →
+            // saltarían desde el principio (docs/specs/audit-followup.md, criterio 1).
             if (position > TimeSpan.Zero && position < _player.Duration)
-            {
-                _player.Seek(position);
-                // En pausa el temporizador no escribe: sin esto la barra, el tiempo y la letra quedarían en 0:00 y
-                // ← → saltarían desde el principio (docs/specs/audit-followup.md, criterio 1).
-                _isUpdatingFromTimer = true;
-                try { PositionSeconds = position.TotalSeconds; }
-                finally { _isUpdatingFromTimer = false; }
-            }
+                SeekTo(position);
             if (play) _player.Play();
             UpdateGapless();
             IsImmersive = immersive;
@@ -897,7 +879,7 @@ public partial class MainViewModel : ViewModelBase
         if (_player.CurrentTime > TimeSpan.FromSeconds(3)
             || _queue.MovePrevious(CheckAvailable) is not { } previous)
         {
-            _player.Seek(TimeSpan.Zero);
+            SeekTo(TimeSpan.Zero);
             return;
         }
         StartPlayback(previous);
@@ -1053,9 +1035,38 @@ public partial class MainViewModel : ViewModelBase
     {
         if (_player.State != PlaybackState.Playing || !_scrub.TimerMayWrite) return;
 
+        SetPositionSilently(_player.CurrentTime);
+    }
+
+    /// <summary>
+    /// Mueve la barra, el tiempo y la letra sin saltar en el reproductor. Con <paramref name="duration"/>, cambia
+    /// también el máximo de la barra dentro de la misma guarda: si no, el Slider ajusta su valor al rango nuevo y
+    /// dispara un salto no deseado.
+    /// </summary>
+    private void SetPositionSilently(TimeSpan position, double? duration = null)
+    {
         _isUpdatingFromTimer = true;
-        try { PositionSeconds = _player.CurrentTime.TotalSeconds; }
+        try
+        {
+            PositionSeconds = position.TotalSeconds;
+            if (duration is { } seconds) DurationSeconds = seconds;
+        }
         finally { _isUpdatingFromTimer = false; }
+    }
+
+    /// <summary>
+    /// Salta a <paramref name="position"/> y pone al día lo que se ve. Es el camino de todo salto que no nace de
+    /// la barra: en pausa el temporizador no escribe, y un <c>Seek</c> a secas dejaría la barra, el tiempo y el
+    /// punto de partida de ← → donde estaban (docs/specs/single-seek-path.md).
+    /// </summary>
+    private void SeekTo(TimeSpan position)
+    {
+        // Acotada como en el reproductor: una línea de la letra más allá del final (un .lrc de otra versión) no
+        // debe dejar la barra fuera de su rango.
+        var duration = _player.Duration;
+        position = position < TimeSpan.Zero ? TimeSpan.Zero : position > duration ? duration : position;
+        _player.Seek(position);
+        SetPositionSilently(position);
     }
 
     // Método parcial generado por CommunityToolkit: se ejecuta al cambiar PositionSeconds.

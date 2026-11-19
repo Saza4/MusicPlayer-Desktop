@@ -15,6 +15,12 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
 - `docs/specs/audit-3.md`: arreglos de la auditoría. **Hecho y verificado a mano por el autor** el 15 de
   noviembre de 2026 (PR #13, #14 y #15). Resolvió los antiguos puntos 4 (`HideFaded`) y 8
   (aviso de `playlists.json`) de la lista de abajo, que ya no están.
+- `docs/specs/playlist-serialization.md`: las operaciones de `PlaylistManager` van una a la vez, como las de
+  `LibraryService`. **Hecho** el 16 de noviembre de 2026 (pruebas en Core; no necesita prueba a mano). Era el
+  antiguo punto 2 de la lista de abajo.
+- `docs/specs/single-seek-path.md`: en pausa, «Anterior» y el clic en una línea de la letra mueven la barra y el
+  tiempo (un solo camino de salto, `MainViewModel.SeekTo`). **Hecho** el 16 de noviembre de 2026 y probado
+  a mano por el autor ese día. Era el antiguo punto 6 de la lista de abajo.
 - `docs/specs/ascii-digits.md`: los parsers solo toman por número los dígitos `0`-`9`. **Hecho** el 16 de
   noviembre de 2026 (pruebas en Core; no necesita prueba a mano). Era el antiguo punto 7 de la lista de abajo.
 - `docs/specs/settings-panel.md`: área de Configuración y reproducir con un clic. **Código hecho**; falta la
@@ -34,21 +40,12 @@ Salen del feedback de uso y de la tercera auditoría de solo lectura.
 1. **Conservar el álbum o artista abierto tras guardar etiquetas.** Hoy, al guardar, la vista vuelve a la lista.
    Es lo único que se conoce de la antigua spec de mejoras de uso (anotado en `ui-responsiveness.md`, «Out of
    scope»).
-2. **`PlaylistManager` no serializa sus operaciones.** Dos operaciones a la vez parten de la misma lista
-   (`_playlists`) y la segunda en guardar descarta el cambio de la primera. `LibraryService` ya lo resuelve con
-   `ExclusiveAsync`. Anotado en `library-data-safety-2.md`. Camino real: «Nueva playlist…» desde el menú de una
-   canción hace `CreateAsync` y luego `AddTracksAsync`; si entre los dos llega otro cambio, se pierde uno.
 3. **Los `Bitmap` de las carátulas no se liberan con `Dispose`.** La carátula grande de «ahora suena»
    (`MainViewModel.NowPlayingCover`), la vista previa del editor (`TagEditorViewModel.CoverPreview`), las
    miniaturas que salen de la caché (`LruCache` no avisa de lo que expulsa; `CoverArtLoader.Invalidate` solo las
    quita) y una carátula grande que llega tras cancelarse su carga quedan para el recolector. No es una fuga, pero
    la memoria nativa tarda en devolverse y no se ha medido cuánto. Antes de cambiar nada, medir: un `Dispose` de
    un bitmap que una fila todavía dibuja es peor que el problema.
-6. **En pausa, dos saltos no mueven la barra.** `MainViewModel.Previous` (`_player.Seek(TimeSpan.Zero)`) y
-   `LyricsViewModel.SeekTo` saltan en el reproductor sin pasar por `PositionSeconds`, y `OnTick` no escribe en
-   pausa: la barra, el tiempo y el punto de partida de ← → se quedan donde estaban hasta reanudar. Es la misma
-   familia que A1 de `audit-followup.md`, que solo se arregló en `ResumePlayback`. Pasos: pausar pasado el
-   segundo 3 y pulsar «Anterior»; o pausar y pulsar una línea de la letra.
 9. **Quitar una pista con el guardado fallido deja un hueco en el empalme.** `MainViewModel.RemoveTrackAsync`
    llama a `PrepareNext(null)` al empezar y solo vuelve a `UpdateGapless()` si todo sale bien; en el `catch` no.
 
