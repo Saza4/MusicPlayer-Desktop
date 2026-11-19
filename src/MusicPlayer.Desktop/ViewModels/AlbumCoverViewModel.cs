@@ -9,18 +9,13 @@ using MusicPlayer.Desktop.Services;
 namespace MusicPlayer.Desktop.ViewModels;
 
 public class AlbumCoverViewModel(
-    CoverEditor editor, CoverArtLoader covers, IImagePickerService picker, LibraryService library)
+    CoverEditor editor, CoverArtLoader covers, IImagePickerService picker, LibraryService library,
+    WriteSessions writes)
 {
     private bool _busy;
 
-    /// <summary>Antes de escribir: quien reproduce debe soltar ese archivo.</summary>
-    public event Action<Track>? Saving;
-
     /// <summary>Terminó: la biblioteca actual, para que las filas vuelvan a pedir su carátula.</summary>
     public event Action<LibrarySnapshot>? Applied;
-
-    /// <summary>La escritura terminó, bien o mal: quien soltó el archivo en <see cref="Saving"/> puede volver a cargarlo.</summary>
-    public event Action? Finished;
 
     public event Action<string>? Notified;
 
@@ -28,7 +23,7 @@ public class AlbumCoverViewModel(
     {
         if (_busy) return;
         _busy = true;
-        var saving = false;
+        IDisposable? session = null;
         try
         {
             var scope = AlbumScope.Of(track, library.Current.Tracks);
@@ -54,8 +49,7 @@ public class AlbumCoverViewModel(
             var image = await File.ReadAllBytesAsync(path); // el tipo lo valida CoverEditor
 
             Notified?.Invoke($"Aplicando carátula a {Plural.Of(available.Count, "canción", "canciones")}…");
-            saving = true;
-            foreach (var item in available) Saving?.Invoke(item);
+            session = writes.Begin(available.Select(t => t.Id)); // quien reproduce suelta esos archivos
 
             var result = await editor.SetManyAsync(available, image);
 
@@ -70,7 +64,7 @@ public class AlbumCoverViewModel(
         finally
         {
             _busy = false;
-            if (saving) Finished?.Invoke(); // un lote, una sola reanudación
+            session?.Dispose(); // un lote, una sola sesión
         }
     }
 

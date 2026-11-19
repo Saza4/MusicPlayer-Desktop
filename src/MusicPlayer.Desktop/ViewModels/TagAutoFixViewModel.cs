@@ -10,19 +10,13 @@ using MusicPlayer.Core.Services;
 
 namespace MusicPlayer.Desktop.ViewModels;
 
-public partial class TagAutoFixViewModel(TagEditor editor) : ObservableObject
+public partial class TagAutoFixViewModel(TagEditor editor, WriteSessions writes) : ObservableObject
 {
     private IReadOnlyList<Track> _scope = Array.Empty<Track>();
     private IReadOnlyList<TagChange> _lastApplied = Array.Empty<TagChange>();
 
-    /// <summary>Antes de escribir: quien reproduce debe soltar los archivos afectados.</summary>
-    public event Action<IReadOnlySet<Guid>>? Saving;
-
     /// <summary>Después de escribir: la biblioteca nueva, ya reordenada.</summary>
     public event Action<LibrarySnapshot>? Applied;
-
-    /// <summary>La escritura terminó, bien o mal: quien soltó el archivo en <see cref="Saving"/> puede volver a cargarlo.</summary>
-    public event Action? Finished;
 
     public event Action<string>? Notified;
 
@@ -134,9 +128,10 @@ public partial class TagAutoFixViewModel(TagEditor editor) : ObservableObject
     private async Task RunAsync(IReadOnlyList<TagChange> changes, bool undoing)
     {
         IsBusy = true;
+        IDisposable? session = null;
         try
         {
-            Saving?.Invoke(changes.Select(c => c.TrackId).ToHashSet());
+            session = writes.Begin(changes.Select(c => c.TrackId)); // quien reproduce suelta los archivos afectados
 
             var progress = new Progress<int>(n => Notified?.Invoke($"Escribiendo etiquetas… {n} de {changes.Count}"));
             var result = undoing
@@ -163,7 +158,7 @@ public partial class TagAutoFixViewModel(TagEditor editor) : ObservableObject
         finally
         {
             IsBusy = false;
-            Finished?.Invoke();
+            session?.Dispose(); // terminó, bien o mal: quien soltó un archivo puede volver a cargarlo
         }
     }
 }
