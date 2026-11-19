@@ -142,9 +142,8 @@ al cursor, isla expandida con el cursor fuera y el botón pulsado, colapso al so
 soltar termina la pista, igual que en la barra principal.
 
 **Prueba a mano del autor (15 de noviembre de 2026):** título, casilla y «Ocultar isla» correctos; pidió 30 fps
-(hecho) y el arrastre de la barra (hecho, sin su prueba a mano todavía).
-
-**Sin verificar:**
+(hecho) y el arrastre de la barra (hecho). **El 19 de noviembre de 2026 el autor probó a mano el resto**, incluido
+el arrastre y lo que sigue, que estaba sin verificar:
 
 - El aspecto del desplazamiento en movimiento (velocidad, pausa y hueco son cuestión de gusto: se cambian en
   `IslandMetrics`).

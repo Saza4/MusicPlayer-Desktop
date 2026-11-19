@@ -1,7 +1,7 @@
 # MusicPlayer-Desktop — Documento maestro y reporte de novedades
 
 > Reproductor de música local, ligero y multiplataforma. **C# · .NET 8 · Avalonia UI 11**.
-> Estado a **19 de noviembre de 2026** · última release publicada: **v1.5.0** (12 de noviembre de 2026; letra por palabra de los `.lrc` enhanced y arreglos de las dos auditorías; spec `docs/specs/release-v1.5.0.md`). Camino a **v1.6.0**, sin spec de release todavía: `main` ya incluye la tercera auditoría, Configuración, el diseño adaptable, la isla con título desplazable, la reproducción en segundo plano y los arreglos del 16 de noviembre (sección 4.3.9). Lo que falta está en `docs/pendientes.md`.
+> Estado a **19 de noviembre de 2026** · última release publicada: **v1.5.0** (12 de noviembre de 2026; letra por palabra de los `.lrc` enhanced y arreglos de las dos auditorías; spec `docs/specs/release-v1.5.0.md`). **v1.6.0** preparada: notas y zip listos y revisados con una auditoría previa; falta el borrador en GitHub y que el autor la publique (spec `docs/specs/release-v1.6.0.md`). Incluye la tercera auditoría, Configuración, el diseño adaptable, la isla con título desplazable, la reproducción en segundo plano, los arreglos del 16 y 19 de noviembre (sección 4.3.9) y el rediseño (4.3.10). Lo que falta está en `docs/pendientes.md`.
 
 Este documento reúne en un solo lugar: la visión y la especificación del proyecto, el reporte de todo lo implementado durante el desarrollo, el historial de versiones tal como se publicó en GitHub Releases, las decisiones de diseño, las limitaciones conocidas y la hoja de ruta. Al final, como anexos, se conserva la especificación original y el prompt maestro.
 
@@ -100,7 +100,7 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 - **Orden (`TrackSorter`):** el disco 0 cuenta como disco 1.
 - **Reubicación (`TrackRelocator`):** solo empareja si la coincidencia por título, artista y álbum es única en ambos lados y la duración difiere como mucho 1 s. Lo ambiguo se deja sin emparejar.
 - **Archivos no disponibles:** la comprobación corre sola al arrancar y el botón «Volver a revisar» de la barra de aviso la repite.
-- **Navegación:** pestañas Canciones, Álbumes y Artistas (solo en la biblioteca, no dentro de una playlist), un botón de retroceso («← Artistas», «← {artista}», «← Álbumes») y «▶ Reproducir» en la barra del álbum o artista, que reproduce desde el principio.
+- **Navegación:** «Tu biblioteca» en la barra lateral, con Canciones y Artistas (solo en la biblioteca, no dentro de una playlist). Artistas es una página con los artistas, las carátulas de sus álbumes y las pistas del elegido (4.3.10). «Álbumes» está oculto desde el rediseño, con su vista todavía en el código.
 
 **Reproducción**
 
@@ -161,7 +161,7 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 | 12  | Temas: claro, oscuro, sistema y temas de usuario en JSON  | Core, Infrastructure, Desktop | Entregado; compila, pasa pruebas y se verificó con capturas en Windows (falta la prueba manual del autor) | v1.3.0 |
 | 13  | Isla flotante de «ahora suena» (Windows)                  | Core, Infrastructure, Desktop | Hecho: sondas automáticas en Windows y puertas de foco, primer plano y escala probadas a mano por el autor | v1.3.0 |
 | 10  | Estilos globales en `App` y `MainWindow`                  | Desktop                       | Hecho (commit `b382184`; se ve en la captura del 4 de noviembre de 2026)            | v1.2.0                 |
-| 14  | Letra progresiva en el modo inmersivo (estilo Apple Music) | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | v1.4.0 (PR #4) |
+| 14  | Letra progresiva en el modo inmersivo | Core, Desktop                 | Hecho: medida con sondas en Windows y aprobada a mano por el autor                   | v1.4.0 (PR #4) |
 | 15  | Capas de letra: traducción y pronunciación incrustadas, y menú de capas en el inmersivo | Core, Infrastructure, Desktop | Hecho: pruebas en MP3, FLAC y M4A, comprobado en la app por UI Automation y probado a mano por el autor en copias | v1.4.0 (PR #5) |
 | 16  | Botones de acción: estilo tonal con icono en la barra superior y en el «+» de COLECCIONES | Desktop                       | Hecho: capturas en Windows (Oscuro, Claro y un tema de usuario, a 640, 960 y 1200 px), hover y foco; CI del PR #6 en verde. Sin probar: `Tab` real, pressed y deshabilitado | v1.4.0 (PR #6) |
 | 17  | Limpieza de código sin uso (`IAudioPlayer.Stop`, `LyricLine.Words`, `LibrarySnapshot.Folders`, `ViewLocator`…) | Core, Audio, Infrastructure, Desktop | Hecho: build sin errores, 640 + 173 pruebas, la app arranca igual | v1.4.0 (PR #7) |
@@ -180,7 +180,7 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 
 #### Barra multimedia con íconos
 
-Se reemplazaron los botones de texto por íconos vectoriales (`PathIcon`), tomando como guía `referencias.png` (referencias tipo Spotify, Apple Music y reproductores móviles) y los principios de `diseño.md`.
+Se reemplazaron los botones de texto por íconos vectoriales (`PathIcon`), tomando como guía `referencias.png` (capturas de reproductores de escritorio y móviles) y los principios de `diseño.md`.
 
 - Estilos reutilizables por clase: `.icon` (botón plano, fondo solo al pasar el cursor), `.skip` (íconos de anterior y siguiente, algo más grandes) y `.play` (círculo sólido y más grande para Reproducir/Pausa, con escala al pasar el cursor y al pulsar).
 - Reproducir y Pausa son dos íconos que se funden con una pequeña escala según `IsPlaying`.
@@ -346,7 +346,7 @@ Cada cambio tiene su spec en `docs/specs/`, con criterios, casos límite y cómo
 - **Pruebas** (`test-waits-and-docs.md`): el guardado diferido de los ajustes se prueba sin reloj.
 - **Lo que queda:** `docs/pendientes.md`.
 
-### 4.3.9 Camino a v1.6.0 (sin publicar)
+### 4.3.9 Camino a v1.6.0 (preparada, sin publicar)
 
 Filas 20 a 26 de 4.1. Cada cambio tiene su spec en `docs/specs/`.
 
@@ -355,7 +355,8 @@ Filas 20 a 26 de 4.1. Cada cambio tiene su spec en `docs/specs/`.
 - **Reproducción y escritura:** sesiones de escritura con contador (`write-sessions.md`), ponerse al día con el reproductor antes de escribir (`write-after-advance.md`), un solo camino de salto (`single-seek-path.md`), quitar una pista sin hueco y avance coherente hacia una pista ausente (`remove-and-advance.md`).
 - **Datos y entradas:** operaciones de playlists una a la vez (`playlist-serialization.md`), dígitos ASCII en los parsers (`ascii-digits.md`) y la tercera auditoría (`audit-3.md`).
 - **Descartado:** traducir la letra en línea (`lyrics-online-translation.md`). La app sigue siendo 100 % local.
-### 4.3.10 Rediseño según los mockups (camino a v1.6.0, sin publicar)
+
+### 4.3.10 Rediseño según los mockups (v1.6.0, preparada)
 
 Especificación, decisiones y resultado: `docs/specs/redesign-mockups.md`. Es visual; el comportamiento no cambia.
 
@@ -535,7 +536,7 @@ SHA-256: `FE5640786A3E63AC2B70F806FF4CBB6229AC5E7DEF7D10DBEB7EC8D4AD8ABE6C`
 
 _Fuente del texto: `docs/notas-de-version/v1.4.0.md` (spec: `docs/specs/release-v1.4.0.md`). Publicada el 8 de noviembre de 2026._
 
-Tres novedades: una **letra progresiva** en el modo inmersivo (estilo Apple Music), **traducción y pronunciación incrustadas** en el propio archivo de audio, y **botones de acción con icono** en la barra superior.
+Tres novedades: una **letra progresiva** en el modo inmersivo, **traducción y pronunciación incrustadas** en el propio archivo de audio, y **botones de acción con icono** en la barra superior.
 
 #### Letra progresiva (modo inmersivo)
 
@@ -717,6 +718,104 @@ SHA256: B0E5A7FEB3B282FA9389CADFC218E87FF8F960C400636CC90EE9AD4CCCED34BA
 
 **Historial completo:** https://github.com/Saza4/MusicPlayer-Desktop/compare/v1.4.0...v1.5.0
 
+### MusicPlayer-Desktop v1.6.0
+
+_Fuente del texto: `docs/notas-de-version/v1.6.0.md` (spec: `docs/specs/release-v1.6.0.md`). Preparada el 19 de noviembre de 2026; la publica el autor._
+
+Una interfaz **rediseñada**, una vista de **Configuración**, la opción de **seguir sonando con la ventana cerrada** desde la bandeja del sistema, y otra ronda de arreglos que hacen la reproducción y la escritura en tus archivos más seguras.
+
+#### Interfaz nueva
+
+- **Rediseño completo** de la ventana principal: búsqueda a la izquierda y acciones a la derecha, barra lateral de alto completo con «Tu biblioteca» (Canciones y Artistas) y «Playlists», lista con columnas (#, título con carátula, artista, álbum y duración) y la fila que suena marcada. La línea de estado va al pie y solo aparece con avisos.
+- **Paleta nueva** en los temas Oscuro y Claro, con un solo azul como color principal. Los temas de usuario siguen funcionando igual.
+- **Página de artista:** al elegir «Artistas», la lista de artistas ocupa la barra lateral y a la derecha aparecen las carátulas de sus álbumes y las pistas del elegido, con separadores de disco. Abre en el artista de la canción que suena.
+- **Barra de reproducción centrada:** los controles quedan en el centro de la ventana a cualquier ancho.
+- **Nada se recorta** entre 640×400 y pantalla completa. Por debajo de 1100 px los botones de arriba quedan solo con icono; por debajo de 800 px el volumen pasa a un desplegable y la barra lateral se pliega.
+- Tras **guardar etiquetas**, la vista se queda en el álbum o el artista que tenías abierto. Si le cambiaste el nombre, lo sigue.
+
+#### Configuración
+
+- El botón del engranaje abre la vista **«Configuración»** dentro de la ventana, con sus opciones agrupadas: apariencia (tema y «Carpeta de temas»), reproducción, isla flotante, segundo plano y datos («Abrir carpeta»). `Esc` o «Volver a la biblioteca» la cierran.
+- **Reproducir con un solo clic** (desactivado de entrada). Con Ctrl o Mayús, el clic solo selecciona.
+
+#### Segundo plano y bandeja del sistema (Windows)
+
+- **Seguir sonando al cerrar la ventana** (desactivado de entrada). Al activarlo, cerrar la ventana la deja en la bandeja del sistema y la música sigue. Un clic en el icono vuelve a abrirla. Su menú tiene «Abrir», «Reproducir» o «Pausar», «Siguiente» y «Salir».
+- **Una sola instancia:** si abres la app otra vez, se muestra la ventana que ya estaba abierta.
+
+#### Isla flotante
+
+- **Mostrar el título en la isla** (desactivado de entrada): la isla sin desplegar muestra título y artista, y si no caben el texto se desplaza mientras suena la música.
+- Botón para **ocultar la isla** y, con la ventana en la bandeja, para **salir** del reproductor.
+- La barra de progreso de la isla se puede **arrastrar**.
+
+#### Reproducción
+
+- En pausa, «Anterior» y pulsar una línea de la letra mueven ya la barra de progreso y el tiempo.
+- **Quitar una pista** de la biblioteca o «Eliminar del disco…» no deja un silencio en el paso a la siguiente, aunque falle el guardado.
+- Si una pista avanza sola hacia una canción cuyo archivo ya no existe, se salta a la siguiente disponible o se detiene. Antes podía quedarse sonando una canción mientras se mostraba otra.
+- Un aviso de fin de pista que llega tarde, después de que elegiste otra canción, ya no mueve la cola.
+- Varias herramientas escribiendo a la vez en tus archivos (etiquetas, carátula, letra) ya no recargan la pista antes de que termine la última.
+- Editar una pista justo después de que la anterior terminara sola ya no falla con el archivo abierto.
+
+#### Tus datos
+
+- Los archivos de datos (`library.json`, `playlists.json`, `settings.json`) se vacían a disco antes de reemplazar el anterior. Así es mucho menos probable que un corte de luz justo al guardar los deje vacíos.
+- Si falla la limpieza de temporales al agregar una carpeta, el escaneo se guarda igual.
+- Las operaciones sobre playlists van una a la vez: dos cambios rápidos seguidos ya no se pisan.
+- Un nombre de archivo o un `.lrc` con números escritos en otros alfabetos (por ejemplo `０１ - título.mp3`) ya no hace fallar «Limpiar etiquetas» ni oculta la letra.
+- Los avisos del arranque (playlists o un tema que no se pudo leer) ya no se pisan con el resumen de la biblioteca.
+
+#### Al actualizar
+
+- Tus ajustes, tu biblioteca y tus playlists siguen funcionando sin cambios.
+- Hay **tres ajustes nuevos** en Configuración, todos **desactivados de entrada**: «Reproducir con un solo clic», «Mostrar el título en la isla» y «Seguir sonando al cerrar la ventana». Hasta que los actives, la app se comporta como antes: cerrar la ventana la cierra del todo.
+- El botón «Tema» de la barra superior pasa a la vista Configuración. «Álbumes» deja de ser una pestaña: los álbumes se ven dentro de cada artista.
+- Sigue en pie lo de la v1.5.0: al usar «Agregar carpeta», la app borra sus propios temporales antiguos (`~conv-` o `~tags-` más 32 dígitos hexadecimales, con extensión de audio y más de 24 horas sin modificarse).
+
+#### Requisitos
+
+- Windows x64 y el [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+- El zip incluye las bibliotecas de BASS (`bass.dll`, `bass_aac.dll`, `bassflac.dll` y `bassmix.dll`). BASS es de [Un4seen Developments](https://www.un4seen.com) y es gratuito solo para uso no comercial.
+- `ffmpeg` es opcional y no se incluye: solo hace falta para convertir formatos.
+- La app es 100 % local: no se conecta a internet.
+
+#### Qué se probó y qué no
+
+- **1078 pruebas automáticas** (867 en la lógica y 211 en repositorios, proveedores y escritores), 119 más que en v1.5.0. Cubren, entre otras cosas, los umbrales del diseño adaptable, la paleta y su contraste, el desplazamiento del título, la decisión de cierre, las sesiones de escritura, la vista que se conserva tras guardar y las operaciones de playlists. La interfaz y el audio no tienen pruebas automáticas.
+- **Probado a mano por el autor en Windows** (15, 16 y 19 de noviembre de 2026), con resultado correcto: el rediseño con los temas Oscuro, Claro y de usuario, Configuración, el clic sencillo, la bandeja y su menú, la instancia única, la isla con título y barra arrastrable, el diseño adaptable, los saltos en pausa, quitar y borrar pistas mientras suena otra, y la vista tras guardar etiquetas. No se anotó el resultado paso a paso.
+- **Zip publicado:** el ejecutable arranca sin modificar los datos del usuario.
+- **Sin probar:** **Linux** (la app compila y pasa las pruebas en CI, pero el audio y la interfaz no se han probado allí), la pantalla táctil y el relleno por palabra con texto de derecha a izquierda.
+- **Pendiente conocido:** con la música en una unidad de red que no responde, la ventana se puede congelar al cambiar de pista.
+
+#### Verificar la descarga
+
+El zip no está firmado. Antes de ejecutarlo, comprueba que es el publicado aquí:
+
+```powershell
+Get-FileHash .\MusicPlayer-v1.6.0-win-x64.zip -Algorithm SHA256
+```
+
+El resultado debe ser exactamente:
+
+```
+SHA256: 098164E66D1500ECF090880ED26BB0545B2A805237B13656817B25445EC71536
+```
+
+- Descárgalo solo desde esta página de Releases. GitHub calcula además el `sha256` de cada archivo adjunto, que puedes ver con `gh release view v1.6.0 --json assets`.
+- Windows puede mostrar un aviso de SmartScreen porque el ejecutable no tiene firma digital.
+- Si prefieres no fiarte del binario, compila tú mismo: `git checkout v1.6.0` y las instrucciones del [README](https://github.com/Saza4/MusicPlayer-Desktop#compilar-y-ejecutar). El zip pesa 11,8 MB.
+
+#### Descarga
+
+**`MusicPlayer-v1.6.0-win-x64.zip`**: descomprime y ejecuta `win-x64\MusicPlayer.Desktop.exe`.
+
+#### Contribuyentes
+
+@Saza4
+
+**Historial completo:** https://github.com/Saza4/MusicPlayer-Desktop/compare/v1.5.0...v1.6.0
+
 ## 6. Observaciones sobre las notas de release
 
 Puntos para pulir el texto publicado, sin cambiar el código.
@@ -728,6 +827,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 5. **v1.3.0** se escribió para no repetir lo anterior: describe solo lo que el código hace (teclas y botones con su nombre real), avisa de que la isla viene **activada por defecto** también para quien actualiza, tiene un apartado «Al actualizar» y separa lo probado automáticamente, lo probado a mano y lo que no se probó (Linux y el recorrido completo con el tema Claro y con temas propios). Los temas que se ven en las capturas de desarrollo (Papel, Medianoche, etc.) son archivos del autor en `%APPDATA%\MusicPlayer\themes`, no temas de serie, y las notas solo anuncian Sistema, Oscuro y Claro.
 6. **v1.4.0** sigue el mismo criterio que v1.3.0: nombres reales de botones y menús, apartado «Al actualizar» (sin ajustes nuevos; un `.es.lrc` junto al audio gana a la capa incrustada), avisa de lo que se pierde al convertir con ffmpeg y separa lo probado de lo no probado (`Tab` real, pressed y deshabilitado de los botones, táctil y Linux). Añade una sección «Verificar la descarga» con el SHA-256 y avisa de que el zip no está firmado. El texto dice «letra progresiva» sin sincronía por palabra, porque los `.lrc` solo traen el inicio de cada línea.
 7. **v1.5.0** separa la novedad (letra por palabra) de los arreglos, que agrupa por lo que nota el usuario y no por spec. «Al actualizar» avisa de lo único que puede sorprender: el borrado automático de temporales antiguos y los topes de 1 MB y 10 MB al leer. «Qué se probó y qué no» dice que la pasada manual se dio por buena entera sin anotar cada paso, y deja escritos los dos pendientes conocidos (unidades de red y R6). La auditoría previa del 12 de noviembre de 2026 corrigió dos promesas (el aviso de `playlists.json` ilegible solo se ve al intentar un cambio; los paneles de edición aún dicen «se detendrá») y añadió los fallos menores que encontró.
+8. **v1.6.0** sigue el mismo criterio: agrupa por lo que nota el usuario (interfaz, Configuración, segundo plano, isla, reproducción, datos) y, en «Al actualizar», dice que los tres ajustes nuevos empiezan desactivados y que «Álbumes» deja de ser pestaña. No promete más de lo comprobado: el vaciado a disco hace «mucho menos probable», no imposible, perder un archivo de datos en un corte de luz.
 
 ## 7. Pruebas y calidad
 
@@ -891,8 +991,8 @@ La advertencia es CS8602 en `MainViewModel.cs:250` (antes en las líneas 222, 23
 
 1. **Integración con el sistema:** SMTC en Windows y MPRIS en Linux.
 2. **Probar en Linux:** omitido por ahora.
-3. **Preparar v1.6.0:** la publicación de v1.5.0 ya está hecha (12 de noviembre de 2026). Todo lo fusionado está probado a mano por el autor (19 de noviembre de 2026); falta la spec de release, que publicará con `-p:ContinuousIntegrationBuild=true`. Después, R6 y el congelamiento con unidades de red, con spec propia.
-4. **Captura del README:** `docs/screenshot.png` es del 8 de noviembre de 2026 (barra superior con iconos, biblioteca vacía). Conviene renovarla con la v1.6.0.
+3. **Publicar v1.6.0:** notas y zip preparados (spec `docs/specs/release-v1.6.0.md`), publicados con `-p:ContinuousIntegrationBuild=true` desde una unidad virtual para que los binarios no lleven rutas locales. Falta el borrador en GitHub y que el autor lo publique. Después, R6 y el congelamiento con unidades de red, con spec propia.
+4. **Captura del README:** `docs/screenshot.png` se renovó el 19 de noviembre de 2026 con el rediseño (biblioteca vacía).
 
 Lo que falta y todavía no tiene spec está en `docs/pendientes.md`.
 
@@ -951,7 +1051,7 @@ Descripción de las experiencias que sirvieron de modelo, adaptadas a un reprodu
 **Visión y objetivos**
 
 - Tipo de aplicación: reproductor de escritorio para archivos de audio locales (`.mp3`, `.flac`, `.wav`, `.m4a`).
-- Enfoque: personal, experimental y formativo, sin consumo de APIs de streaming cerrado ni dependencias del ecosistema propietario de Spotify o Apple Music.
+- Enfoque: personal, experimental y formativo, sin consumo de APIs de streaming cerradas ni dependencias de plataformas propietarias.
 - Propósito profesional: proyecto de referencia para portafolio en GitHub, con patrones de diseño documentados.
 - Portabilidad: solución multiplataforma (Windows y Linux), sin acoplamientos a Win32, WPF, WinUI o NAudio.
 
@@ -1037,7 +1137,7 @@ Objetivo para este paso:
 
 ## Anexo D: análisis de funciones esenciales y su estado
 
-Funciones que un reproductor local de escritorio, comparado con Apple Music o Spotify, debería tener, con el estado actual de cada una.
+Funciones que un reproductor local de escritorio, comparado con los grandes reproductores comerciales, debería tener, con el estado actual de cada una.
 
 | Prioridad original | Función                                              | Por qué importa                                                                    | Diseño técnico previsto                                                               | Estado                                                              |
 | ------------------ | ---------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |

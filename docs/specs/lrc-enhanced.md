@@ -76,7 +76,7 @@ Lo que ya está preparado: `FillTextBlock` recibe el progreso como posición hor
 ## Fuera de alcance
 
 - **`[offset:]`**: es un tema distinto que afecta también a la lista clásica; merece su propia iteración.
-- Dialectos distintos de `<mm:ss.xx>`: `[mm:ss.xx]` por palabra, `{}` de Apple, formatos A2 y TTML.
+- Dialectos distintos de `<mm:ss.xx>`: `[mm:ss.xx]` por palabra, marcas entre llaves `{}`, formatos A2 y TTML.
 - Escapar `<...>` literales dentro de la letra. Un `<12:30>` escrito a propósito en una línea con marca se interpretará como etiqueta (limitación, la misma de LrcStudio).
 - Generar tiempos por palabra automáticamente, y editarlos en la app.
 - Relleno por palabra (Fase 2) y todo lo visual de esta fase.

@@ -1,11 +1,11 @@
-# Especificación: rediseño según los mockups de Claude Design
+# Especificación: rediseño según los mockups
 
 Estado: **hecha** (17 de noviembre de 2026) y aplicada sobre `main` el 19 de noviembre (PR #29), **probada a mano
 por el autor** ese día. Ver «Resultado».
 
 ## Contexto
 
-El autor pidió llevar a la app el proyecto de Claude Design «MusicPlayer Desktop mockups»
+El autor pidió llevar a la app el proyecto de diseño «MusicPlayer Desktop mockups»
 (`MusicPlayer Mockups.dc.html`, pantallas 1a-1f), ya corregido antes para conservar lo que le gustaba: la carátula
 junto a cada canción, el fondo desenfocado del inmersivo, la «X» para salir y la burbuja con «A» de las capas. Es un
 cambio **visual**: comandos, atajos, bindings existentes y comportamiento no cambian. El criterio general es

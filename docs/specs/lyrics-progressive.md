@@ -1,10 +1,10 @@
-# Especificación: Letras progresivas (estilo Apple Music)
+# Especificación: Letras progresivas
 
 Estado: **terminada (M0-M6, 7 de noviembre de 2026)**. El autor aprobó el estilo progresivo: es el único para la letra sincronizada del modo inmersivo. Alcance: **solo el modo inmersivo**; el panel lateral no cambia. Ver «Resultado de M6». *Nota del 10 de noviembre de 2026:* `LyricLine.Words` y `LyricWord` volvieron con otra forma (`docs/specs/lrc-enhanced.md`) y el relleno por palabra se implementó en `docs/specs/lrc-enhanced-fill.md`; `FillTextBlock` recibe la posición horizontal tal como preveía RNF-5. *Nota del 8 de noviembre de 2026:* `LyricLine.Words` y `LyricWord`, que esta spec reservaba para la sincronía por palabra (RNF-5), se quitaron por no tener ningún uso; la precaución de `FillTextBlock` (progreso como posición horizontal) se conserva.
 
 ## Contexto
 
-Referencia: `ProgressingStyleLyrics.swift` (Magesh Sridhar, SwiftUI, 2023), una recreación de la letra «progresiva» de Apple Music. Se quiere el mismo resultado en MusicPlayer-Desktop (C#, .NET 8, Avalonia 11.2.5), sin servicios externos y sobre los `.lrc` que la app ya lee.
+Referencia: `ProgressingStyleLyrics.swift` (Magesh Sridhar, SwiftUI, 2023), una recreación de una letra «progresiva» que se rellena según avanza la canción. Se quiere el mismo resultado en MusicPlayer-Desktop (C#, .NET 8, Avalonia 11.2.5), sin servicios externos y sobre los `.lrc` que la app ya lee.
 
 Hoy la letra es un `ListBox` (`MainWindow.axaml`, clase `lyrics`) con la línea activa en negrita y opacidad 1 frente a 0,45 en las demás. `LyricsViewModel.UpdatePosition` se llama desde `MainViewModel.OnPositionSecondsChanged`, que a su vez recibe un temporizador de **250 ms**: suficiente para cambiar de línea, insuficiente para un relleno fluido.
 
@@ -33,7 +33,7 @@ Se replica el **resultado visual**, no la implementación: en Avalonia el estado
 | Medir el alto real de cada línea | Sí | `Measure`/`Bounds` del propio panel, en lugar de 33,6 fijo |
 | Brillo y temblor por línea | Técnicamente sí | Fuera de alcance: requieren datos por canción (ver más abajo) |
 
-Dato clave: el `.lrc` solo da el **inicio** de cada línea, no cuándo termina cada palabra. El relleno usará la duración estimada de la línea (siguiente marca menos esta, con tope por longitud del texto) y avanzará de forma uniforme. No coincidirá palabra por palabra como en Apple Music; sí se verá progresivo y fluido. El formato `.lrc` «enhanced» (`<mm:ss.xx>` por palabra) queda para una fase posterior.
+Dato clave: el `.lrc` solo da el **inicio** de cada línea, no cuándo termina cada palabra. El relleno usará la duración estimada de la línea (siguiente marca menos esta, con tope por longitud del texto) y avanzará de forma uniforme. No coincidirá palabra por palabra; sí se verá progresivo y fluido. El formato `.lrc` «enhanced» (`<mm:ss.xx>` por palabra) queda para una fase posterior.
 
 ## Criterios de aceptación
 
