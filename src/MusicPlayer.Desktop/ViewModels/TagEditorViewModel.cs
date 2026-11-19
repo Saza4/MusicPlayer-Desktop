@@ -86,6 +86,8 @@ public partial class TagEditorViewModel(
             var cover = await covers.LoadLargeAsync(track);
             if (version == _loadVersion && _newCover is null && !_removeCover)
                 CoverPreview = cover;
+            else
+                cover?.Dispose(); // llegó tarde: nadie la ha recibido (LoadLargeAsync no la guarda en caché)
         }
         catch (Exception)
         {

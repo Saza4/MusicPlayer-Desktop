@@ -550,20 +550,23 @@ public partial class MainViewModel : ViewModelBase
     private async Task RemoveTrackAsync(TrackItemViewModel? item, bool deleteFile)
     {
         if (item is null) return;
+        IDisposable? session = null;
         try
         {
+            // Una sola regla: si suena la canción quitada, se detiene (no se reanuda al terminar). Antes de comparar,
+            // ponerse al día: la pista pudo avanzar sola.
             CatchUpWithPlayer();
-            _player.PrepareNext(null); // suelta el archivo preparado: en Windows no se puede borrar un archivo abierto
-
-            // Una sola regla: si suena la canción quitada, se detiene. Además, en Windows
-            // el archivo debe soltarse antes de poder borrarlo.
             if (CurrentTrack?.Track.Id == item.Track.Id)
                 ClearCurrentTrack();
 
+            // Como cualquier escritura en audio: la sesión suelta la pista preparada (en Windows no se puede borrar un
+            // archivo abierto), impide volver a prepararla mientras se borra y, al cerrarse en el finally, prepara la
+            // siguiente también si el guardado falla (docs/specs/remove-and-advance.md).
+            session = _writes.Begin(new[] { item.Track.Id });
+
             var result = await _library.RemoveTracksAsync(new[] { item.Track.Id }, deleteFile);
             var removedIds = result.Removed.Select(t => t.Id).ToList();
-            _queue.RemoveWhere(q => removedIds.Contains(q.Track.Id));
-            UpdateGapless();
+            _queue.RemoveWhere(q => removedIds.Contains(q.Track.Id)); // la siguiente se prepara al cerrar la sesión
             await Playlists.ForgetTracksAsync(removedIds);
             ApplySnapshot(result.Snapshot);
 
@@ -585,6 +588,10 @@ public partial class MainViewModel : ViewModelBase
             {
                 Status = $"No se pudo quitar la canción: {ex.Message}";
             }
+        }
+        finally
+        {
+            session?.Dispose();
         }
     }
 
@@ -625,13 +632,14 @@ public partial class MainViewModel : ViewModelBase
         StartPlayback(list[index]);
     }
 
-    private void StartPlayback(TrackItemViewModel item)
+    /// <summary>Carga y reproduce la pista. Devuelve false si no pudo: entonces no se tocó lo que sonaba.</summary>
+    private bool StartPlayback(TrackItemViewModel item)
     {
         if (!File.Exists(item.Track.FilePath))
         {
             MarkAvailability(item, false);
             Status = NotAvailable(item);
-            return;
+            return false;
         }
         try
         {
@@ -641,12 +649,14 @@ public partial class MainViewModel : ViewModelBase
             ShowTrack(item);
             _player.Play();
             UpdateGapless();
+            return true;
         }
         catch (Exception ex)
         {
             // Load ya soltó lo anterior: la interfaz no debe seguir diciendo que suena algo.
             ClearCurrentTrack();
             Status = ex.Message;
+            return false;
         }
     }
 
@@ -689,7 +699,13 @@ public partial class MainViewModel : ViewModelBase
         if (!string.Equals(next.Track.FilePath, path, StringComparison.OrdinalIgnoreCase))
         {
             // La cola cambió justo antes del salto y lo que suena ya no coincide: se reinicia con lo correcto.
-            StartPlayback(next);
+            if (StartPlayback(next)) return;
+
+            // Su archivo ya no está (StartPlayback lo anotó en la línea de estado). Se busca la siguiente disponible,
+            // como al terminar una pista; si no hay, se detiene: lo que suena no es lo que dice la cola ni lo que se
+            // muestra (docs/specs/remove-and-advance.md).
+            if (_queue.MoveNextAfterEnd(CheckAvailable) is { } other && StartPlayback(other)) return;
+            if (CurrentTrack is not null) ClearCurrentTrack();
             return;
         }
 
@@ -744,6 +760,8 @@ public partial class MainViewModel : ViewModelBase
             var cover = await _covers.LoadLargeAsync(track, cts.Token);
             if (!cts.IsCancellationRequested)
                 NowPlayingCover = cover; // null si la pista no tiene carátula
+            else
+                cover?.Dispose(); // se cambió de pista: nadie la ha recibido (LoadLargeAsync no la guarda en caché)
         }
         catch (OperationCanceledException)
         {
@@ -791,7 +809,7 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private void ResumeInterrupted()
     {
-        // Saving soltó también la pista preparada. Si no hay nada que reanudar (se escribió en otra pista, o el
+        // Al abrir la sesión, OnWriting soltó también la pista preparada. Si no hay nada que reanudar (se escribió en otra pista, o el
         // usuario ya eligió otra), se vuelve a preparar la siguiente para no perder el empalme sin silencio
         // (docs/specs/audit-followup.md, criterio 3).
         var was = _interrupted;
@@ -965,9 +983,14 @@ public partial class MainViewModel : ViewModelBase
 
     private void OnTagsSaved(LibrarySnapshot snapshot)
     {
-        // El álbum o artista abierto pudo cambiar de clave: se vuelve a la vista general.
-        _artistScope = null;
-        _albumScope = null;
+        // El álbum o artista abierto se conserva; si cambió de nombre, se sigue a lo que se veía
+        // (docs/specs/keep-browse-scope.md). El grupo se rehace con la biblioteca nueva: el viejo tiene los datos de antes.
+        var shown = Tracks.Select(i => i.Track.Id).ToList();
+        var (artist, albumKey) = BrowseScope.Resolve(_artistScope, _albumScope?.Key, shown, snapshot.Tracks);
+        _artistScope = artist;
+        _albumScope = albumKey is null ? null
+            : LibraryGrouper.GroupAlbums(snapshot.Tracks.Where(t => LibraryGrouper.AlbumKey(t) == albumKey))
+                .FirstOrDefault();
         ApplySnapshot(snapshot);
         UpdateGapless();
     }

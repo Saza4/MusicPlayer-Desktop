@@ -45,7 +45,7 @@ public static class WindowNative
     {
         if (!OperatingSystem.IsWindows()) return false;
         if (window.TryGetPlatformHandle()?.Handle is not { } hwnd || hwnd == IntPtr.Zero) return false;
-        ShowWindow(hwnd, SwRestore);
+        RestoreOnWindows(hwnd);
         return true;
     }
 
@@ -53,7 +53,7 @@ public static class WindowNative
     public static bool IsForeground(Window window) =>
         OperatingSystem.IsWindows()
         && window.TryGetPlatformHandle()?.Handle is { } hwnd
-        && hwnd == GetForegroundWindow();
+        && IsForegroundOnWindows(hwnd);
 
     /// <summary>
     /// Plan B si Activate() no basta: pide el primer plano directamente. Windows lo permite porque el
@@ -63,8 +63,17 @@ public static class WindowNative
     {
         if (!OperatingSystem.IsWindows()) return false;
         if (window.TryGetPlatformHandle()?.Handle is not { } hwnd || hwnd == IntPtr.Zero) return false;
-        return SetForegroundWindow(hwnd);
+        return ForceForegroundOnWindows(hwnd);
     }
+
+    [SupportedOSPlatform("windows")]
+    private static void RestoreOnWindows(IntPtr hwnd) => ShowWindow(hwnd, SwRestore);
+
+    [SupportedOSPlatform("windows")]
+    private static bool IsForegroundOnWindows(IntPtr hwnd) => hwnd == GetForegroundWindow();
+
+    [SupportedOSPlatform("windows")]
+    private static bool ForceForegroundOnWindows(IntPtr hwnd) => SetForegroundWindow(hwnd);
 
     [SupportedOSPlatform("windows")]
     private static void SetRegionOnWindows(IntPtr hwnd, PixelRect a, int radius)

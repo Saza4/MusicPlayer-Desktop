@@ -1,6 +1,6 @@
 # Spec: arreglos de la tercera auditoría (15 de noviembre de 2026)
 
-Estado: **aprobada por el autor el 15 de noviembre de 2026**. Sin código todavía.
+Estado: **implementada y verificada a mano por el autor el 15 de noviembre de 2026** (PR #13, #14 y #15). Ver los hitos al final.
 
 ## Context
 
