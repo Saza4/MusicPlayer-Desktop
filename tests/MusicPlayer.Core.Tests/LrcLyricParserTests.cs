@@ -36,6 +36,27 @@ public class LrcLyricParserTests
         Assert.Single(block.Lines);
     }
 
+    // docs/specs/ascii-digits.md: \d aceptaba dígitos que int.Parse no sabe convertir y Parse lanzaba.
+    [Theory]
+    [InlineData("[０１:２３.００]hola")] // de ancho completo
+    [InlineData("[١٢:٣٠.٠٠]hola")] // árabes
+    public void Parse_NonAsciiDigitsInTimeTag_DoesNotThrowAndIsPlainText(string content)
+    {
+        var block = _parser.Parse(content);
+
+        Assert.Equal(LyricsKind.Plain, block.Kind);
+        Assert.Equal(content, Assert.Single(block.Lines).Text);
+    }
+
+    [Fact]
+    public void Parse_NonAsciiTimeTagAmongNormalOnes_KeepsTheSyncedLines()
+    {
+        var block = _parser.Parse("[00:01.00]uno\n[０１:２３.００]dos\n[00:05.00]tres");
+
+        Assert.Equal(LyricsKind.Synced, block.Kind);
+        Assert.Equal(new[] { "uno", "tres" }, block.Lines.Select(l => l.Text));
+    }
+
     [Fact]
     public void Parse_PlainText_ReturnsPlainBlock()
     {

@@ -39,6 +39,28 @@ public class TagSuggesterTests
         Assert.Equal("", after.Artist);
     }
 
+    // docs/specs/ascii-digits.md: \d aceptaba dígitos que uint.Parse no sabe convertir y Parse lanzaba.
+    [Theory]
+    [InlineData("０１ - título")] // de ancho completo
+    [InlineData("١٢ - título")] // árabes
+    public void FileName_WithNonAsciiLeadingDigits_DoesNotThrowAndHasNoNumber(string name)
+    {
+        var parsed = FileNameParser.Parse(name);
+
+        Assert.Null(parsed.Number);
+        Assert.Equal("título", parsed.Title);
+    }
+
+    [Fact]
+    public void FileName_NumberFollowedByNonAsciiDigit_IsNotATrackNumber()
+    {
+        // Como «10.000 Reasons»: lo que sigue al separador empieza por un dígito, sea del tipo que sea.
+        var parsed = FileNameParser.Parse("10.０００ Reasons");
+
+        Assert.Null(parsed.Number);
+        Assert.Equal("10.０００ Reasons", parsed.Title);
+    }
+
     [Fact]
     public void NumberArtistTitle_AreAllExtracted()
     {
