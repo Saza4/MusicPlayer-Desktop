@@ -1,7 +1,7 @@
 # Spec: área de Configuración y reproducir con un clic
 
 Estado: **implementada el 15 de noviembre de 2026** (rama `feat/settings-panel`, desde `main` con los PR #12 a #16
-ya fusionados), a falta de la prueba a mano del autor (ver «Resultado»). Compila con la CS8602 de siempre y pasan
+ya fusionados) y **probada a mano por el autor** (15 y 19 de noviembre de 2026, ver «Resultado»). Compila con la CS8602 de siempre y pasan
 996 pruebas (787 en Core, 209 en Infrastructure).
 
 ## Context
@@ -130,10 +130,10 @@ tema, «Abrir carpeta» y los temas Claro y de usuario. Dos observaciones:
 - **Mayús + clic «no funciona».** Comprobado después con clics sintéticos y un registro temporal: el clic llega
   con `Shift`, la fila queda seleccionada y no se reproduce, igual que con Ctrl. La lista es de selección única,
   así que Mayús no selecciona un rango: si eso es lo que se esperaba, es una función nueva (selección múltiple),
-  no un fallo de esta spec. **Pendiente de que el autor diga qué esperaba.**
+  no un fallo de esta spec. **Resuelto el 19 de noviembre de 2026:** el autor lo da por bueno tal como está.
 - **Un solo control de tema:** hecho (decisión 2).
 
-**Sin verificar (tras mudar el botón «Tema»):** la lista de temas abierta desde Configuración con ratón y teclado
+**Probado a mano por el autor el 19 de noviembre de 2026 (tras mudar el botón «Tema»):** la lista de temas abierta desde Configuración con ratón y teclado
 (vista previa, `Enter`, y `Esc` cerrando solo la lista).
 
 ## Hitos

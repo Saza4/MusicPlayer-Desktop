@@ -1,6 +1,6 @@
 # Spec: conservar el álbum o artista abierto tras guardar etiquetas
 
-Estado: implementada el 19 de noviembre de 2026, **a falta de la prueba a mano del autor** (lista en «Resultado»).
+Estado: implementada el 19 de noviembre de 2026, y **probada a mano por el autor** el mismo día (PR #27).
 Compila con 0 errores y la advertencia CS8602 de siempre, y pasan las 1061 pruebas (850 en Core, 211 en
 Infrastructure), 10 de ellas nuevas (`BrowseScopeTests`).
 
