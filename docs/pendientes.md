@@ -30,12 +30,7 @@ Todo está fusionado en `main`.
   - `docs/specs/remove-and-advance.md` (PR #27): quitar una pista sin hueco en el empalme (era el punto 9) y avance
     coherente hacia una pista ausente (el caso vecino de R6).
   - `docs/specs/keep-browse-scope.md` (PR #27): la vista sigue en el álbum o artista tras guardar (era el punto 1).
-
-## Falta la prueba a mano del autor
-
-- El rediseño según los mockups (`docs/specs/redesign-mockups.md`), en su PR desde el 19 de noviembre de 2026.
-  Su spec registra capturas, no una prueba a mano. Sin probar: Linux, el foco con teclado real en los botones
-  nuevos y los paneles de edición (convertir, limpiar etiquetas, editor de etiquetas) con la paleta nueva.
+  - `docs/specs/redesign-mockups.md` (PR #29): el rediseño según los mockups. Linux sigue sin probar.
 
 ## Sin spec todavía
 

@@ -174,7 +174,7 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 | 24  | Seguir sonando al cerrar (bandeja) e instancia única (`background-playback.md`) | Core, Desktop | Hecho y probado a mano por el autor | v1.6.0 (PR #20) |
 | 25  | Arreglos del 16 de noviembre: dígitos ASCII, un solo camino de salto, playlists en fila, escribir tras un avance y sesión de escritura | Core, Audio, Desktop | Hecho, con la pasada manual del autor ese día | v1.6.0 (PR #22 a #26) |
 | 26  | Quitar una pista sin hueco y avance hacia una pista ausente (`remove-and-advance.md`); la vista se queda en el álbum o artista tras guardar (`keep-browse-scope.md`) | Core, Desktop | Hecho y probado a mano por el autor | v1.6.0 (PR #27) |
-| 27  | Rediseño según los mockups: paleta, barra lateral con artistas, página de artista, barra de reproducción centrada y botones de acción con borde (`redesign-mockups.md`) | Core, Desktop | Hecho: capturas en Windows con tres temas y dos tamaños; falta la prueba a mano del autor | v1.6.0 |
+| 27  | Rediseño según los mockups: paleta, barra lateral con artistas, página de artista, barra de reproducción centrada y botones de acción con borde (`redesign-mockups.md`) | Core, Desktop | Hecho: capturas en Windows con tres temas y dos tamaños, y probado a mano por el autor | v1.6.0 (PR #29) |
 
 ### 4.2 Novedades de la serie v1.1.0
 

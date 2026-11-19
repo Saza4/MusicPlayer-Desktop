@@ -1,7 +1,7 @@
 # Especificación: rediseño según los mockups de Claude Design
 
-Estado: **hecha** (17 de noviembre de 2026) y aplicada sobre `main` el 19 de noviembre, con su PR, a falta de la
-prueba a mano del autor. Ver «Resultado».
+Estado: **hecha** (17 de noviembre de 2026) y aplicada sobre `main` el 19 de noviembre (PR #29), **probada a mano
+por el autor** ese día. Ver «Resultado».
 
 ## Contexto
 
