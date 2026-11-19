@@ -169,11 +169,11 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 | 19  | Arreglos de dos auditorías: reproducción, entradas no confiables, datos de la biblioteca e interfaz | Core, Audio, Infrastructure, Desktop | Hecho: 959 pruebas y pasada manual del autor en Windows el 11 de noviembre de 2026 (sin detalle paso a paso) | v1.5.0 (PR #10) |
 | 20  | Tercera auditoría: archivos, reproducción y resto (`audit-3.md`) | Core, Audio, Infrastructure, Desktop | Hecho y verificado a mano por el autor | v1.6.0 (PR #13 a #15) |
 | 21  | Diseño adaptable entre 640×400 y pantalla completa (`responsive-layout.md`) | Core, Desktop | Hecho y verificado a mano por el autor | v1.6.0 (PR #16) |
-| 22  | Vista «Configuración» y reproducir con un clic (`settings-panel.md`) | Core, Desktop | Hecho; probado en parte a mano (faltan Mayús + clic y la lista de temas) | v1.6.0 (PR #17) |
+| 22  | Vista «Configuración» y reproducir con un clic (`settings-panel.md`) | Core, Desktop | Hecho y probado a mano por el autor | v1.6.0 (PR #17) |
 | 23  | Isla: título desplazable a 30 fps, ocultar, salir y barra arrastrable (`island-title-and-close.md`) | Core, Desktop | Hecho y probado a mano por el autor | v1.6.0 (PR #19) |
-| 24  | Seguir sonando al cerrar (bandeja) e instancia única (`background-playback.md`) | Core, Desktop | Hecho; falta la prueba a mano del autor | v1.6.0 (PR #20) |
+| 24  | Seguir sonando al cerrar (bandeja) e instancia única (`background-playback.md`) | Core, Desktop | Hecho y probado a mano por el autor | v1.6.0 (PR #20) |
 | 25  | Arreglos del 16 de noviembre: dígitos ASCII, un solo camino de salto, playlists en fila, escribir tras un avance y sesión de escritura | Core, Audio, Desktop | Hecho, con la pasada manual del autor ese día | v1.6.0 (PR #22 a #26) |
-| 26  | Quitar una pista sin hueco y avance hacia una pista ausente (`remove-and-advance.md`); la vista se queda en el álbum o artista tras guardar (`keep-browse-scope.md`) | Core, Desktop | Hecho; falta la prueba a mano del autor | v1.6.0 |
+| 26  | Quitar una pista sin hueco y avance hacia una pista ausente (`remove-and-advance.md`); la vista se queda en el álbum o artista tras guardar (`keep-browse-scope.md`) | Core, Desktop | Hecho y probado a mano por el autor | v1.6.0 (PR #27) |
 
 ### 4.2 Novedades de la serie v1.1.0
 
@@ -747,7 +747,7 @@ Puntos para pulir el texto publicado, sin cambiar el código.
 | `PlaylistManager`, una operación a la vez (`playlist-serialization.md`), ejecución del 16 de noviembre de 2026 (Debug) | +5 | +0 | **830 + 211 = 1041**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). |
 | Escribir tras un avance automático (`write-after-advance.md`), ejecución del 16 de noviembre de 2026 (Debug) | +0 | +0 | **830 + 211 = 1041**. El cambio vive en `MainViewModel` y `BassAudioPlayer`, sin pruebas automáticas; pasada manual de regresión hecha por el autor ese día. |
 | Sesión de escritura con contador (`write-sessions.md`), ejecución del 16 de noviembre de 2026 (Debug) | +10 | +0 | **840 + 211 = 1051**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Las pruebas son de `WriteSessions`; el resto vive en Desktop, con la pasada manual hecha por el autor ese día. |
-| Quitar sin hueco y vista conservada (`remove-and-advance.md`, `keep-browse-scope.md`), ejecución del 19 de noviembre de 2026 (`-c Release`) | +10 | +0 | **850 + 211 = 1061**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Las pruebas son de `BrowseScope`; lo demás vive en Desktop y espera la prueba a mano del autor. |
+| Quitar sin hueco y vista conservada (`remove-and-advance.md`, `keep-browse-scope.md`), ejecución del 19 de noviembre de 2026 (`-c Release`) | +10 | +0 | **850 + 211 = 1061**, todas superadas. Compila con 0 errores y 1 advertencia (CS8602). Las pruebas son de `BrowseScope`; lo demás vive en Desktop y lo probó a mano el autor ese día. |
 
 La advertencia es CS8602 en `MainViewModel.cs:250` (antes en las líneas 222, 237 y 249; el código añadido encima la va desplazando): el lambda del temporizador de búsqueda usa `_searchDebounce` dentro de su propia asignación. Esa línea existe desde el 25 de octubre de 2026. _Deducción:_ la ejecución anterior no la mostró porque fue una compilación incremental o en Debug.
 
@@ -874,7 +874,7 @@ La advertencia es CS8602 en `MainViewModel.cs:250` (antes en las líneas 222, 23
 
 1. **Integración con el sistema:** SMTC en Windows y MPRIS en Linux.
 2. **Probar en Linux:** omitido por ahora.
-3. **Preparar v1.6.0:** la publicación de v1.5.0 ya está hecha (12 de noviembre de 2026). Falta la prueba a mano del autor de lo listado en `docs/pendientes.md` y la spec de release, que publicará con `-p:ContinuousIntegrationBuild=true`. Después, R6 y el congelamiento con unidades de red, con spec propia.
+3. **Preparar v1.6.0:** la publicación de v1.5.0 ya está hecha (12 de noviembre de 2026). Todo lo fusionado está probado a mano por el autor (19 de noviembre de 2026); falta la spec de release, que publicará con `-p:ContinuousIntegrationBuild=true`. Después, R6 y el congelamiento con unidades de red, con spec propia.
 4. **Captura del README:** `docs/screenshot.png` es del 8 de noviembre de 2026 (barra superior con iconos, biblioteca vacía). Conviene renovarla con la v1.6.0.
 
 Lo que falta y todavía no tiene spec está en `docs/pendientes.md`.

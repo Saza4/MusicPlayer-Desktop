@@ -23,17 +23,16 @@ Todo está fusionado en `main`.
 - `docs/specs/lyrics-online-translation.md`: **descartada** por el autor el 15 de noviembre de 2026 (PR #21). La app
   sigue siendo 100 % local y sin red.
 
-## Falta la prueba a mano del autor
+- Probados a mano por el autor el 19 de noviembre de 2026, sin fallos (sin detalle paso a paso):
+  - `docs/specs/settings-panel.md` (PR #17), incluida la lista de temas desde Configuración. Mayús + clic se queda
+    como está: selecciona sin reproducir, igual que Ctrl.
+  - `docs/specs/background-playback.md` (PR #20): bandeja, su menú e instancia única.
+  - `docs/specs/remove-and-advance.md` (PR #27): quitar una pista sin hueco en el empalme (era el punto 9) y avance
+    coherente hacia una pista ausente (el caso vecino de R6).
+  - `docs/specs/keep-browse-scope.md` (PR #27): la vista sigue en el álbum o artista tras guardar (era el punto 1).
 
-- `docs/specs/settings-panel.md` (PR #17): probada en parte el 15 de noviembre de 2026. Quedan Mayús + clic (el
-  autor tiene que decir qué esperaba) y la lista de temas desde Configuración con ratón y teclado.
-- `docs/specs/background-playback.md` (PR #20): sobre todo el icono de la bandeja, su menú y la instancia única
-  (lista en la spec, «Resultado»).
-- `docs/specs/remove-and-advance.md`: quitar una pista ya no deja hueco en el empalme (era el punto 9 de esta
-  lista), el borrado va dentro de una sesión de escritura, y un avance automático hacia una pista ausente ya no
-  deja sonando una pista distinta de la que se muestra (el caso vecino de R6).
-- `docs/specs/keep-browse-scope.md`: tras guardar etiquetas, la vista sigue en el álbum o artista abierto (era el
-  punto 1).
+## Fuera de `main`
+
 - El rediseño según los mockups (`docs/specs/redesign-mockups.md`): está hecho en un commit local del autor, sin
   subir ni PR. Su spec registra capturas, pero no una prueba a mano.
 

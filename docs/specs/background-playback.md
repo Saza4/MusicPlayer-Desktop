@@ -1,7 +1,7 @@
 # Spec: seguir sonando al cerrar la ventana (bandeja del sistema)
 
-Estado: **implementada el 15 de noviembre de 2026** (rama `feat/background-playback`), a falta de la prueba a mano
-del autor (ver «Resultado»). Compila con la CS8602 de siempre y pasan 1030 pruebas (819 en Core, 211 en
+Estado: **implementada el 15 de noviembre de 2026** (PR #20) y **probada a mano por el autor el 19 de
+noviembre de 2026**, sin fallos. Compila con la CS8602 de siempre y pasan 1030 pruebas (819 en Core, 211 en
 Infrastructure). Depende de `settings-panel.md`.
 
 ## Context
@@ -136,7 +136,8 @@ no dispara `Closed` y el proceso sigue vivo; `Show()` devuelve la ventana. Un `S
     0 y `settings.json` queda guardado.
   - Ajuste apagado: cerrar termina el proceso con código 0.
 
-**Sin verificar (falta la prueba a mano del autor):**
+**Probado a mano por el autor el 19 de noviembre de 2026** (sin detalle paso a paso). Era la lista sin verificar,
+salvo Linux, que sigue sin probar:
 
 - **El icono de la bandeja:** que aparece al ocultar y desaparece al volver, el clic que abre la ventana y su
   menú («Abrir», «Reproducir» o «Pausar», «Siguiente», «Salir»). No se pudo capturar ni pulsar desde un script.
