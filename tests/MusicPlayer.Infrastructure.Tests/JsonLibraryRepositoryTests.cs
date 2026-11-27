@@ -41,6 +41,45 @@ public class JsonLibraryRepositoryTests : IDisposable
         Assert.Equal("Various Artists", t.AlbumArtist);
     }
 
+    // docs/specs/auto-refresh-folders.md, criterios 1 y 3.
+    [Fact]
+    public async Task SaveThenLoad_RoundTripsFolders()
+    {
+        var folders = new[] { Path.Combine(_dir, "Música"), Path.Combine(_dir, "Otra") };
+
+        await new JsonLibraryRepository(FilePath).SaveAsync(LibrarySnapshot.Empty with { Folders = folders });
+        var loaded = await new JsonLibraryRepository(FilePath).LoadAsync();
+
+        Assert.Equal(folders, loaded.Folders);
+    }
+
+    [Fact]
+    public async Task Load_FileWithoutFolders_HasNoFolders()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        await File.WriteAllTextAsync(FilePath, """{"Version":1,"Tracks":[]}""");
+
+        var loaded = await new JsonLibraryRepository(FilePath).LoadAsync();
+
+        Assert.Empty(loaded.Folders);
+    }
+
+    [Fact]
+    public async Task Load_FileFromBeforePr7_RecoversItsFoldersAndDropsTheInvalidOnes()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        var music = Path.Combine(_dir, "Música");
+        var inside = System.Text.Json.JsonSerializer.Serialize(Path.Combine(music, "Rock"));
+        await File.WriteAllTextAsync(FilePath, $$"""
+            {"Version":1,"Folders":[{{System.Text.Json.JsonSerializer.Serialize(music)}},{{inside}},"","relativa",null],
+            "Tracks":[]}
+            """);
+
+        var loaded = await new JsonLibraryRepository(FilePath).LoadAsync();
+
+        Assert.Equal([music], loaded.Folders);
+    }
+
     [Fact]
     public async Task Load_MissingFile_ReturnsEmpty()
     {

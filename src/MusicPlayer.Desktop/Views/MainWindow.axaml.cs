@@ -45,6 +45,9 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, OnPreviewKeyUp, RoutingStrategies.Tunnel);
         Deactivated += (_, _) => _muteKeyDown = _spaceWasShortcut = false; // si se suelta la tecla con otra ventana en primer plano
+        // Al volver a la ventana se revisan las carpetas agregadas; la decisión de si toca es del ViewModel y de Core
+        // (docs/specs/auto-refresh-folders.md, criterio 11).
+        Activated += (_, _) => (DataContext as MainViewModel)?.OnWindowActivated();
         Opened += OnOpened;
 
         // Arrastre de las barras de progreso (la principal y la del inmersivo, Classes="progress"): el salto se hace

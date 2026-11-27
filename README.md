@@ -28,6 +28,7 @@ funciones trabajan sobre tus archivos. Motivado principalmente por querer amplia
 **Biblioteca**
 
 - Escaneo de carpetas (con todas sus subcarpetas) en segundo plano, metadatos con TagLibSharp, orden por artista, álbum, disco y pista, y persistencia en JSON. Quitar canciones de la biblioteca o del disco.
+- **Las carpetas agregadas se revisan solas:** al abrir la app y al volver a su ventana (como mucho una vez por minuto), la música nueva que copiaste a una carpeta ya agregada aparece sin volver a elegirla. Solo agrega: lo que borres queda como no disponible, como siempre. Una carpeta en una unidad desconectada se salta y se revisa cuando vuelve.
 - **Búsqueda en tiempo real** por título, artista, artista del álbum y álbum, sin distinguir mayúsculas ni acentos. Cada palabra escrita debe coincidir en alguno de esos campos.
 - **Navegación por artista y álbum:** artistas del álbum → álbumes por año → pistas en orden de disco y número. Los recopilatorios se agrupan con la etiqueta "artista del álbum".
 - **Playlists:** crear, renombrar, eliminar, agregar y quitar canciones.
@@ -130,7 +131,7 @@ dotnet test
 
 Pruebas unitarias con xUnit en `tests/`: `MusicPlayer.Core.Tests` para la lógica y
 `MusicPlayer.Infrastructure.Tests` para repositorios JSON, proveedores y escritores de archivos.
-Hay 1078 pruebas (867 en Core y 211 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
+Hay 1117 pruebas (903 en Core y 214 en Infrastructure). No cubren la conversión real con `ffmpeg` ni el
 código de vista (menús, selectores, foco, teclado, la ventana de la isla y el dibujo de la letra progresiva), que se prueban a mano.
 De la isla se prueban en Core las reglas: cuándo se ve, dónde va en cada escala, los pasos del hover y el seek.
 De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, la atenuación y el desenfoque.
@@ -139,7 +140,7 @@ De la letra progresiva, el relleno, las pausas, el resorte, el desplazamiento, l
 
 - **Letras incrustadas:** USLT es texto sin sincronizar por especificación; los tiempos `[mm:ss.xx]` viajan dentro del texto y solo esta app los interpreta. Solo UTF-8 de hasta 1 MB por capa, al incrustar y al leer: un `.lrc` o una letra incrustada mayor se ignora, y de una línea se usan como mucho 32 marcas de tiempo iniciales. La traducción y la pronunciación incrustadas solo las muestra esta app: otros reproductores ven solo la letra principal. Con el clic derecho hace falta la letra principal para incrustar; desde el modo inmersivo, «Incrustar traducción…» e «Incrustar pronunciación…» eligen el archivo con el selector y no necesitan `cancion.lrc` ni hermanos, pero la pista ya debe tener letra sincronizada. Si un `cancion.es.lrc` sigue junto al audio, ese hermano gana al leer. Formatos con capas: MP3, FLAC y M4A (en WAV, OGG u Opus solo la principal). **Convertir formato** (ffmpeg, comprobado el 8 de noviembre de 2026 de MP3 y M4A a MP3, M4A y FLAC): la letra principal solo sobrevive de M4A a M4A o a FLAC (de MP3, o hacia MP3, ffmpeg la deja en un campo de texto suelto que no es la letra); la traducción y la pronunciación se conservan hacia MP3 y FLAC y se pierden hacia M4A. Sin la principal, las capas tampoco se ven. Si vas a convertir, conserva los `.lrc` o vuelve a incrustar después.
 - **Conversión:** convertir a WAV pierde en la práctica las etiquetas y la carátula. Convertir de un formato con pérdida a FLAC o WAV no mejora la calidad.
-- **Biblioteca:** las carpetas no se vigilan (para ver música nueva en una carpeta ya agregada, vuelve a usar «Agregar carpeta») y no se pueden quitar; sí canciones sueltas. El género se lee pero no se muestra.
+- **Biblioteca:** las carpetas agregadas se revisan al abrir la app y al volver a su ventana, no en vivo (con la app en segundo plano no se revisa nada); no se ven en la interfaz ni se pueden quitar, y una canción ya conocida que edites con otro programa no se vuelve a leer hasta usar «Agregar carpeta». Sí se pueden quitar canciones sueltas. El género se lee pero no se muestra.
 - **Carátulas:** no se redimensionan, así que una portada pesada infla el archivo.
 - **Temas:** el texto sigue la variante base (clara u oscura) y no se puede personalizar. El modo inmersivo es siempre oscuro: solo el botón Reproducir/Pausa y los iconos activos siguen el tema.
 - **Isla flotante:** solo en Windows (en Linux no se muestra). Siempre en la pantalla principal. No se maneja con el teclado: se pensó para el ratón sin quitar el foco a otras apps.

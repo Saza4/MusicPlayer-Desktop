@@ -95,7 +95,7 @@ Reglas finas del código que no aparecen en otras secciones. Se verificaron cont
 
 **Biblioteca y búsqueda**
 
-- **Escaneo (`LibraryScanner`):** recorre la carpeta elegida con todas sus subcarpetas (ignora las inaccesibles) y lee `.mp3`, `.flac`, `.wav` y `.m4a`. No se guarda la lista de carpetas agregadas: no se vigilan ni se pueden quitar (ver la sección 9). Un `library.json` antiguo con la clave `Folders` se lee igual: se ignora.
+- **Escaneo (`LibraryScanner`):** recorre la carpeta elegida con todas sus subcarpetas (ignora las inaccesibles) y lee `.mp3`, `.flac`, `.wav` y `.m4a`. Las carpetas agregadas se guardan en `library.json` (`Folders`, sin duplicados ni carpetas dentro de otras: `LibraryFolders`) y se revisan solas al terminar el arranque y al activarse la ventana, como mucho una vez por minuto (`FolderRefreshPolicy`). La revisión (`LibraryService.RefreshFoldersAsync`) solo lee las etiquetas de las rutas nuevas, reubica las pistas movidas, deja para la siguiente los archivos que otro programa sigue escribiendo, salta las carpetas no accesibles, no quita pistas ni borra temporales, y guarda una vez y solo si hay cambios (spec `docs/specs/auto-refresh-folders.md`). Un `library.json` anterior al PR #7 con la clave `Folders` la recupera.
 - **Búsqueda (`TrackFilter`):** la consulta se separa en palabras y todas deben coincidir (AND) en título, artista, artista del álbum o álbum, sin distinguir mayúsculas ni acentos. `MainViewModel` espera 200 ms tras la última tecla antes de filtrar.
 - **Orden (`TrackSorter`):** el disco 0 cuenta como disco 1.
 - **Reubicación (`TrackRelocator`):** solo empareja si la coincidencia por título, artista y álbum es única en ambos lados y la duración difiere como mucho 1 s. Lo ambiguo se deja sin emparejar.
@@ -904,7 +904,7 @@ La advertencia es CS8602 en `MainViewModel.cs:250` (antes en las líneas 222, 23
 
 **Biblioteca**
 
-- Las carpetas no se vigilan: si copias música nueva a una carpeta ya agregada, hay que pulsar «Agregar carpeta» y elegirla otra vez. Tampoco hay forma de quitar una carpeta: solo canciones sueltas («Quitar de la biblioteca» o «Eliminar del disco…») o las no disponibles (el botón «Quitar de la biblioteca…» de la barra de aviso).
+- Las carpetas agregadas se revisan al arrancar y al activar la ventana, no en vivo: con la app en segundo plano la música nueva no aparece hasta volver a la ventana. Una pista conocida editada por otro programa no se vuelve a leer (hay que usar «Agregar carpeta»). En Linux no se detectan las copias a medias. Las carpetas agregadas no se ven en la interfaz ni se pueden quitar: solo canciones sueltas («Quitar de la biblioteca» o «Eliminar del disco…») o las no disponibles (el botón «Quitar de la biblioteca…» de la barra de aviso).
 - El género se lee de las etiquetas pero no se muestra ni se puede editar.
 - El editor de etiquetas cubre título, artista, artista del álbum, álbum, año, pista y disco; no el género.
 - La ventana tiene un tamaño mínimo de 640×400; con menos de 1100 px de ancho los botones de la barra superior quedan solo con icono (ver 4.3.6) y, con menos de 800, el volumen pasa a un desplegable y la barra lateral se pliega (spec `docs/specs/responsive-layout.md`). Los umbrales son constantes (`LayoutBreakpoints`), no se mide el texto.
@@ -1080,7 +1080,7 @@ MusicPlayer.sln
 │       └── Assets/              (iconos vectoriales, estilos y temas)
 ```
 
-La estructura real creció con `MusicPlayer.Infrastructure` y los proyectos de pruebas (sección 3). **De esta especificación original no se implementó:** las carpetas raíz monitorizadas, la búsqueda por letra, la categoría «Listas de reproducción» como pestaña (las playlists van en la barra lateral COLECCIONES), el formato `.m3u8` (las playlists son un JSON propio) y el género como dato visible (se lee, pero no se muestra). `Album`, `Artist` y `PlayerViewModel` tampoco existen como tipos: la agrupación es `LibraryGrouper` y el reproductor vive en `MainViewModel`.
+La estructura real creció con `MusicPlayer.Infrastructure` y los proyectos de pruebas (sección 3). **De esta especificación original no se implementó:** la vigilancia en vivo de las carpetas raíz (se revisan al arrancar y al activar la ventana), la búsqueda por letra, la categoría «Listas de reproducción» como pestaña (las playlists van en la barra lateral COLECCIONES), el formato `.m3u8` (las playlists son un JSON propio) y el género como dato visible (se lee, pero no se muestra). `Album`, `Artist` y `PlayerViewModel` tampoco existen como tipos: la agrupación es `LibraryGrouper` y el reproductor vive en `MainViewModel`.
 
 **A. Gestión de biblioteca y archivos**
 

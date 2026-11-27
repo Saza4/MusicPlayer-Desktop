@@ -65,10 +65,68 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
     {
         var found = await scanner.ScanAsync(folder, progress, ct);
 
-        var byPath = _current.Tracks
+        var byPath = IndexByPath();
+        var (_, relocated) = await MergeAsync(byPath, found, ct);
+
+        // Primero se guarda lo escaneado, con la carpeta para revisarla después (docs/specs/auto-refresh-folders.md,
+        // criterio 1); la limpieza va después y no puede echarlo a perder (docs/specs/audit-3.md, H4).
+        var saved = await CommitAsync(_current with
+        {
+            Tracks = TrackSorter.Sort(byPath.Values),
+            Folders = LibraryFolders.Add(_current.Folders, folder),
+        }, ct);
+
+        // Temporales de la app que quedaron de un cierre brusco (library-data-safety-2.md, criterio 7).
+        var cleaned = 0;
+        try { cleaned = await scanner.CleanStaleTemporariesAsync(folder, ct); }
+        catch (OperationCanceledException) { } // cancelar la limpieza no deshace el guardado ya hecho
+
+        return new AddFolderResult(saved, relocated, cleaned);
+    }
+
+    /// <summary>
+    /// Revisa las carpetas agregadas y añade lo nuevo (docs/specs/auto-refresh-folders.md, criterios 4 a 10): solo lee
+    /// las etiquetas de las rutas que la biblioteca no conoce, no quita pistas ni borra archivos, salta las carpetas
+    /// no accesibles y guarda una sola vez, y solo si hay cambios.
+    /// </summary>
+    public Task<RefreshResult> RefreshFoldersAsync(CancellationToken ct = default) =>
+        ExclusiveAsync(() => RefreshFoldersCoreAsync(ct), ct);
+
+    private async Task<RefreshResult> RefreshFoldersCoreAsync(CancellationToken ct)
+    {
+        var byPath = IndexByPath();
+        var unknown = new HashSet<string>(FilePaths.Comparer);
+        var unreachable = 0;
+
+        foreach (var folder in _current.Folders)
+        {
+            var paths = await scanner.ListAudioFilesAsync(folder, ct);
+            if (paths is null) { unreachable++; continue; }
+            unknown.UnionWith(paths.Where(p => !byPath.ContainsKey(p)));
+        }
+
+        var found = unknown.Count == 0 ? Array.Empty<Track>() : await scanner.ReadSettledFilesAsync(unknown, ct);
+        if (found.Count == 0)
+            return new RefreshResult(_current, 0, 0, unreachable);
+
+        var (fresh, relocated) = await MergeAsync(byPath, found, ct);
+        var saved = await CommitAsync(_current with { Tracks = TrackSorter.Sort(byPath.Values) }, ct);
+        return new RefreshResult(saved, fresh - relocated, relocated, unreachable);
+    }
+
+    private Dictionary<string, Track> IndexByPath() =>
+        _current.Tracks
             .DistinctBy(t => t.FilePath, FilePaths.Comparer)
             .ToDictionary(t => t.FilePath, FilePaths.Comparer);
 
+    /// <summary>
+    /// Mete en <paramref name="byPath"/> lo encontrado, conservando el Id y la fecha de alta de las rutas conocidas, y
+    /// reubica las pistas ausentes que parecen haberse movido. Devuelve cuántas rutas eran nuevas y cuántas de ellas
+    /// eran pistas movidas.
+    /// </summary>
+    private static async Task<(int Fresh, int Relocated)> MergeAsync(
+        Dictionary<string, Track> byPath, IReadOnlyList<Track> found, CancellationToken ct)
+    {
         // Rutas que la biblioteca aún no conocía: candidatas a ser pistas movidas.
         var fresh = found.Where(t => !byPath.ContainsKey(t.FilePath)).ToList();
         var missing = fresh.Count == 0
@@ -90,16 +148,7 @@ public sealed class LibraryService(LibraryScanner scanner, ILibraryRepository re
             relocated++;
         }
 
-        // Primero se guarda lo escaneado; la limpieza va después y no puede echarlo a perder
-        // (docs/specs/audit-3.md, H4).
-        var saved = await CommitAsync(new LibrarySnapshot(TrackSorter.Sort(byPath.Values)), ct);
-
-        // Temporales de la app que quedaron de un cierre brusco (library-data-safety-2.md, criterio 7).
-        var cleaned = 0;
-        try { cleaned = await scanner.CleanStaleTemporariesAsync(folder, ct); }
-        catch (OperationCanceledException) { } // cancelar la limpieza no deshace el guardado ya hecho
-
-        return new AddFolderResult(saved, relocated, cleaned);
+        return (fresh.Count, relocated);
     }
 
     public Task<RemoveResult> RemoveTracksAsync(IEnumerable<Guid> ids, bool deleteFiles) =>
