@@ -80,20 +80,9 @@ public sealed partial class LibraryScanner(ITrackMetadataReader reader)
     {
         return Task.Run<IReadOnlyList<Track>>(() =>
         {
-            var options = new EnumerationOptions
-            {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible = true
-            };
-
             var tracks = new List<Track>();
-            foreach (var path in Directory.EnumerateFiles(rootFolder, "*.*", options))
+            foreach (var path in EnumerateAudioFiles(rootFolder, ct))
             {
-                ct.ThrowIfCancellationRequested();
-
-                if (!SupportedExtensions.Contains(Path.GetExtension(path)) || IsTemporary(path))
-                    continue;
-
                 var track = SafeRead(path);
                 if (track is null) continue;
 
@@ -104,9 +93,67 @@ public sealed partial class LibraryScanner(ITrackMetadataReader reader)
         }, ct);
     }
 
+    // Los audios de la carpeta y sus subcarpetas (ignora las inaccesibles), sin los temporales de la app.
+    private static IEnumerable<string> EnumerateAudioFiles(string rootFolder, CancellationToken ct)
+    {
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
+        foreach (var path in Directory.EnumerateFiles(rootFolder, "*.*", options))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (SupportedExtensions.Contains(Path.GetExtension(path)) && !IsTemporary(path))
+                yield return path;
+        }
+    }
+
+    /// <summary>
+    /// Rutas de los audios de la carpeta, sin leer sus etiquetas. Null si la carpeta no existe o deja de responder a
+    /// mitad del recorrido (unidad desconectada): quien llama la salta sin error (docs/specs/auto-refresh-folders.md,
+    /// criterio 8).
+    /// </summary>
+    public Task<IReadOnlyList<string>?> ListAudioFilesAsync(string rootFolder, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<string>?>(() =>
+        {
+            if (!Directory.Exists(rootFolder)) return null;
+            try { return EnumerateAudioFiles(rootFolder, ct).ToList(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+        }, ct);
+
     /// <summary>Lee los metadatos de archivos concretos, sin recorrer carpetas.</summary>
     public Task<IReadOnlyList<Track>> ReadFilesAsync(IEnumerable<string> paths, CancellationToken ct = default) =>
         Task.Run<IReadOnlyList<Track>>(() => paths.Select(SafeRead).OfType<Track>().ToList(), ct);
+
+    /// <summary>
+    /// Como <see cref="ReadFilesAsync"/>, pero deja fuera los archivos que otro programa sigue escribiendo (una copia
+    /// en curso), para no guardar etiquetas o duración de un archivo incompleto: entran en la próxima revisión
+    /// (docs/specs/auto-refresh-folders.md, criterio 7).
+    /// </summary>
+    public Task<IReadOnlyList<Track>> ReadSettledFilesAsync(IEnumerable<string> paths, CancellationToken ct = default) =>
+        Task.Run<IReadOnlyList<Track>>(() =>
+        {
+            var tracks = new List<Track>();
+            foreach (var path in paths)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (IsBeingWritten(path)) continue;
+                if (SafeRead(path) is { } track) tracks.Add(track);
+            }
+            return tracks;
+        }, ct);
+
+    // En Windows, abrir para leer sin compartir la escritura falla si otro proceso lo tiene abierto para escribir.
+    // En Linux no hay ese bloqueo y siempre da false.
+    private static bool IsBeingWritten(string path)
+    {
+        try
+        {
+            using var _ = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return false;
+        }
+        catch (FileNotFoundException) { return true; } // desapareció entre el listado y la lectura
+        catch (DirectoryNotFoundException) { return true; }
+        catch (UnauthorizedAccessException) { return false; } // el lector decidirá; no es una copia en curso
+        catch (IOException) { return true; } // violación de uso compartido: alguien lo está escribiendo
+    }
 
     // El lector no debería lanzar, pero las etiquetas son una entrada externa: un archivo que lo haga lanzar se
     // omite y los demás entran (docs/specs/untrusted-input-limits.md, criterio 7).

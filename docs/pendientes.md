@@ -42,6 +42,9 @@ Todo está fusionado en `main`.
    devolverse. Antes de seguir hay que **medir**: memoria privada del proceso tras cambiar de pista muchas veces
    (`tools/medir-cpu.ps1` solo mide CPU). Solo si sale un problema real, `LruCache` con aviso de expulsión o un
    contador de referencias. Un `Dispose` sobre un bitmap que alguna vista todavía dibuja es peor que el problema.
+2. **Ver y quitar las carpetas agregadas.** Desde `auto-refresh-folders.md` se guardan en `library.json` y se
+   revisan solas, pero no se ven en la interfaz ni se pueden quitar. Quitar una carpeta tendría que decidir qué
+   pasa con sus pistas y sus playlists (¿quitarlas, o solo dejar de revisarla?).
 
 ## Aplazado a propósito
 

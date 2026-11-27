@@ -313,9 +313,11 @@ public partial class MainViewModel : ViewModelBase
                          SettingsService settings, TagEditorViewModel tagEditor,
                          TagAutoFixViewModel autoFix, ConvertViewModel conversion,
                          AlbumCoverViewModel albumCover, EmbedLyricsViewModel embedLyrics,
-                         ThemeViewModel themes, SettingsViewModel settingsPanel, WriteSessions writes)
+                         ThemeViewModel themes, SettingsViewModel settingsPanel, WriteSessions writes,
+                         FolderRefreshPolicy folderRefresh)
     {
         _writes = writes;
+        _folderRefresh = folderRefresh;
         Settings = settingsPanel;
         _covers = covers;
         _settings = settings;
@@ -411,7 +413,7 @@ public partial class MainViewModel : ViewModelBase
         var pending = _startupNotices;
         _startupNotices = null;
         if (pending is { Count: > 0 })
-            Status = string.Join(" · ", pending);
+            Status = _startupNotice = string.Join(" · ", pending);
     }
 
     // ---- Biblioteca ----
@@ -451,6 +453,10 @@ public partial class MainViewModel : ViewModelBase
             _ = CheckAvailabilityAsync(); // en segundo plano: no retrasa el arranque
             if (settingsProblem is not null) Notify(settingsProblem);
             ShowStartupNotices();
+
+            // Música copiada a las carpetas agregadas con la app cerrada (docs/specs/auto-refresh-folders.md).
+            _libraryLoaded = true;
+            _ = RefreshFoldersAsync();
         }
         catch (Exception ex)
         {
@@ -484,6 +490,45 @@ public partial class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             Status = $"Error al escanear: {ex.Message}";
+        }
+    }
+
+    // ---- Revisión automática de las carpetas agregadas (docs/specs/auto-refresh-folders.md) ----
+
+    private readonly FolderRefreshPolicy _folderRefresh;
+    private bool _libraryLoaded; // hasta cargar bien la biblioteca no se revisa (ni cuenta como revisión)
+    private string? _startupNotice; // el aviso del arranque, para no taparlo con «N canciones nuevas»
+
+    /// <summary>La ventana principal se activó: si toca, se revisan las carpetas (criterio 11).</summary>
+    public void OnWindowActivated() => _ = RefreshFoldersAsync();
+
+    private async Task RefreshFoldersAsync()
+    {
+        if (!_libraryLoaded || _writes.IsOpen || !_folderRefresh.TryStart(DateTime.UtcNow)) return;
+        try
+        {
+            var result = await _library.RefreshFoldersAsync();
+            if (result.Changed)
+            {
+                var shown = Status;
+                ApplySnapshot(result.Snapshot); // escribe el estado general: el mensaje va después
+                var notes = new List<string>();
+                if (result.Added > 0)
+                    notes.Add(Plural.Of(result.Added, "canción nueva", "canciones nuevas"));
+                if (result.Relocated > 0)
+                    notes.Add(Plural.Of(result.Relocated, "canción reubicada", "canciones reubicadas"));
+                var note = string.Join("; ", notes);
+                Status = _startupNotice is not null && shown == _startupNotice ? $"{_startupNotice} · {note}" : note;
+            }
+            await CheckAvailabilityAsync(); // lo borrado mientras tanto aparece como no disponible (criterio 12)
+        }
+        catch (Exception ex)
+        {
+            Status = $"No se pudieron revisar las carpetas: {ex.Message}";
+        }
+        finally
+        {
+            _folderRefresh.Finish(DateTime.UtcNow);
         }
     }
 

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using MusicPlayer.Core.Interfaces;
 using MusicPlayer.Core.Models;
+using MusicPlayer.Core.Services;
 
 namespace MusicPlayer.Infrastructure;
 
@@ -9,7 +10,9 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
     private const int CurrentVersion = 1;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    internal sealed record LibraryFile(int Version, List<TrackRecord>? Tracks);
+    // Folders, al final y opcional: un library.json sin la clave carga igual, y uno anterior al PR #7 que aún la trae
+    // la recupera (docs/specs/auto-refresh-folders.md, criterio 3).
+    internal sealed record LibraryFile(int Version, List<TrackRecord>? Tracks, List<string?>? Folders = null);
 
     internal sealed record TrackRecord(
         Guid Id, string FilePath, string Title, string Artist, string Album,
@@ -43,7 +46,7 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
                 AlbumArtist = r.AlbumArtist ?? ""
             }).ToList();
 
-            return new LibrarySnapshot(tracks);
+            return new LibrarySnapshot(tracks) { Folders = LibraryFolders.Clean(file.Folders ?? new()) };
         }
         catch (JsonException)
         {
@@ -62,7 +65,8 @@ public sealed class JsonLibraryRepository(string filePath) : ILibraryRepository
             CurrentVersion,
             snapshot.Tracks.Select(t => new TrackRecord(
                 t.Id, t.FilePath, t.Title, t.Artist, t.Album, t.Year,
-                t.Genre, t.TrackNumber, t.Duration.Ticks, t.AddedAt, t.DiscNumber, t.AlbumArtist)).ToList());
+                t.Genre, t.TrackNumber, t.Duration.Ticks, t.AddedAt, t.DiscNumber, t.AlbumArtist)).ToList(),
+            snapshot.Folders.ToList<string?>());
 
         // Las escrituras del mismo archivo van en fila: en Windows, dos File.Move con sobrescritura a la vez
         // chocan (docs/specs/library-data-safety-2.md, criterio 3). El temporal es único por escritura.

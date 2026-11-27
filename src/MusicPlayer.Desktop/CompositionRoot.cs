@@ -27,6 +27,8 @@ public static class CompositionRoot
         services.AddSingleton<LibraryScanner>();
         services.AddSingleton<ILibraryRepository>(_ => new JsonLibraryRepository(AppPaths.Library));
         services.AddSingleton<LibraryService>();
+        // Cuándo se revisan solas las carpetas agregadas (docs/specs/auto-refresh-folders.md).
+        services.AddSingleton<FolderRefreshPolicy>();
         services.AddSingleton<ITrackTagWriter, TagLibTrackTagWriter>();
         services.AddSingleton<TagEditor>();
 
